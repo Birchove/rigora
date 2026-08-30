@@ -6,6 +6,7 @@ __pycache__/
 # Environments and package caches
 .venv/
 .uv-cache*/
+.worktrees/
 
 # Tests and coverage
 .pytest_cache/
