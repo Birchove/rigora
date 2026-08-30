@@ -1,0 +1,88 @@
+"""Research planning domain models."""
+
+from typing import Annotated, Literal, Self
+
+from pydantic import BaseModel, Field, StringConstraints, model_validator
+
+from research_mentor.domain.evidence import EvidenceRef
+
+NonBlankText = Annotated[str, StringConstraints(min_length=1)]
+IdeaText = Annotated[str, StringConstraints(min_length=1, max_length=19999)]
+
+
+def _reject_blank(value: str, field_name: str) -> None:
+    if not value.strip():
+        raise ValueError(f"{field_name} 不能为空白字符串")
+
+
+class InitialInput(BaseModel):
+    original_idea: IdeaText
+    domain: NonBlankText
+    time_limit: str | None = None
+    available_resources: list[str] = Field(default_factory=list)
+    unavailable_resources: list[str] = Field(default_factory=list)
+    other_constraints: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_required_text(self) -> Self:
+        _reject_blank(self.original_idea, "original_idea")
+        _reject_blank(self.domain, "domain")
+        return self
+
+
+class UserPlanFeedback(BaseModel):
+    user_reason: str
+
+
+class KnowledgeItem(BaseModel):
+    topic: str
+    reason: str
+    references: list[EvidenceRef] = Field(default_factory=list)
+
+
+class Milestone(BaseModel):
+    name: str
+    goal: str
+    estimated_duration: str
+
+
+class KeyInsight(BaseModel):
+    title: str
+    content: str
+    rationale: str
+    evidence: list[EvidenceRef] = Field(default_factory=list)
+
+
+class ResearchPlan(BaseModel):
+    research_question: str
+    knowledge_requirements: list[KnowledgeItem]
+    milestones: list[Milestone]
+    key_insight: KeyInsight
+    open_issues: list[str] = Field(default_factory=list)
+
+
+class UserPlanDecision(BaseModel):
+    decision: Literal["accept", "override", "request_revision"]
+    user_reason: str | None = None
+    overridden_key_insight: KeyInsight | None = None
+
+    @model_validator(mode="after")
+    def validate_decision_shape(self) -> Self:
+        if self.decision == "accept" and self.overridden_key_insight is not None:
+            raise ValueError("accept 不得包含 overridden_key_insight")
+        if self.decision == "request_revision":
+            if self.user_reason is None or not self.user_reason.strip():
+                raise ValueError("request_revision 必须包含非空 user_reason")
+            if self.overridden_key_insight is not None:
+                raise ValueError("request_revision 不得包含 overridden_key_insight")
+        if self.decision == "override" and self.overridden_key_insight is None:
+            raise ValueError("override 必须包含 overridden_key_insight")
+        return self
+
+
+class OverrideRecord(BaseModel):
+    agent_recommendation: KeyInsight
+    user_choice: KeyInsight
+    agent_reason: str
+    user_reason: str | None = None
+    timestamp: str
