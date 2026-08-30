@@ -105,6 +105,7 @@ uv run pytest -q -p no:cacheprovider tests/evals/test_key_insight_check_eval.py
 ## 设计文档
 
 - [`docs/design/2026-08-30-full-product-design.md`](docs/design/2026-08-30-full-product-design.md)：v1.0 完整后端、provider、状态机、API、前端和验收规格。
+- [`docs/superpowers/plans/2026-08-30-full-product-implementation.md`](docs/superpowers/plans/2026-08-30-full-product-implementation.md)：经确认规格对应的 32 项 TDD 实施计划。
 - [`docs/design/prompt仓库.md`](docs/design/prompt仓库.md)：公共 Mentor Prompt 与五个 Agent Prompt。
 - [`docs/design/命名架构具体版.md`](docs/design/命名架构具体版.md)：Input/Output Schema、状态和 Harness 设计。
 - [`docs/design/AI+ 创新大赛.md`](docs/design/AI+%20创新大赛.md)：产品背景与早期流程设计。
