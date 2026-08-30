@@ -5,13 +5,26 @@ description = "Deterministic multi-agent research mentor core"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "aiosqlite>=0.22.1",
+    "alembic>=1.19.1",
+    "anyio>=4.14.2",
+    "fastapi>=0.141.1",
+    "firecrawl-anydoc>=0.2.4",
+    "httpx>=0.28.1",
+    "openai>=3.6.0",
     "pydantic>=2.10,<3",
+    "pydantic-settings>=2.15.0",
+    "python-multipart>=0.0.32",
+    "sqlalchemy[asyncio]>=2.0.52",
     "tzdata>=2025.2",
+    "uvicorn[standard]>=0.52.4",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=8,<9",
+    "pytest-asyncio>=1.4.0",
+    "respx>=0.23.1",
 ]
 
 [build-system]

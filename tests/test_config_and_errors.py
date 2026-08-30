@@ -1,8 +1,10 @@
 from dataclasses import FrozenInstanceError
+from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
-from research_mentor.config import HarnessConfig
+from research_mentor.config import HarnessConfig, Settings
 from research_mentor.errors import (
     DuplicateSessionError,
     IllegalTransitionError,
@@ -11,6 +13,21 @@ from research_mentor.errors import (
     ResearchMentorError,
     SessionNotFoundError,
 )
+
+
+@pytest.fixture(autouse=True)
+def clear_settings_environment(monkeypatch):
+    for name in (
+        "RESEARCH_MENTOR_MODEL_PROVIDER",
+        "RESEARCH_MENTOR_MODEL_NAME",
+        "RESEARCH_MENTOR_MODEL_BASE_URL",
+        "RESEARCH_MENTOR_MODEL_API_KEY",
+        "RESEARCH_MENTOR_DATABASE_URL",
+        "RESEARCH_MENTOR_UPLOAD_ROOT",
+        "RESEARCH_MENTOR_PUBLIC_BASE_URL",
+        "RESEARCH_MENTOR_DEMO_MODE",
+    ):
+        monkeypatch.delenv(name, raising=False)
 
 
 def test_harness_config_defaults():
@@ -28,6 +45,33 @@ def test_harness_config_is_immutable():
 
     with pytest.raises(FrozenInstanceError):
         config.max_check_rounds = 6  # type: ignore[misc]
+
+
+def test_settings_rejects_unknown_provider(monkeypatch):
+    monkeypatch.setenv("RESEARCH_MENTOR_MODEL_PROVIDER", "unknown")
+
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_settings_defaults_to_demo_and_sqlite():
+    settings = Settings()
+
+    assert settings.model_provider == "demo"
+    assert settings.model_name == "gpt-5-mini"
+    assert settings.model_base_url is None
+    assert settings.model_api_key is None
+    assert settings.database_url.startswith("sqlite+aiosqlite:///")
+    assert settings.upload_root == Path("./data/uploads")
+    assert str(settings.public_base_url) == "http://localhost:8000/"
+    assert settings.demo_mode is True
+
+
+@pytest.mark.parametrize("provider", ("demo", "openai", "openai_compatible"))
+def test_settings_accepts_supported_providers(monkeypatch, provider):
+    monkeypatch.setenv("RESEARCH_MENTOR_MODEL_PROVIDER", provider)
+
+    assert Settings().model_provider == provider
 
 
 def test_domain_errors_derive_from_research_mentor_error():
