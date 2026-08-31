@@ -1,10 +1,11 @@
 """Shared agent input and invocation contracts."""
 
 from datetime import date, datetime
-from typing import Literal
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
+
+from research_mentor.domain.jobs import AgentName
 
 
 def get_current_date() -> date:
@@ -43,9 +44,6 @@ class SysInput(BaseModel):
 
 class RetrievalSysInput(SysInput):
     retrieval_guidelines: list[str] = Field(default_factory=DEFAULT_RETRIEVAL_GUIDELINES.copy)
-
-
-AgentName = Literal["idea_review", "plan_loop", "key_insight_check", "working_qa", "complete"]
 
 
 class AgentInvocation(BaseModel):
