@@ -14,7 +14,11 @@ from research_mentor.domain.checks import (
     KeyInsightScores,
 )
 from research_mentor.domain.experiments import ExperimentInfo
-from research_mentor.domain.research import KeyInsight, UserPlanDecision
+from research_mentor.domain.research import (
+    ForwardResearchContext,
+    KeyInsight,
+    UserPlanDecision,
+)
 from research_mentor.errors import InvariantViolationError
 from research_mentor.harness.routing import (
     route_complete_output,
@@ -27,7 +31,24 @@ from research_mentor.harness.state import SessionPhase
 
 
 def idea_output_factory(idea_type: str, action: str) -> IdeaReviewOutput:
-    return IdeaReviewOutput(
+    payload = {
+        "idea_type": idea_type,
+        "action": action,
+        "normalized_idea": "可验证的研究主张",
+        "reason": "理由",
+        "next_action": "下一步",
+    }
+    if idea_type == "forward" and action == "proceed_to_working":
+        payload["forward_context"] = ForwardResearchContext(
+            stage="experiment_in_progress",
+            research_question="状态压缩能否提升恢复稳定性？",
+            current_experiment=ExperimentInfo(current_experiment="主实验"),
+        )
+    return IdeaReviewOutput(**payload)
+
+
+def unvalidated_idea_output(idea_type: str, action: str) -> IdeaReviewOutput:
+    return IdeaReviewOutput.model_construct(
         idea_type=idea_type,
         action=action,
         normalized_idea="可验证的研究主张",
@@ -129,7 +150,7 @@ def test_idea_table_out_combinations_are_rejected(
     idea_type: str, action: str
 ) -> None:
     with pytest.raises(InvariantViolationError):
-        route_idea_review(idea_output_factory(idea_type, action))
+        route_idea_review(unvalidated_idea_output(idea_type, action))
 
 
 @pytest.mark.parametrize("check_round", [1, 2, 3, 4, 5])

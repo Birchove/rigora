@@ -2,11 +2,11 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from research_mentor.agents.common import RetrievalSysInput
 from research_mentor.domain.evidence import EvidenceRef, LiteratureRecord
-from research_mentor.domain.research import InitialInput
+from research_mentor.domain.research import ForwardResearchContext, InitialInput
 
 DEFAULT_IDEA_REVIEW_GUIDELINES = [
     "idea_review_agent 负责判断用户输入属于opinion、range 或 forward。对于 forward 类型，应进一步判断已有实验信息是否足以进入 Working 阶段：\n    - 信息充分：action = proceed_to_working\n    - 信息不足：action = request_refinement\n    Harness 不自行进行语义分类，只负责校验idea_type 与 action 的组合并执行状态路由。",
@@ -49,3 +49,21 @@ class IdeaReviewOutput(BaseModel):
     next_action: str
     literature_searches: list[LiteratureRecord] = Field(default_factory=list)
     evidence: list[EvidenceRef] = Field(default_factory=list)
+    forward_context: ForwardResearchContext | None = None
+
+    @model_validator(mode="after")
+    def validate_route_payload(self) -> "IdeaReviewOutput":
+        if self.idea_type == "range" and self.action != "request_refinement":
+            raise ValueError("range can only request refinement")
+        if self.action == "proceed_to_plan" and self.idea_type != "opinion":
+            raise ValueError("only opinion can proceed to plan")
+        if self.action == "proceed_to_working":
+            if self.idea_type != "forward" or self.forward_context is None:
+                raise ValueError(
+                    "proceed_to_working requires forward idea and forward_context"
+                )
+            if self.forward_context.missing_fields:
+                raise ValueError("proceed_to_working requires no missing fields")
+        elif self.forward_context is not None:
+            raise ValueError("only proceed_to_working can include forward_context")
+        return self

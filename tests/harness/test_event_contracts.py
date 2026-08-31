@@ -23,7 +23,12 @@ from research_mentor.domain.experiments import (
     ValidationResult,
     ValidationTask,
 )
-from research_mentor.domain.research import KeyInsight, OverrideRecord, UserPlanDecision
+from research_mentor.domain.research import (
+    ForwardResearchContext,
+    KeyInsight,
+    OverrideRecord,
+    UserPlanDecision,
+)
 from research_mentor.harness.orchestrator import ResearchMentorOrchestrator
 from research_mentor.harness.state import ResearchSession, SessionEvent, SessionEventType, SessionPhase
 
@@ -67,6 +72,11 @@ def _forward() -> IdeaReviewOutput:
         normalized_idea="已有状态压缩实验",
         reason="已有材料可开始工作。",
         next_action="进入实验问答。",
+        forward_context=ForwardResearchContext(
+            stage="experiment_in_progress",
+            research_question="状态压缩能否提升恢复稳定性？",
+            current_experiment=ExperimentInfo(current_experiment="比较状态压缩与基线"),
+        ),
     )
 
 

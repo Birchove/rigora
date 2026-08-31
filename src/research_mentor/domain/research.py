@@ -5,6 +5,11 @@ from typing import Annotated, Literal, Self
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 from research_mentor.domain.evidence import EvidenceRef
+from research_mentor.domain.experiments import (
+    ExperimentInfo,
+    MainExperimentResult,
+    ValidationResult,
+)
 
 NonBlankText = Annotated[str, StringConstraints(min_length=1)]
 IdeaText = Annotated[str, StringConstraints(min_length=1, max_length=19999)]
@@ -59,6 +64,57 @@ class ResearchPlan(BaseModel):
     milestones: list[Milestone]
     key_insight: KeyInsight
     open_issues: list[str] = Field(default_factory=list)
+
+
+ForwardStage = Literal[
+    "experiment_in_progress",
+    "main_experiment_completed",
+    "validation_in_progress",
+    "research_completed",
+]
+
+
+class ForwardResearchContext(BaseModel):
+    stage: ForwardStage
+    research_question: str
+    current_experiment: ExperimentInfo | None = None
+    main_result: MainExperimentResult | None = None
+    completed_validations: list[ValidationResult] = Field(default_factory=list)
+    source_document_ids: list[str] = Field(default_factory=list)
+    missing_fields: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_stage_payload(self) -> Self:
+        current_name = (
+            self.current_experiment.current_experiment
+            if self.current_experiment is not None
+            else None
+        )
+        has_current = current_name is not None and bool(current_name.strip())
+        if self.stage == "experiment_in_progress" and not has_current:
+            raise ValueError("experiment_in_progress requires current_experiment")
+        if self.stage in {"main_experiment_completed", "research_completed"}:
+            if self.main_result is None:
+                raise ValueError("completed stage requires main_result")
+        if self.stage == "validation_in_progress":
+            if self.main_result is None or not has_current:
+                raise ValueError(
+                    "validation_in_progress requires main_result and current_experiment"
+                )
+        return self
+
+
+class ResearchContext(BaseModel):
+    normalized_idea: str
+    research_question: str
+    plan: ResearchPlan | None = None
+    forward_context: ForwardResearchContext | None = None
+
+    @model_validator(mode="after")
+    def validate_exactly_one_source(self) -> Self:
+        if (self.plan is None) == (self.forward_context is None):
+            raise ValueError("exactly one of plan or forward_context is required")
+        return self
 
 
 class UserPlanDecision(BaseModel):

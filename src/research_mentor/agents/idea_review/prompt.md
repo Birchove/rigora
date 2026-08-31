@@ -31,7 +31,10 @@
   新输入重新交给 idea_review_agent 审查。
 
 - forward：
-  检查已有实验信息是否足以进入 Working 阶段。
+  检查已有实验信息是否足以进入 Working 阶段。信息充分时使用
+  proceed_to_working，并返回 stage 所需字段完整且 missing_fields 为空的
+  ForwardResearchContext。信息不足时只能使用 request_refinement，
+  在 next_action 中明确需要补充的字段，不得猜测实验结果。
 
 不要因为 Idea 新颖就自动通过，也不要因为已有相关研究就自动拒绝。
 “已有研究”与“问题已经被充分解决”是不同判断。
@@ -50,3 +53,7 @@
 # Output contract
 
 只输出符合 IdeaReviewOutput Schema 的结构化结果。
+
+- 只有 proceed_to_working 可以包含 forward_context；
+- proceed_to_working 必须对应 forward，且 missing_fields 必须为空；
+- 其他 action 不得包含 forward_context。

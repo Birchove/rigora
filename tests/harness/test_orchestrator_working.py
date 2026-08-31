@@ -23,7 +23,7 @@ from research_mentor.domain.experiments import (
     ValidationResult,
     ValidationTask,
 )
-from research_mentor.domain.research import UserPlanDecision
+from research_mentor.domain.research import ForwardResearchContext, UserPlanDecision
 from research_mentor.errors import InvariantViolationError, PortExecutionError
 from research_mentor.harness.orchestrator import ResearchMentorOrchestrator
 from research_mentor.harness.state import SessionEventType, SessionPhase
@@ -63,6 +63,11 @@ def forward_review() -> IdeaReviewOutput:
         normalized_idea="验证分层状态压缩的恢复稳定性",
         reason="用户已有明确任务。",
         next_action="提供完整实验任务上下文。",
+        forward_context=ForwardResearchContext(
+            stage="experiment_in_progress",
+            research_question="分层状态压缩能否提升恢复稳定性？",
+            current_experiment=ExperimentInfo(current_experiment="运行恢复正确率基线"),
+        ),
     )
 
 
