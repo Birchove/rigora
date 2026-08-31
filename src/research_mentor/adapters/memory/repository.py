@@ -1,11 +1,69 @@
 """In-memory research session repository."""
 
+from types import TracebackType
+from typing import Self
+
 from research_mentor.errors import (
     DuplicateSessionError,
     InvariantViolationError,
     SessionNotFoundError,
 )
 from research_mentor.harness.state import ResearchSession, SessionEvent
+from research_mentor.ports.repository import ProcessedCommand
+
+
+class MemoryProcessedCommandRepository:
+    def __init__(
+        self,
+        commands: dict[tuple[str, str], ProcessedCommand] | None = None,
+    ) -> None:
+        self._commands = commands if commands is not None else {}
+
+    async def find(
+        self, project_id: str, command_id: str
+    ) -> ProcessedCommand | None:
+        command = self._commands.get((project_id, command_id))
+        return command.model_copy(deep=True) if command is not None else None
+
+    async def add(self, command: ProcessedCommand) -> None:
+        key = (command.project_id, command.command_id)
+        if key in self._commands:
+            raise InvariantViolationError("Processed command already exists")
+        self._commands[key] = command.model_copy(deep=True)
+
+
+class MemoryRepositoryPort:
+    """Small transactional UoW used by port contract tests."""
+
+    def __init__(
+        self,
+        *,
+        processed_commands: MemoryProcessedCommandRepository,
+    ) -> None:
+        self._stored_commands = processed_commands._commands
+        self._working_commands: dict[tuple[str, str], ProcessedCommand] | None = None
+        self.processed_commands = processed_commands
+
+    async def __aenter__(self) -> Self:
+        self._working_commands = {
+            key: command.model_copy(deep=True)
+            for key, command in self._stored_commands.items()
+        }
+        self.processed_commands = MemoryProcessedCommandRepository(
+            self._working_commands
+        )
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        if exc_type is None and self._working_commands is not None:
+            self._stored_commands.clear()
+            self._stored_commands.update(self._working_commands)
+        self._working_commands = None
 
 
 class MemoryResearchSessionRepository:
