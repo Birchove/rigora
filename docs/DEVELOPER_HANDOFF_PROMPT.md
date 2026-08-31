@@ -125,6 +125,8 @@ uv run pytest -q -p no:cacheprovider
 9. 负面、不显著、不符合预期或动摇主张的结果必须保留并进入相应 warning/revision 流程，不得美化。
 10. 模型自然语言不得被解析为 command。
 11. Working `success` 只进入用户显式结果记录/确认，不直接结束；新版流程图的 `error` 分别映射到主实验 `report_plan_issue` 或 validation 的显式 result record，不新增 `validationResult: bool`。
+12. `success` 不能提前把 current task 标为 completed；用户提交结构化结果后才确认，选择继续实验时用确定性的 `resume_working`。
+13. forward 使用 `ResearchContext.forward_context` 且允许 `plan=None`，不得反推虚假 ResearchPlan。
 
 ### 5.3 RAG、文件与 Prompt 安全
 
@@ -137,6 +139,7 @@ uv run pytest -q -p no:cacheprovider
 7. `LiteratureRecord` 记录检索所得；`EvidenceRef` 只记录实际支撑判断的来源，并说明具体 support。
 8. 外部网络在自动测试中必须 mock；没有证据与存在反对证据必须区分。
 9. Context Assembler 必须按 Agent 投影字段；`sys_input` 只构造 stable instructions，不得重复序列化进动态 `user_input`，也不得传完整 session dump。
+10. Working retrieval query 必须拼接 normalized idea、research question/forward stage、current task/current experiment 与 question；rank score 只做 diagnostics，v1 不得在模型前按低分硬拒。
 
 ### 5.4 压缩与“傲娇”语气
 

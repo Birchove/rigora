@@ -1,6 +1,6 @@
 # 傲娇导师 v1.0 完整产品 Implementation Plan
 
-> **2026-09-01 增量说明：** Task 2–15 的已完成历史保持不变。新版《AI+ 创新大赛》只调整尚未完成的 Task 16、18、19、20、28、30、31、32：加入 Context Assembler 投影、`low/mid/high` 候选路径、Working completion/error 的显式兼容路由和产品定位验收。必要条件 gate 因规则未定义而不实现。
+> **2026-09-01 增量说明：** Task 2–15 的已完成历史保持不变。新版《AI+ 创新大赛》与已确认《Working RAG 与用户控制增量设计》调整 Task 16、18、19、20、28、30、31、32：加入 Context Assembler 投影、`low/mid/high` 候选路径、上下文化 Working 检索、无低分硬拒、完成确认、Working error 兼容路由和产品定位验收。必要条件 gate 因规则未定义而不实现。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -1202,10 +1202,11 @@ async def test_rank_unavailable_does_not_decline_question(builder_with_unavailab
     assert context.rank_status == "unavailable"
     assert context.decline_as_unrelated is False
 
-async def test_successful_low_rank_uses_configured_threshold(builder):
-    builder.settings.rag_relevance_threshold = 0.3
-    context = await builder.build(SESSION, "明天的天气？", character_budget=12000)
-    assert context.top_relevance == 0.12 and context.decline_as_unrelated is True
+async def test_low_rank_is_diagnostic_and_never_short_circuits(builder):
+    context = await builder.build(SESSION, "那第二个方案呢？", character_budget=12000)
+    assert "缓存策略" in builder.ranker.last_query
+    assert "当前实验" in builder.ranker.last_query
+    assert context.top_relevance == 0.12 and context.decline_as_unrelated is False
 ```
 
 - [ ] **Step 2: 运行 RED**
@@ -1216,7 +1217,7 @@ Expected: FAIL，working context builder 不存在。
 
 - [ ] **Step 3: 实现 deterministic context policy**
 
-顺序固定为：`ResearchContext`/current task → 结构化实验事实 → 最新用户输入 → recent `ConversationTurn` → selected document chunks/literature → `CompactContext`。Working QA 继续继承 `RetrievalSysInput`；Harness 可按问题决定是否实际检索，但不得为其他三个非 retrieval Agent 注入 retrieval guidelines。只有 rank `ok` 且 top score 低于 `Settings.rag_relevance_threshold`（默认 0.3）时才设置明确不相关；rank unavailable 时继续交给 Agent 判断并注入 limitation。
+顺序固定为：`ResearchContext`/current task → 结构化实验事实 → 最新用户输入 → recent `ConversationTurn` → selected document chunks/literature → `CompactContext`。检索 query 拼接 normalized idea、research question/forward stage、current task/current experiment 和 question。Working QA 继续继承 `RetrievalSysInput`；不得为其他三个非 retrieval Agent 注入 retrieval guidelines。rank score 只写 diagnostics，任何低分/empty/unavailable 都不得在模型前拒绝；`Settings.rag_relevance_threshold` 保留给 Task 30 校准，不驱动 v1 路由。
 
 本 Task 同时固定 `ContextAssembler` 边界：每个 Agent 先做字段投影，再分别构造 stable instructions、project facts 和 turn payload。`sys_input` 只传给 instructions builder，严禁重复出现在序列化 `user_input`；也不得传入其他 Agent 专属字段、完整 session dump 或未选检索结果。为五个 runner 增加 prompt isolation regression，断言动态 JSON 中不存在 `sys_input`、`behavior_constraints`、`retrieval_guidelines` 等 instructions-only key。
 
@@ -1400,7 +1401,7 @@ Expected: FAIL，round history/risk acknowledgement 未完整实现。
 
 `decide_plan` 处理现有 `accept/override/request_revision`：accept/override 由 TaskFactory 从 active plan 创建 main task并进入 Working；request revision 保存 feedback、重置 `check_round=0` 并回 Planning。首次 plan 和用户主动 revision 都把 `check_round=0` 传给 Plan Loop；只有 Harness 在一次失败 Check 后递增。
 
-沿用现有 command 名：`RunPlanCommand` 增加默认 `mode="low"`；`RunCheckCommand` 在多路径时携带 `candidate_id`；`DecidePlanCommand` 在 `mid/high` 必须携带一个已就绪 candidate ID，在 `low` 可省略并确定性指向唯一候选。不得另造与 `decide_plan` 重叠的选择 command。
+沿用现有 plan command 名：`RunPlanCommand` 增加默认 `mode="low"`；`RunCheckCommand` 在多路径时携带 `candidate_id`；`DecidePlanCommand` 在 `mid/high` 必须携带一个已就绪 candidate ID，在 `low` 可省略并确定性指向唯一候选。Task 20 另加入确定性的 `resume_working`，只用于驳回 completion proposal，不与 plan decision 重叠。
 
 - [ ] **Step 4: 运行 GREEN 与 scoring eval**
 
@@ -1421,7 +1422,10 @@ git commit -m "功能：完成方案检查与修订闭环"
 - Modify: `src/research_mentor/agents/working_qa/contracts.py`
 - Modify: `src/research_mentor/harness/orchestrator.py`
 - Modify: `src/research_mentor/harness/validation.py`
+- Modify: `src/research_mentor/application/context_service.py`
+- Modify: `src/research_mentor/agents/complete/contracts.py`
 - Test: `tests/harness/test_orchestrator_completion_v1.py`
+- Test: `tests/harness/test_working_context.py`
 
 - [ ] **Step 1: 写结果和三路状态测试**
 
@@ -1429,6 +1433,18 @@ git commit -m "功能：完成方案检查与修订闭环"
 async def test_working_plan_issue_waits_for_user_revision_decision(orchestrator):
     session = await orchestrator.send_working_message(PROJECT_ID, PLAN_ISSUE_MESSAGE)
     assert session.phase is SessionPhase.AWAITING_PLAN_REVISION_DECISION
+
+async def test_success_requires_result_panel_confirmation(orchestrator):
+    proposed = await orchestrator.send_working_message(PROJECT_ID, "差不多做完了")
+    assert proposed.phase is SessionPhase.AWAITING_RESULT_RECORD
+    assert proposed.current_task.status == "in_progress"
+    resumed = await orchestrator.resume_working(PROJECT_ID)
+    assert resumed.phase is SessionPhase.WORKING
+
+async def test_forward_without_plan_reaches_complete(orchestrator):
+    session = await orchestrator.with_forward_context(plan=None).record_main_result(PROJECT_ID, MAIN_RESULT)
+    assert session.research_context.plan is None
+    assert (await orchestrator.run_complete(PROJECT_ID)).phase in COMPLETE_OUTPUT_PHASES
 
 async def test_main_result_then_explicit_run_complete(orchestrator):
     recorded = await orchestrator.record_main_result(PROJECT_ID, MAIN_RESULT)
@@ -1470,7 +1486,7 @@ Expected: FAIL，completion modes 未完全接线。
 
 - [ ] **Step 3: 实现结果影响和 loop**
 
-给 Working output 增加精确 `report_plan_issue` action；`answer/clarify/decline` 留在 Working，`success` 进入 `AWAITING_RESULT_RECORD`，plan issue 进入 `AWAITING_PLAN_REVISION_DECISION`。记录命令按 current task 拆成 `record_main_result` 与 `record_validation_result`，均只写用户提供的结果并进入 `COMPLETING`；随后必须显式 `run_complete` 才调用 Complete Agent。
+先修正 Task 16 已被新裁决替代的行为：Working query 使用研究/阶段/任务/问题组合，低分只做 diagnostics，`decline_as_unrelated` 不再由 ranker 置 true。给 Working output 增加精确 `report_plan_issue` action；`answer/clarify/decline` 留在 Working，`success` 进入 `AWAITING_RESULT_RECORD` 但不完成 task。`resume_working` 可无模型调用返回 Working；`record_main_result`/`record_validation_result` 是用户确认点，在同一事务中完成 current task 并进入 `COMPLETING`，随后必须显式 `run_complete`。Complete input 接受 `plan=None` 的 forward ResearchContext。
 
 新版流程图中的 `error` 作为兼容术语，不新增第五种含义重叠的 Working action：主实验中“能证明当前结论有误”映射为 `report_plan_issue`；validation 中的错误、负面结论或执行失败仍等待用户通过 `record_validation_result(execution_status, impact, failure_reason)` 明确记录，然后回 Complete。不得增加或推断 `validationResult: bool`，避免混淆“执行失败”和“完成但反对预期”。`success` 后的 `AWAITING_RESULT_RECORD` 及结果表单就是用户确认 gate；未确认时不得完成任务或调用 Complete。
 
@@ -1510,11 +1526,11 @@ async def test_same_command_id_returns_original_receipt(command_bus):
     assert second.run_id == first.run_id
 
 def test_command_union_names_are_exact():
-    assert command_type_names() == {"submit_idea", "submit_refinement", "run_plan", "run_check", "decide_plan", "send_working_message", "record_main_result", "record_validation_result", "run_complete", "select_validations", "decide_plan_revision", "cancel_run", "restart_research", "archive_project"}
+    assert command_type_names() == {"submit_idea", "submit_refinement", "run_plan", "run_check", "decide_plan", "send_working_message", "resume_working", "record_main_result", "record_validation_result", "run_complete", "select_validations", "decide_plan_revision", "cancel_run", "restart_research", "archive_project"}
 
 def test_result_phase_exposes_only_matching_record_command():
-    assert allowed_commands(session_with_current_task("main")) == ("record_main_result", "cancel_run", "restart_research", "archive_project")
-    assert allowed_commands(session_with_current_task("validation")) == ("record_validation_result", "cancel_run", "restart_research", "archive_project")
+    assert allowed_commands(session_with_current_task("main")) == ("record_main_result", "resume_working", "cancel_run", "restart_research", "archive_project")
+    assert allowed_commands(session_with_current_task("validation")) == ("record_validation_result", "resume_working", "cancel_run", "restart_research", "archive_project")
 
 def test_restart_research_requires_explicit_confirmation():
     with pytest.raises(ValidationError):
@@ -1537,7 +1553,7 @@ class CommandBase(BaseModel):
 
 Command = Annotated[
     SubmitIdeaCommand | SubmitRefinementCommand | RunPlanCommand | RunCheckCommand |
-    DecidePlanCommand | SendWorkingMessageCommand | RecordMainResultCommand |
+    DecidePlanCommand | SendWorkingMessageCommand | ResumeWorkingCommand | RecordMainResultCommand |
     RecordValidationResultCommand | RunCompleteCommand | SelectValidationsCommand |
     DecidePlanRevisionCommand | CancelRunCommand | RestartResearchCommand |
     ArchiveProjectCommand,
@@ -2503,7 +2519,7 @@ git commit -m "文档：完成 v1 启动与验收指南"
 | 5 forward completed → Complete | 17, 19 | completion orchestrator E2E |
 | 6 低单项但总分 6.0 通过 | 5, 18 | `test_low_dimension_does_not_veto_passing_total` |
 | 7 revision reset/override audit | 18, 20 | plan loop/audit tests |
-| 8 无关问题 decline | 16 | working relevance tests |
+| 8 低分仍进入上下文判断 | 16, 19, 30 | working relevance/calibration tests |
 | 9 rank unavailable 不伪装 | 16 | `test_rank_unavailable_does_not_decline_question` |
 | 10 supported file 可引用 | 10, 12, 24 | document adapter/API/E2E |
 | 11 parse 失败隔离 | 10, 24 | parser/API failure tests |

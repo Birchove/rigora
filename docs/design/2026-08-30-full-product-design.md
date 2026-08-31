@@ -558,7 +558,7 @@ Working 每次问题先构造 retrieval corpus：
 - 已上传 document chunks；
 - 已选 LiteratureRecord 摘要。
 
-rank 输出 `[0,1]` relevance。只有 rank 成功且 `top_relevance < config.rag_relevance_threshold` 才能触发明确“不相关”提示。rank unavailable 时交给 Agent 结合上下文判断，并公开说明限制。
+Working 检索 query 固定拼接 `normalized_idea + research_question/current stage + current task/current experiment + question`，避免“那第二个方案呢”等短问题丢失研究语境。rank 输出只作为 diagnostics；v1 不允许按低分在模型前硬拒，无论 low/empty/unavailable 都交给 Working Agent 结合结构化上下文判断，并公开说明限制。`rag_relevance_threshold` 仅用于 Task 30 标注集校准，在有证据前不驱动路由，也不增加额外相关性小模型。
 
 需要外部事实时可以搜索 OpenAlex；普通实验排错优先使用项目材料，避免每轮无意义外部检索。
 
@@ -961,7 +961,7 @@ v1.0 只有在以下场景均有自动或人工可复核证据时才能宣称完
 5. forward 已完成主实验可以记录结果并进入 Complete。
 6. Check 单项低于 2.5 但总分达到 6.0 时通过。
 7. 用户 request revision 重置内部 check round；override 留完整记录。
-8. Working 无关问题在 rank 成功且低于阈值时 decline。
+8. Working 低相关分数仍进入 Agent；检索 query 包含研究与任务上下文，只有 Agent 结合上下文后才能 decline。
 9. rank unavailable 不得伪装成不相关。
 10. 上传 supported 文件后产生 Markdown/chunks 并可被引用。
 11. parse 失败可见且不破坏项目。
