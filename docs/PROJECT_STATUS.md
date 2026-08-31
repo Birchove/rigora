@@ -9,8 +9,8 @@
 - 实现审计基线：`65755f0`（不含本状态文档后续产生的 commit）
 - 目标版本：v1.0
 - 当前版本定位：可安装、可测试的 deterministic multi-agent backend core；尚不是可运行的完整产品
-- 当前测试基线：Task 17 完成后 `343 passed`
-- v1 implementation plan：Task 1–17 已有独立 commit；Task 18–32 尚未达到对应验收标准
+- 当前测试基线：Task 18 完成后 `350 passed`
+- v1 implementation plan：Task 1–18 已有独立 commit；Task 19–32 尚未达到对应验收标准
 
 分支关系：
 
@@ -269,9 +269,8 @@ Task 13–16 已完成：async typed model port、OpenAI Responses/OpenAI-compat
 
 ### 5.4 Milestone D：完整 Orchestrator 与 Application commands
 
-Task 17 已闭合 Idea Review 四种 action、非 CS domain guard、forward `ResearchContext` 与 stage task 初始化。Milestone D 尚未实现：
+Task 17–18 已闭合 Idea Review 四种 action、非 CS domain guard、forward `ResearchContext` 与 stage task 初始化，以及 `low/mid/high` 的 1/2/3 路 Plan/Check 候选隔离、单选和 exhausted override。Milestone D 尚未实现：
 
-- 按 v1 数据模型完成 Plan/Check/Revision/User gate；
 - Working → result → Complete 的三路闭环：writing、validation、plan revision；
 - application command bus；
 - command 幂等键、统一 phase guard、project version guard；

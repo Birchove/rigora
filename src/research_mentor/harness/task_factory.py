@@ -8,7 +8,7 @@ from research_mentor.domain.experiments import (
     ExperimentTaskOrigin,
     ValidationTask,
 )
-from research_mentor.domain.research import ForwardResearchContext
+from research_mentor.domain.research import ForwardResearchContext, ResearchPlan
 
 
 class TaskFactory:
@@ -69,4 +69,20 @@ class TaskFactory:
             origin="forward",
             status="in_progress",
             experiment_info=experiment_info,
+        )
+
+    @staticmethod
+    def from_plan(plan: ResearchPlan) -> ExperimentTaskContext:
+        return ExperimentTaskContext(
+            task_id=str(uuid4()),
+            task_kind="main",
+            origin="plan",
+            status="in_progress",
+            experiment_info=ExperimentInfo(
+                current_experiment=(
+                    plan.milestones[0].name
+                    if plan.milestones
+                    else plan.research_question
+                ),
+            ),
         )

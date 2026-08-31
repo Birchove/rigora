@@ -16,6 +16,9 @@ from research_mentor.domain.experiments import (
 from research_mentor.domain.research import (
     InitialInput,
     OverrideRecord,
+    PlanCandidatePath,
+    PlanCandidateOverrideRecord,
+    PlanGenerationMode,
     ResearchContext,
     ResearchPlan,
     UserPlanDecision,
@@ -54,6 +57,11 @@ class ResearchSession(BaseModel):
     pending_plan_feedback: UserPlanFeedback | None = None
     plan_decision: UserPlanDecision | None = None
     override_record: OverrideRecord | None = None
+    plan_generation_mode: PlanGenerationMode = "low"
+    plan_candidates: list[PlanCandidatePath] = Field(default_factory=list)
+    candidate_override_records: list[PlanCandidateOverrideRecord] = Field(
+        default_factory=list
+    )
     current_task: ExperimentTaskContext | None = None
     main_experiment: MainExperimentResult | None = None
     completed_validations: list[ValidationResult] = Field(default_factory=list)

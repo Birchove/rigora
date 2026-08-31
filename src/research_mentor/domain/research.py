@@ -5,6 +5,7 @@ from typing import Annotated, Literal, Self
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 from research_mentor.domain.evidence import EvidenceRef
+from research_mentor.domain.checks import CheckRound
 from research_mentor.domain.experiments import (
     ExperimentInfo,
     MainExperimentResult,
@@ -64,6 +65,33 @@ class ResearchPlan(BaseModel):
     milestones: list[Milestone]
     key_insight: KeyInsight
     open_issues: list[str] = Field(default_factory=list)
+
+
+PlanGenerationMode = Literal["low", "mid", "high"]
+PlanCandidateDisposition = Literal[
+    "active", "ready", "exhausted", "override", "selected", "archived"
+]
+
+
+class PlanCandidatePath(BaseModel):
+    candidate_id: str
+    candidate_index: int = Field(ge=1, le=3)
+    model_profile: str
+    focus_hint: str
+    plan: ResearchPlan | None = None
+    response_to_user: str | None = None
+    change_summary: list[str] = Field(default_factory=list)
+    check_history: list[CheckRound] = Field(default_factory=list)
+    check_round: int = Field(default=0, ge=0)
+    disposition: PlanCandidateDisposition = "active"
+
+
+class PlanCandidateOverrideRecord(BaseModel):
+    candidate_id: str
+    final_score: float = Field(ge=0.0, le=10.0)
+    unresolved_issues: list[str] = Field(default_factory=list)
+    user_reason: NonBlankText
+    timestamp: str
 
 
 ForwardStage = Literal[

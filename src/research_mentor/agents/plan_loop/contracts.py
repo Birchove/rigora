@@ -45,6 +45,8 @@ class PlanLoopInput(BaseModel):
     previous_insight_check: KeyInsightCheckOutput | None = None
     previous_plan: ResearchPlan | None = None
     user_feedback: UserPlanFeedback | None = None
+    candidate_index: int = Field(default=1, ge=1, le=3)
+    candidate_focus: str | None = None
 
     @model_validator(mode="after")
     def validate_mode(self) -> Self:
