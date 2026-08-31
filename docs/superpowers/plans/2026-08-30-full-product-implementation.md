@@ -1,5 +1,7 @@
 # 傲娇导师 v1.0 完整产品 Implementation Plan
 
+> **2026-09-01 增量说明：** Task 2–15 的已完成历史保持不变。新版《AI+ 创新大赛》只调整尚未完成的 Task 16、18、19、20、28、30、31、32：加入 Context Assembler 投影、`low/mid/high` 候选路径、Working completion/error 的显式兼容路由和产品定位验收。必要条件 gate 因规则未定义而不实现。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 把当前 deterministic Python core 扩展为具有真实 LLM/RAG、文件检索、SQL 持久化、可恢复工作流、FastAPI/SSE 与 React 前端的 v1.0 完整产品。
@@ -18,7 +20,7 @@
 - 每个 Agent 的固定 Prompt 文件保持静态；动态信息只通过 typed input 注入。
 - 每次 commit 前运行该任务的定向测试和 `uv run pytest -q -p no:cacheprovider`。
 - frontend 建立后，每次 frontend commit 前运行 `npm test -- --run` 与 `npm run build`。
-- v1.0 完成条件：设计规格第 17 节 30 项场景全部自动化或人工可复验，Python/unit、frontend/unit、Playwright/E2E 全绿，README 可从空数据库启动。
+- v1.0 完成条件：设计规格第 16 节 34 项场景全部自动化或人工可复验，Python/unit、frontend/unit、Playwright/E2E 全绿，README 可从空数据库启动。
 
 ## 1. 目标文件结构
 
@@ -1216,6 +1218,8 @@ Expected: FAIL，working context builder 不存在。
 
 顺序固定为：`ResearchContext`/current task → 结构化实验事实 → 最新用户输入 → recent `ConversationTurn` → selected document chunks/literature → `CompactContext`。Working QA 继续继承 `RetrievalSysInput`；Harness 可按问题决定是否实际检索，但不得为其他三个非 retrieval Agent 注入 retrieval guidelines。只有 rank `ok` 且 top score 低于 `Settings.rag_relevance_threshold`（默认 0.3）时才设置明确不相关；rank unavailable 时继续交给 Agent 判断并注入 limitation。
 
+本 Task 同时固定 `ContextAssembler` 边界：每个 Agent 先做字段投影，再分别构造 stable instructions、project facts 和 turn payload。`sys_input` 只传给 instructions builder，严禁重复出现在序列化 `user_input`；也不得传入其他 Agent 专属字段、完整 session dump 或未选检索结果。为五个 runner 增加 prompt isolation regression，断言动态 JSON 中不存在 `sys_input`、`behavior_constraints`、`retrieval_guidelines` 等 instructions-only key。
+
 ```python
 class CompactContext(BaseModel):
     summary: str
@@ -1323,6 +1327,7 @@ git commit -m "功能：闭合 Idea Review 四路状态转换"
 ### Task 18: 完成 plan/check/revision/confirmation loop
 
 **Files:**
+- Modify: `src/research_mentor/domain/research.py`
 - Modify: `src/research_mentor/harness/orchestrator.py`
 - Modify: `src/research_mentor/harness/state.py`
 - Test: `tests/harness/test_orchestrator_plan_loop_v1.py`
@@ -1357,6 +1362,28 @@ async def test_user_revision_resets_round_and_override_is_audited(orchestrator):
     assert revised.phase is SessionPhase.PLANNING and revised.check_round == 0
     overridden = await orchestrator.decide_plan(PROJECT_ID, override_decision(reason="资源窗口即将关闭"))
     assert overridden.override_record.user_reason == "资源窗口即将关闭"
+
+@pytest.mark.parametrize(("mode", "count"), [("low", 1), ("mid", 2), ("high", 3)])
+async def test_plan_mode_creates_isolated_candidate_paths(orchestrator, mode, count):
+    session = await orchestrator.run_plan(PROJECT_ID, mode=mode)
+    assert len(session.plan_candidates) == count
+    assert len({item.candidate_id for item in session.plan_candidates}) == count
+    assert all(item.check_round == 0 for item in session.plan_candidates)
+
+async def test_high_mode_selects_exactly_one_candidate_and_preserves_others(orchestrator):
+    session = await orchestrator.with_ready_candidates(3).decide_plan(
+        PROJECT_ID, UserPlanDecision(decision="accept"), candidate_id="candidate-2"
+    )
+    assert session.active_plan == session.plan_candidates[1].plan
+    assert session.phase is SessionPhase.WORKING
+    assert len(session.plan_candidates) == 3
+
+async def test_exhausted_candidate_requires_explicit_override(orchestrator):
+    session = await orchestrator.with_exhausted_candidate("candidate-1").continue_imperfect_plan(
+        PROJECT_ID, "candidate-1", user_reason="资源窗口有限"
+    )
+    assert session.plan_candidates[0].disposition == "override"
+    assert session.override_records[-1].user_reason == "资源窗口有限"
 ```
 
 - [ ] **Step 2: 运行 RED**
@@ -1367,9 +1394,13 @@ Expected: FAIL，round history/risk acknowledgement 未完整实现。
 
 - [ ] **Step 3: 实现 Harness-owned loop**
 
-`run_plan` 只创建/执行一个 Plan Loop run，成功后 `PLANNING → CHECKING_KEY_INSIGHT`；`run_check` 只创建/执行一个 Check run，再由 Harness 计算 total。pass 进入 `AWAITING_PLAN_DECISION`；fail 且未达上限把 structured revision request 保存在 session 并回 `PLANNING`；第 `max_check_rounds` 次失败进入 `CHECK_LOOP_EXHAUSTED`。不得在一个 command 内自动循环多个 AgentRun，也不得把 exhausted 改成风险确认 gate。
+`PlanGenerationMode` 固定为 `low/mid/high`，默认 `low`，由 Harness 映射为 1/2/3 条 `PlanCandidatePath`。每条路径保存稳定 candidate ID/index、冻结的 model profile/focus hint、独立 plan、Check history 和 round。Harness 可以并发调度不同路径，但每个 AgentRun 只调用一个现有 Agent；不得新增 Agent 类型，也不得用完全相同 request 的随机重复冒充差异。
+
+`run_plan` 对每条 active path 分别创建 Plan Loop run，成功后该路径进入 Check；`run_check` 对指定路径创建一个 Check run，再由 Harness 计算 total。所有仍可产出候选的路径到达 pass 或 exhausted 决策点后，`mid/high` 才进入候选选择 gate；用户必须按 candidate ID 选且只能选一个。未选路径及历史继续持久化和导出。fail 且未达上限只修订该路径；达到上限后用户只能显式选择带警告 override 继续该候选，或封存本轮并返回 Idea Review。必要条件 gate 未定义，不加入判定，权威条件仍只有总分 `>= 6.0`。
 
 `decide_plan` 处理现有 `accept/override/request_revision`：accept/override 由 TaskFactory 从 active plan 创建 main task并进入 Working；request revision 保存 feedback、重置 `check_round=0` 并回 Planning。首次 plan 和用户主动 revision 都把 `check_round=0` 传给 Plan Loop；只有 Harness 在一次失败 Check 后递增。
+
+沿用现有 command 名：`RunPlanCommand` 增加默认 `mode="low"`；`RunCheckCommand` 在多路径时携带 `candidate_id`；`DecidePlanCommand` 在 `mid/high` 必须携带一个已就绪 candidate ID，在 `low` 可省略并确定性指向唯一候选。不得另造与 `decide_plan` 重叠的选择 command。
 
 - [ ] **Step 4: 运行 GREEN 与 scoring eval**
 
@@ -1441,6 +1472,8 @@ Expected: FAIL，completion modes 未完全接线。
 
 给 Working output 增加精确 `report_plan_issue` action；`answer/clarify/decline` 留在 Working，`success` 进入 `AWAITING_RESULT_RECORD`，plan issue 进入 `AWAITING_PLAN_REVISION_DECISION`。记录命令按 current task 拆成 `record_main_result` 与 `record_validation_result`，均只写用户提供的结果并进入 `COMPLETING`；随后必须显式 `run_complete` 才调用 Complete Agent。
 
+新版流程图中的 `error` 作为兼容术语，不新增第五种含义重叠的 Working action：主实验中“能证明当前结论有误”映射为 `report_plan_issue`；validation 中的错误、负面结论或执行失败仍等待用户通过 `record_validation_result(execution_status, impact, failure_reason)` 明确记录，然后回 Complete。不得增加或推断 `validationResult: bool`，避免混淆“执行失败”和“完成但反对预期”。`success` 后的 `AWAITING_RESULT_RECORD` 及结果表单就是用户确认 gate；未确认时不得完成任务或调用 Complete。
+
 Complete 的 validation mode 进入 selection gate；`ValidationSelection` 按 rank 生成队列并逐项进入 Working。每个 validation 结果记录后回 Complete；若已有 selected queue，Harness 优先继续队首并拒绝新建议中的 queued/completed duplicate，除非 Complete 输出 plan revision。plan revision mode 等待 `decide_plan_revision`：`revise` 把不可改写实验事实传给 Plan Loop并重置 round；`continue_with_warning` 保存双方理由后回 Complete；`end_project` 保留负面结果并进入 Completed。writing mode 保存 `WritingGuidance` 后完成。每个结果使用 `execution_status/impact/failure_reason` 和 evidence files，不把科学反对结论当作执行失败。
 
 - [ ] **Step 4: 运行 GREEN 与完整 harness suite**
@@ -1510,6 +1543,10 @@ Command = Annotated[
     ArchiveProjectCommand,
     Field(discriminator="type"),
 ]
+
+# RunPlanCommand.mode: Literal["low", "mid", "high"] = "low"
+# RunCheckCommand.candidate_id / DecidePlanCommand.candidate_id: str | None
+# 多路径 session 由 Harness 要求 candidate_id 非空且引用当前候选；command 名称不变。
 
 class CommandBus:
     async def dispatch(self, command: Command) -> AgentCommandReceipt | DeterministicCommandResult:
@@ -2118,6 +2155,8 @@ Expected: FAIL，workspace components 和 `MENTOR_MICROCOPY` 不存在。
 
 Desktop 三栏：project/nav 240px、main minmax(0,1fr)、evidence 360px；窄屏左栏变 drawer、右栏变 evidence sheet，中栏始终是主内容，不改成 tabs 替代。主视图按精确 `Phase` exhaustive switch 渲染 typed cards；按钮只从 server `allowed_commands` 产生。证据卡显示 source/support/provenance/安全外链；Check 卡明确区分模型五维分数与 Harness final score；run trace 只呈现公开 events。全局中文 UI，技术标识保留英文。
 
+首次使用与空状态要明确产品边界：这是管理科研判断和推进的导师工作台，帮助聚焦选题、审查方案、处理研究过程问题、记录结果和组织验证；不替用户写代码或论文正文，不承诺解决所有科研问题；与当前研究无关的细碎问题引导至通用 Agent/搜索。竞品说明只能表述工作流差异，不得声称基础模型能力优于 ChatGPT、Claude、Deep Research、ResearchAgent、AI Scientist、Co-Scientist、Google Scholar 或 Semantic Scholar。
+
 视觉 token：
 
 ```css
@@ -2281,6 +2320,8 @@ Expected: FAIL，四个 datasets/runner 不存在。
 
 Idea Review 至少 20 条 CS 标注，覆盖 opinion/range/forward、reject/refinement、四种 forward stage、证据不足、prompt injection 与用户错误自称 type。其余四 Agent 各覆盖正常、边界、事实冲突和 injection；Plan 用专家 rubric；Check 重复采样评五维稳定性与 total-only 5.9/6.0 boundary；Complete 评 validation relevance/duplicate、plan revision 和 WritingGuidance。
 
+Plan eval 还必须覆盖 low/mid/high 的 1/2/3 路径数、candidate ID 唯一性、跨路径状态隔离、差异 profile 可追溯、单选 gate 和 exhausted override；Working eval 覆盖 success 未确认不推进、主实验 plan issue 与 validation `completed+contradicts`/`failed+neutral` 的不同路由。Prompt isolation eval 断言动态 payload 不重复 `sys_input`。必要条件 gate 不进入 dataset 或通过条件。
+
 retrieval suite 提供人工 relevance label，用于校准 0.3；citation suite 计算可解析率和 DOI/URL/provider-ID duplicate rate；demo workflow suite 计算完整流程 success rate。`EvalReport.metadata` 必含 Prompt version、model profile、重复采样次数和带 timezone 时间。runner 只评 schema/routing/rubric/稳定指标，不用另一个 LLM 当发布 gate；无真实 provider 时仅报告 deterministic 指标并明确 `provider_mode="demo"`，不伪造真实模型表现。
 
 - [ ] **Step 4: 运行 GREEN 与全量 Python suite**
@@ -2296,7 +2337,7 @@ git add evals src/research_mentor/evals tests/evals
 git commit -m "测试：扩充五 Agent 行为评估集"
 ```
 
-### Task 31: 建立 Playwright E2E 与 30 项验收覆盖
+### Task 31: 建立 Playwright E2E 与 34 项验收覆盖
 
 **Files:**
 - Modify: `frontend/package.json`
@@ -2365,7 +2406,7 @@ Expected: FAIL，Playwright config/完整连接尚未验证。
 - `visual`：1440×1000 三栏与 390×844 drawer/sheet screenshot，固定 demo data、字体与 animations disabled；
 - Python integration：四个 forward stage、result/validation boundary、OpenAlex empty/unavailable、rank 0.3 boundary、worker recovery；architecture test 禁止 Agent 导入其他 Agent、repository/provider 或直接修改 Harness 状态。
 
-`test_acceptance_matrix.py` 对规格 1..30 各绑定至少一个实际 pytest/Playwright test，并读取 pytest/Playwright JUnit reports 验证节点本次确实 PASS；缺号、节点不存在、未执行或失败均使 gate 失败。
+`test_acceptance_matrix.py` 对规格 1..34 各绑定至少一个实际 pytest/Playwright test，并读取 pytest/Playwright JUnit reports 验证节点本次确实 PASS；缺号、节点不存在、未执行或失败均使 gate 失败。新增场景 31–34 分别覆盖 plan mode 候选隔离与单选、exhausted override/未定义 gate、Working success/error 兼容路由、Context Assembler payload 隔离。
 
 - [ ] **Step 4: 运行 GREEN**
 
@@ -2420,7 +2461,7 @@ Expected: FAIL，README 尚为 v0.1 且脚本不存在。
 
 - [ ] **Step 3: 完成操作文档与 scripts**
 
-README 必须包含：产品截图位置、五 Agent 架构、demo quickstart、真实 OpenAI/OpenAI-compatible 配置、OpenAlex mailto、Anydoc/FlagEmbedding 可选安装、SQLite/PostgreSQL、文件限制、API/SSE contract、测试矩阵、已知 v1 scope。`scripts/dev.ps1` 启动 API worker 和 Vite；`scripts/check.ps1` 顺序执行 migration smoke、Python tests、frontend tests/build、Playwright。
+README 必须包含：产品截图位置、五 Agent 架构、low/mid/high 候选模式与默认 low、demo quickstart、真实 OpenAI/OpenAI-compatible 配置、OpenAlex mailto、Anydoc/FlagEmbedding 可选安装、SQLite/PostgreSQL、文件限制、API/SSE contract、测试矩阵、已知 v1 scope，以及“不替写代码/论文正文、不解决无关细碎问题”的产品边界。`scripts/dev.ps1` 启动 API worker 和 Vite；`scripts/check.ps1` 顺序执行 migration smoke、Python tests、frontend tests/build、Playwright。
 
 `.gitignore` 加入 `.env`、`data/`、SQLite 文件、frontend node_modules/dist、Playwright artifacts，不忽略 migrations、lockfiles 或 evals。
 
@@ -2494,6 +2535,6 @@ git commit -m "文档：完成 v1 启动与验收指南"
 4. **D gate:** 从 idea 到 writing/validation/revision 的 application-level journeys 全绿。
 5. **E gate:** API、SSE、restart/idempotency tests 全绿，demo 可从空数据库 seed。
 6. **F gate:** React unit/build 全绿，可在桌面和窄屏完成主要命令。
-7. **G gate:** 30 项 acceptance mapping、eval、Playwright、accessibility 与 README quickstart 全部通过。
+7. **G gate:** 34 项 acceptance mapping、eval、Playwright、accessibility 与 README quickstart 全部通过。
 
 只有当前 gate 全绿才能进入下一 milestone；provider credential 缺失不应阻止 demo gate，但真实 provider smoke test 必须在有凭据的发布环境单独执行并记录 request id，不能写入仓库。

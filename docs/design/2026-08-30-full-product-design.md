@@ -1,6 +1,6 @@
 # 傲娇导师完整产品设计规格
 
-- 状态：已于 2026-08-30 获用户确认，可进入 implementation plan 与开发。
+- 状态：已于 2026-08-30 获用户确认，并于 2026-09-01 按新版《AI+ 创新大赛》完成增量裁决。
 - 日期：2026-08-30。
 - 目标版本：v1.0。
 - 目标读者：后端、Agent、RAG、前端、测试与部署实现者。
@@ -20,6 +20,8 @@
 
 冲突时使用更高优先级规则。不得以旧流程图覆盖本文状态机。
 
+2026-09-01 新版《AI+ 创新大赛》的有效新增意图已经显式吸收到本文；后续开发仍以本文为最高优先级，不直接从源文档流程图反推 contract。新版中的图片路径只用于产品叙事和演示稿排版，不是实现或验收依据。
+
 ### 1.1 v1.0 必须完成
 
 - 保留五个职责独立的 Agent；
@@ -29,6 +31,7 @@
 - 可选本地 FlagEmbedding rank adapter；
 - SQL 持久化、事件、乐观并发和恢复；
 - Idea Review、Plan/Check/User gate、Working、Complete 全流程；
+- Plan/Check 支持 `low / mid / high` 三种方案模式，分别产生 1 / 2 / 3 条独立候选路径；
 - forward 用户已有实验材料直接进入 Working；
 - 结构化 validation 候选、用户选择、排序、循环和跳过；
 - 结构化 WritingGuidance；
@@ -43,12 +46,11 @@
 - 自动生成完整论文正文；
 - 替用户执行实验或编造实验结果；
 - 强制加入第六个压缩 Agent 或独立语气 Agent；
-- 一次生成多个 KeyInsight 候选并改变现有 Plan Loop 语义；
 - 生物医药等高风险领域的专用能力；
 - 多租户账号、计费和组织权限；
 - 分布式微服务和消息队列。
 
-上述三类额外 Agent/候选 Insight 是扩展点，不是已确定产品功能。上下文压缩由 Harness application service 完成；“傲娇”只属于 UI microcopy。
+不得为多候选路径新增 Agent 职责类型。`mid/high` 是现有 `plan_loop` 与 `key_insight_check` 的独立 run 组合，由 Harness 管理路径、轮次和用户选择。上下文压缩由 Harness application service 完成；“傲娇”只属于 UI microcopy。
 
 v1.0 产品能力和 Eval 限定在 computer science。`InitialInput.domain` 仍保留字符串以支持未来扩展，但 application 层只能接受配置中声明的 CS domain/alias；其他领域返回明确的 unsupported-domain refinement，不假装具备专科能力。
 
@@ -428,6 +430,14 @@ max_check_rounds: int = Field(ge=1)
 
 首次 plan 和用户主动 revision 使用 `check_round=0`；第 N 次内部 Check 失败回 Plan 时使用 `check_round=N`。只有 Harness 修改计数，最大值默认 5。
 
+### 4.11 Plan 候选模式与必要条件 gate
+
+`PlanGenerationMode = Literal["low", "mid", "high"]`，默认 `low`；候选数固定映射为 1、2、3。每条 `PlanCandidatePath` 有稳定 `candidate_id`、`candidate_index`、独立的 active plan、Check 历史和 `check_round`。Harness 可并发调度不同路径的 AgentRun，但每个 run 仍只调用一个 Agent；Agent 之间不得互调。`mid/high` 必须等所有仍可产出候选的路径到达 pass 或 exhausted 决策点后，再进入候选选择 gate。用户只能按 candidate ID 选择一条进入 Working；未选候选和评分历史仍写入研究日志。
+
+路径差异通过配置化的 candidate profile 与明确的 `candidate_index`/focus hint 产生并记录，不能假称相同 request 的随机重复就是有效差异。v1 只保留现有五种 Agent 职责，不把“每条路径的一提一审”解释为新增 Agent 类型。
+
+新版源文档提到“必要条件 gate”，但没有定义 gate 名称、判定字段、失败路由或与总分阈值的关系。因此本版本继续以五维加权总分 `>= 6.0` 为唯一机器通过条件，`check_guidelines` 不得新增单项否决。新增 gate 必须先由用户确认完整规则，再修改本节、Schema、Eval 和 acceptance；实现者不得猜测。
+
 ## 5. 状态机
 
 `AgentRunStatus` 与科研 `SessionPhase` 分离。Agent 运行时 session 保持业务 phase，前端通过 run/event 显示 busy。
@@ -471,6 +481,8 @@ AWAITING_VALIDATION_SELECTION
   └─ finish_without_more_validation ► COMPLETING（带用户 override 记录）
 ```
 
+其中 `PLANNING ↔ CHECKING_KEY_INSIGHT` 是一条候选路径模板。`low` 运行一条并沿用普通 `AWAITING_PLAN_DECISION`；`mid/high` 分别运行两/三条相互隔离的模板，聚合后进入同一用户候选选择 gate。候选模式和每条路径的 profile 在创建本轮 plan 时冻结，重试不得偷偷改变数量或 profile。
+
 ### 5.3 Validation queue
 
 - 一次选择可包含多个 task；session 只允许一个 `current_task`；
@@ -489,6 +501,8 @@ AWAITING_VALIDATION_SELECTION
 - `end_project`：保留负面结果并结束，仍允许导出日志。
 
 Plan Loop 只能修改计划解释和后续步骤，不得修改已记录实验事实。
+
+Check 达到上限时，用户可以选择“带警告继续该不完美候选”或“放弃本轮并回到 Idea Review”。前者必须保留最终评分、未解决问题和用户理由，并作为 `override` 类型候选进入选择；后者封存本轮全部路径，不删除历史。`mid/high` 中单条路径 exhausted 不阻断其他路径继续。
 
 ### 5.5 新 idea、运行中输入与等待超时
 
@@ -555,6 +569,14 @@ rank 输出 `[0,1]` relevance。只有 rank 成功且 `top_relevance < config.ra
 - 历史消息按相关性和时间选择；
 - 超额历史用 `CompactContext` 代替，但原始记录仍在 SQL；
 - compaction 输出必须经过 Schema 校验并记录 source turn IDs。
+
+Context Assembler 是 Harness/Application 的确定性能力，不是额外 Agent。每次 model call 必须先按 Agent 做字段投影，再分成：
+
+1. stable instructions：`common_mentor + agent prompt + 该 Agent 适用的 runtime policy`；
+2. project facts：本项目内稳定的 typed 研究上下文；
+3. turn payload：本轮新增的用户输入、选中 evidence、recent turns/compact context。
+
+`sys_input` 只用于构建 instructions，不得再次序列化进 `user_input`；其他 Agent 的专属字段、完整 session dump、未选 document chunks/literature 也不得注入。结构化权威状态优先于聊天历史；只有不可结构化历史允许 compact，且需要时可按 source IDs 从 event/turn 存储回拉。
 
 ## 7. Ports 与 adapters
 
@@ -750,6 +772,8 @@ Pydantic input error、illegal phase、stale version、provider unavailable、ra
 - API client 从 OpenAPI types 或手写受测 discriminated unions 生成；
 - server state 与 draft UI state 分离；
 - frontend 不保存 provider secret，不运行 Harness 规则。
+
+产品定位是“管理科研判断与推进的导师工作台”，不是通用 LLM 替代品。它帮助用户聚焦选题、形成和审查方案、处理研究过程问题、记录结果并组织验证；不替用户写代码或论文正文，也不承诺解决“所有科研问题”。与当前研究无关的细碎通用问题应明确引导至通用 Agent 或搜索工具。v1 的专业能力与 Eval 仍限 computer science。
 
 ### 10.2 桌面布局
 
@@ -960,6 +984,10 @@ v1.0 只有在以下场景均有自动或人工可复核证据时才能宣称完
 28. restart research 会封存旧 cycle 并创建新 session，旧日志仍可导出。
 29. 非 CS domain 得到明确 unsupported-domain 结果，不调用伪专科流程。
 30. 全部 Python、frontend、E2E、build 和 architecture boundary tests 通过。
+31. `low/mid/high` 分别创建 1/2/3 条隔离候选路径；`mid/high` 只允许选择一个 candidate ID 进入 Working，未选历史仍可导出。
+32. Check exhausted 的不完美候选只有经用户显式 override 才能继续；必要条件 gate 未获确认前不参与判定。
+33. Working `success` 必须进入用户显式结果记录/确认，不直接终止；主实验 plan issue 与 validation 负面/失败结果按任务类型进入既有 revision/result 流程，不用 `validationResult` boolean 猜测。
+34. 每个 Agent request 的动态 payload 不含 `sys_input`、其他 Agent 专属字段或完整 session dump，Context Assembler 的投影与 source provenance 可测试。
 
 ## 17. 实施阶段
 

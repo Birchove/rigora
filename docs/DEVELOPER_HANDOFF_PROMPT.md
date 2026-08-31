@@ -8,14 +8,14 @@
 
 ## 一、任务目标
 
-从 implementation plan 的 **Task 2** 开始，严格按顺序持续执行到 **Task 32**。不得跳过 Task 或 Milestone gate，不得重复实现已经完成的 Task 1。
+从 implementation plan 的当前首个未完成 Task 继续，严格按顺序持续执行到 **Task 32**。不得跳过 Task 或 Milestone gate，也不得重复实现已有独立 commit 的 Task。
 
 你的完成目标是：
 
 1. 完成 Milestone A–G；
 2. 使完整 Idea Review、Plan/Check/User gate、Working、Complete 和 validation/revision 流程可运行；
 3. 接通真实 structured model、RAG、SQL persistence、documents、FastAPI、SSE、deterministic demo 和 React frontend；
-4. 完成五 Agent Eval、Playwright E2E、30 项验收、README 和 release audit；
+4. 完成五 Agent Eval、Playwright E2E、34 项验收、README 和 release audit；
 5. 每个 Task 独立 commit；
 6. 每个 Milestone gate 通过后汇报一次，然后直接继续下一 Milestone，无需等待用户再次确认；
 7. 只 commit，**不得自动 push、merge、创建 PR 或修改 `main`**。
@@ -33,11 +33,11 @@
 - 仓库：`D:\A_main\arrogant_teacher\research_mentor_core`
 - 当前专用 worktree：`D:\A_main\arrogant_teacher\research_mentor_core\.worktrees\full-product-v1`
 - 必须工作的分支：`feature/full-product-v1`
-- 已完成实现基线：Task 1
+- 已完成实现基线：Task 1–15；Task 16 在 2026-09-01 交接时已有未提交工作，必须先审阅并保留
 - 必须存在的交接决策 commit：`a0e36ed`（允许 HEAD 更新，但它必须是 HEAD 的 ancestor）
 - Python：3.12
 - Python 环境与依赖工具：`uv`
-- 当前已验证的 core 测试基线：`229 passed`
+- 当前测试基线以最近一个已完成 Task 的全量回归记录和本地重新执行结果为准；不得沿用早期 `229 passed` 数字
 - 当前分支可能领先 GitHub；这是预期状态，不要因此 push
 
 开始前执行：
@@ -71,7 +71,7 @@ uv run pytest -q -p no:cacheprovider
 3. `docs/superpowers/plans/2026-08-30-full-product-implementation.md`：Task 2–32 的唯一执行计划；
 4. `docs/design/命名架构具体版.md`：结构化 Schema 与非流程图正文；
 5. `docs/design/prompt仓库.md`：公共 Mentor Prompt、五 Agent Prompt 和组合规则；
-6. `docs/design/AI+ 创新大赛.md`：产品背景和前端要求；
+6. `docs/design/AI+ 创新大赛.md`：产品背景和前端要求；其中 2026-09-01 新版意图只以已吸收到最高优先级设计与 implementation plan 的裁决为准；
 7. 根目录 `AGENTS.md`（如存在）及环境提供的适用开发指令。
 
 设计冲突时按以下顺序裁决：
@@ -109,6 +109,8 @@ uv run pytest -q -p no:cacheprovider
 5. Check Agent 只输出五维原始评分、理由和修订建议；Harness 必须重新计算权威 final score。
 6. Check 权重固定为：research fit 20%、novelty 25%、research value 20%、testability/feasibility 20%、evidence support 15%。
 7. final score 保留一位小数，总分 `>= 6.0` 即通过，不设置单项否决条件。
+8. `low/mid/high` 分别创建 1/2/3 条隔离的 Plan/Check 候选路径，但仍只使用现有五种 Agent 职责；用户按 candidate ID 单选后才能进入 Working。
+9. “必要条件 gate”尚无字段与路由定义，不得从 `check_guidelines` 猜测或增加否决条件。
 
 ### 5.2 Idea、Working 与结果
 
@@ -122,6 +124,7 @@ uv run pytest -q -p no:cacheprovider
 8. 未经用户选择的 validation candidate 不得成为执行中任务。
 9. 负面、不显著、不符合预期或动摇主张的结果必须保留并进入相应 warning/revision 流程，不得美化。
 10. 模型自然语言不得被解析为 command。
+11. Working `success` 只进入用户显式结果记录/确认，不直接结束；新版流程图的 `error` 分别映射到主实验 `report_plan_issue` 或 validation 的显式 result record，不新增 `validationResult: bool`。
 
 ### 5.3 RAG、文件与 Prompt 安全
 
@@ -133,6 +136,7 @@ uv run pytest -q -p no:cacheprovider
 6. 不得编造题名、作者、DOI、URL、实验结果或证据结论。
 7. `LiteratureRecord` 记录检索所得；`EvidenceRef` 只记录实际支撑判断的来源，并说明具体 support。
 8. 外部网络在自动测试中必须 mock；没有证据与存在反对证据必须区分。
+9. Context Assembler 必须按 Agent 投影字段；`sys_input` 只构造 stable instructions，不得重复序列化进动态 `user_input`，也不得传完整 session dump。
 
 ### 5.4 压缩与“傲娇”语气
 
@@ -221,7 +225,7 @@ Gate：frontend unit tests 与 build 全绿，desktop 和 narrow-screen 可完�
 
 ### Milestone G：Task 30–32
 
-完成五 Agent eval、Playwright E2E、accessibility、30 项验收、README、quickstart 和 release audit。
+完成五 Agent eval、Playwright E2E、accessibility、34 项验收、README、quickstart 和 release audit。
 
 Gate：所有 Python/frontend/Eval/E2E/build/boundary/acceptance 检查通过。真实 provider smoke test 只有在有凭据的发布环境运行，并只记录 request ID，不得记录 secret。
 
@@ -311,7 +315,7 @@ Milestone <A-G> 尚未通过
 
 1. Task 2–32 全部按计划实施；
 2. Milestone A–G gate 全部通过；
-3. 30 项验收场景具有可追溯测试证据；
+3. 34 项验收场景具有可追溯测试证据；
 4. 五 Agent Eval 达到计划阈值；
 5. Python 全量测试通过；
 6. frontend tests、build、Playwright 和 accessibility 检查通过；
@@ -322,4 +326,4 @@ Milestone <A-G> 尚未通过
 
 最终报告必须给出：commit 范围、实际测试结果、仍需凭据才能运行的真实 provider smoke test、未 push 状态和建议的人工审查重点。不要自行 push；等待用户明确授权。
 
-现在先执行“当前环境”检查和必读文档阅读，然后从 Task 2 开始。
+现在先执行“当前环境”检查和必读文档阅读，然后审阅并继续当前首个未完成 Task。

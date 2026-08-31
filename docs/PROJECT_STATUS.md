@@ -4,13 +4,13 @@
 
 ## 1. 状态基准
 
-- 记录日期：2026-08-31
+- 记录日期：2026-09-01
 - 当前开发分支：`feature/full-product-v1`
 - 实现审计基线：`65755f0`（不含本状态文档后续产生的 commit）
 - 目标版本：v1.0
 - 当前版本定位：可安装、可测试的 deterministic multi-agent backend core；尚不是可运行的完整产品
-- 当前测试基线：`229 passed`
-- v1 implementation plan：Task 1 已完成；Task 2–32 尚未达到对应验收标准，其中部分已有 v0.1 雏形
+- 当前测试基线：应以 Task 15 commit 后的本地全量回归与继续开发时重新执行结果为准，早期 `229 passed` 已失效
+- v1 implementation plan：Task 1–15 已有独立 commit；Task 16 正在工作区中开发；Task 17–32 尚未达到对应验收标准
 
 分支关系：
 
@@ -30,7 +30,9 @@ main (3eebca6，v0.1 初始核心)
 4. `docs/design/AI+ 创新大赛.md`：产品背景和前端要求；
 5. 历史流程图与图片。
 
-实施时使用 `docs/superpowers/plans/2026-08-30-full-product-implementation.md`。该计划包含 7 个 Milestone、32 个按 TDD 编排的 Task，以及 30 项产品验收场景映射。
+实施时使用 `docs/superpowers/plans/2026-08-30-full-product-implementation.md`。该计划包含 7 个 Milestone、32 个按 TDD 编排的 Task，以及 34 项产品验收场景映射。
+
+2026-09-01 增量裁决已把验收场景扩充为 34 项，并调整尚未完成的 Task 16、18、19、20、28、30–32。旧/新版《AI+ 创新大赛》的流程图和图片不能绕过这些显式裁决。
 
 ## 3. 产品设计摘要
 
@@ -88,7 +90,7 @@ SQL / OpenAlex / AnyDoc / FlagEmbedding / model adapters
   → Idea Review
       ├─ range / 信息不足 → 请求用户补充 → 重新审查
       ├─ reject → 拒绝并给出原因及可执行改进
-      ├─ opinion → Plan Loop ↔ Key Insight Check → User gate
+      ├─ opinion → low/mid/high 的 1/2/3 条 Plan Loop ↔ Key Insight Check 候选路径 → User gate
       └─ forward → 使用已有实验上下文直接准备 Working
   → Working QA
   → 用户记录主实验结果
@@ -116,14 +118,17 @@ final_score =
 - 自动生成完整论文正文；
 - 替用户执行实验或编造实验结果；
 - 将上下文压缩或语气塑造实现为独立 Agent；v1 由 Harness service 和 UI 表达层分别承担这两项能力；
-- 一次生成多个 KeyInsight 候选并改变现有 Plan Loop 语义；
 - 计算机科学以外领域的专业科研辅导；非 CS 输入必须返回 `unsupported-domain`，不得进入 Agent pipeline；
 - 多租户账号、计费和组织权限；
 - 分布式微服务和消息队列。
 
 v1 产品能力和 Eval 限定在 computer science。v1 必须包含上下文压缩和克制的“傲娇”语气，但不为它们新增独立 Agent：上下文压缩由 Harness application service 完成；“傲娇”只用于非实质性的 UI microcopy，不能改写 Agent 输出，也不能驱动 Agent 为维持人设而刻意反对用户。是否在 post-v1 将任一能力 Agent 化只是可选评估项，当前不承诺目标版本。
 
-## 4. 当前已实现内容
+新增统一规则：`low/mid/high` 是 Harness 对现有 Plan/Check runner 的 1/2/3 路隔离编排，不新增 Agent 类型；用户按 candidate ID 单选。必要条件 gate 因未定义而不参与评分。Working `success` 必须经用户结果记录确认；所谓 `error` 映射为既有 plan issue 或显式 validation result，不使用含义不清的 `validationResult` boolean。Context Assembler 按 Agent 投影，`sys_input` 只进入 instructions，不重复进入动态 payload。
+
+## 4. v0.1 历史实现基线
+
+本节保留 Task 1 开始前的逐文件审计，供理解迁移来源，不再代表 2026-09-01 的实时文件清单。当前完成进度以 §1、Git 独立 Task commits 和 implementation plan 为准；不得因为本节写“缺少”而重复实现 Task 2–15。
 
 ### 4.1 根目录、配置与文档
 
@@ -239,48 +244,28 @@ common_mentor.md
 | `evals/key_insight_check_cases.json` | Check Agent scoring 回归样例 |
 | `tests/evals/test_key_insight_check_eval.py` | 读取 Eval 样例并验证 Harness 判定 |
 
-当前全量测试基线为 229 项通过。该结果证明 v0.1 core 和 Task 1 稳定，不代表 v1 完整产品已经实现。
+该历史快照当时的全量测试基线为 229 项通过，不代表当前测试数量或 v1 完整产品已经实现。
 
-## 5. 尚未实现内容
+## 5. Task 进度与尚未实现内容
 
 ### 5.1 Milestone A：v1 Contracts 与 Harness 状态机
 
 | Task | 状态 | 未完成内容 |
 |---|---|---|
 | 1. v1 依赖、配置与应用入口 | 已完成 | 后续只在对应 provider 接入时扩充配置，不重复改造 |
-| 2. 项目、对话、文档与 AgentRun 模型 | 未开始 | Project、Conversation、Document、DocumentChunk、AgentRun、PublicEvent 等 |
-| 3. ForwardResearchContext、ResearchContext、Idea Review action | 部分有 v0.1 雏形 | 需要按 v1 contract 迁移 forward 输入、研究上下文和 action |
-| 4. Complete、validation selection 与结果影响 | 部分有 v0.1 雏形 | 结构化 Complete 输出、WritingGuidance、validation candidates/selection、结果影响 |
-| 5. SessionPhase、PlanLoop round 与 Harness 权威评分 | 部分有 v0.1 雏形 | 按 v1 canonical phase、round 语义和版本契约迁移 |
-| 6. completion routing 与 validation queue | 部分有 v0.1 雏形 | 候选排序、用户选择、skip、逐项执行及回到 Complete/修订 |
+| 2. 项目、对话、文档与 AgentRun 模型 | 已完成 | 保留独立 commit，不重复实现 |
+| 3. ForwardResearchContext、ResearchContext、Idea Review action | 已完成 | 保留独立 commit，不重复实现 |
+| 4. Complete、validation selection 与结果影响 | 已完成 | 保留独立 commit，不重复实现 |
+| 5. SessionPhase、PlanLoop round 与 Harness 权威评分 | 已完成 | 保留独立 commit，不重复实现 |
+| 6. completion routing 与 validation queue | 已完成 | 保留独立 commit，不重复实现 |
 
 ### 5.2 Milestone B：持久化、文档与检索 providers
 
-尚未实现：
-
-- repository、Unit of Work、event/outbox ports；
-- SQLAlchemy async schema；
-- Alembic initial migration；
-- SQL UnitOfWork、乐观并发与原子 outbox；
-- 安全文件存储、文件类型/大小限制和项目目录隔离；
-- AnyDoc/Markdown 转换、chunking 和 provenance；
-- OpenAlex 文献检索 adapter；
-- 项目 document chunk 检索；
-- 可选 FlagEmbedding ranker。
+Task 7–12 已完成并各有独立 commit：repository/UoW/event ports、SQLAlchemy/Alembic、事务与乐观并发、安全文档处理、OpenAlex、项目 chunk 检索和可选 FlagEmbedding ranker 均已落地。后续只按其 contract 使用或修复回归，不重复实现。
 
 ### 5.3 Milestone C：真实 structured model 与 RAG
 
-尚未实现：
-
-- 将五 Agent runner 与 `StructuredModelPort` 迁移为 async typed call；
-- OpenAI Responses API adapter；
-- OpenAI-compatible adapter；
-- provider 错误映射、超时、structured output 校验和有限 retry；
-- Idea Review 两阶段检索上下文；
-- Working QA 相关性选择；
-- project chunks、文献与会话上下文合并；
-- Harness application service 执行的 context compression，不新增压缩 Agent；
-- context budget、证据 provenance 和检索诊断。
+Task 13–15 已完成：async typed model port、OpenAI Responses/OpenAI-compatible adapters 和 Idea Review 两阶段检索上下文已有独立 commit。Task 16 正在实现 Working QA 相关性选择、project chunks/文献/会话合并、Context Assembler 投影、context budget、provenance 与 Harness compaction；工作区已有未提交源码/测试，必须保留并先完成该 Task。
 
 ### 5.4 Milestone D：完整 Orchestrator 与 Application commands
 
@@ -326,7 +311,7 @@ FastAPI 等依赖已加入，但没有 API 代码。尚未实现：
 - 五 Agent 的完整 Eval datasets 与统一 runner；
 - provider/mock/demo 的质量回归阈值；
 - Playwright E2E；
-- 30 项产品验收场景；
+- 34 项产品验收场景；
 - frontend unit/build/accessibility 检查；
 - production quickstart、环境变量说明和最终 README；
 - release audit 与真实 provider smoke test 记录。
@@ -342,15 +327,15 @@ FastAPI 等依赖已加入，但没有 API 代码。尚未实现：
 
 ## 6. 推荐继续开发顺序
 
-下一位开发者应从 implementation plan 的 Task 2 开始，不应跳过 Milestone gate：
+下一位开发者应从 implementation plan 的当前首个未完成 Task 继续，不应跳过 Milestone gate：
 
-1. **完成 Milestone A（Task 2–6）**：先固定 v1 数据 contract 和 canonical state machine，保持无外部 I/O；
-2. **完成 Milestone B（Task 7–12）**：建立 SQL、文件和 retrieval provider 边界及实现；
-3. **完成 Milestone C（Task 13–16）**：全链路 async，接入真实 model 和 RAG；
+1. **Milestone A（Task 2–6）已完成**：不得重复实现；
+2. **Milestone B（Task 7–12）已完成**：不得重复实现；
+3. **继续 Milestone C 的 Task 16**：完成 Working Context/Context Assembler、全量回归和独立 commit；
 4. **完成 Milestone D（Task 17–21）**：将 domain、provider 和 durable run 组合成完整 application journey；
 5. **完成 Milestone E（Task 22–26）**：建立 API、SSE 和 deterministic demo；
 6. **完成 Milestone F（Task 27–29）**：实现 React 工作台；
-7. **完成 Milestone G（Task 30–32）**：补齐 Eval、E2E、30 项验收和发布审计。
+7. **完成 Milestone G（Task 30–32）**：补齐 Eval、E2E、34 项验收和发布审计。
 
 每个 Task 必须遵循计划中的 RED → GREEN → 全量回归 → commit 顺序。只有当前 Milestone gate 全绿，才进入下一 Milestone。
 
