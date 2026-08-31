@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, JsonValue
 
 
 DocumentStatus = Literal["uploaded", "parsing", "ready", "failed"]
@@ -19,3 +19,16 @@ class UploadedDocument(BaseModel):
     status: DocumentStatus
     created_at: datetime
     error_message: str | None = None
+
+
+class ParsedDocument(BaseModel):
+    markdown: str
+    parser_metadata: dict[str, JsonValue] = Field(default_factory=dict)
+
+
+class DocumentChunk(BaseModel):
+    chunk_id: str
+    document_id: str
+    ordinal: int = Field(ge=0)
+    heading_path: list[str] = Field(default_factory=list)
+    markdown: str

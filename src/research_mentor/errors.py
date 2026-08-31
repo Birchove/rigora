@@ -38,3 +38,11 @@ class ConcurrencyConflict(ResearchMentorError):
         super().__init__(
             f"Version conflict for {resource_id}: expected {expected_version}"
         )
+
+
+class InvalidStorageIdentifier(ResearchMentorError):
+    """文件存储标识符可能导致路径越界。"""
+
+
+class DocumentParseFailed(ResearchMentorError):
+    """上传文档无法转换为规范 Markdown。"""

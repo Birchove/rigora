@@ -8,7 +8,12 @@ from research_mentor.domain.completion import (
     ValidationSelection,
     WritingGuidance,
 )
-from research_mentor.domain.documents import DocumentStatus, UploadedDocument
+from research_mentor.domain.documents import (
+    DocumentChunk,
+    DocumentStatus,
+    ParsedDocument,
+    UploadedDocument,
+)
 from research_mentor.domain.jobs import AgentName, AgentRun, AgentRunStatus
 from research_mentor.domain.projects import ResearchProject
 
@@ -18,8 +23,10 @@ __all__ = [
     "AgentName",
     "ConversationTurn",
     "CompleteAgentOutput",
+    "DocumentChunk",
     "DocumentStatus",
     "ExcludedValidation",
+    "ParsedDocument",
     "ResearchProject",
     "UploadedDocument",
     "ValidationCandidate",
