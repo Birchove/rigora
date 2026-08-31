@@ -28,7 +28,11 @@ from research_mentor.domain.experiments import (
     ValidationTask,
 )
 from research_mentor.domain.research import ForwardResearchContext, UserPlanDecision
-from research_mentor.errors import InvariantViolationError, PortExecutionError
+from research_mentor.errors import (
+    InvariantViolationError,
+    ModelOutputInvalid,
+    PortExecutionError,
+)
 from research_mentor.harness.orchestrator import ResearchMentorOrchestrator
 from research_mentor.harness.state import SessionEventType, SessionPhase
 
@@ -36,11 +40,11 @@ from research_mentor.harness.state import SessionEventType, SessionPhase
 class RecordingMemoryModelAdapter(MemoryModelAdapter):
     def __init__(self) -> None:
         super().__init__()
-        self.calls: list[dict[str, object]] = []
+        self.calls = []
 
-    def invoke(self, **kwargs):
-        self.calls.append(kwargs.copy())
-        return super().invoke(**kwargs)
+    async def generate(self, request):
+        self.calls.append(request.model_copy(deep=True))
+        return await super().generate(request)
 
 
 @pytest.fixture
@@ -173,8 +177,8 @@ def enter_forward_context(bundle, initial_input):
 
 
 def parse_latest_call(model: RecordingMemoryModelAdapter, agent_name: str, tag: str) -> dict:
-    call = next(call for call in reversed(model.calls) if call["agent_name"] == agent_name)
-    user_input = call["user_input"]
+    call = next(call for call in reversed(model.calls) if call.agent_name == agent_name)
+    user_input = call.user_input
     assert isinstance(user_input, str)
     return json.loads(user_input.split(f"<{tag}>", 1)[1].rsplit(f"</{tag}>", 1)[0])
 
@@ -350,7 +354,7 @@ def test_non_success_working_actions_stay_working_and_record_exact_event(
             WorkingQAOutput.model_construct(
                 action="invalid", reason="bad", reply="bad", updated_experiment_info=None
             ),
-            ValidationError,
+            ModelOutputInvalid,
         ),
     ],
 )
@@ -504,14 +508,14 @@ def test_complete_requires_main_result(bundle, initial_input, research_plan):
     )
     session_before = repository.get("s1")
     events_before = repository.list_events("s1")
-    complete_calls_before = sum(call["agent_name"] == "complete" for call in model.calls)
+    complete_calls_before = sum(call.agent_name == "complete" for call in model.calls)
 
     with pytest.raises(InvariantViolationError):
         orchestrator.run_complete("s1", completion_status=True)
 
     assert repository.get("s1") == session_before
     assert repository.list_events("s1") == events_before
-    assert sum(call["agent_name"] == "complete" for call in model.calls) == complete_calls_before
+    assert sum(call.agent_name == "complete" for call in model.calls) == complete_calls_before
 
 
 @pytest.mark.parametrize("missing_field", ["initial_input", "idea_review", "active_plan", "main_experiment"])
@@ -526,20 +530,23 @@ def test_complete_requires_every_prerequisite_without_calling_runner(
         repository.list_events("s1")[-1].model_copy(update={"event_id": f"seed-missing-{missing_field}"}),
     )
     before = persisted_state(repository)
-    calls_before = sum(call["agent_name"] == "complete" for call in model.calls)
+    calls_before = sum(call.agent_name == "complete" for call in model.calls)
 
     with pytest.raises(InvariantViolationError):
         orchestrator.run_complete("s1", completion_status=True)
 
     assert persisted_state(repository) == before
-    assert sum(call["agent_name"] == "complete" for call in model.calls) == calls_before
+    assert sum(call.agent_name == "complete" for call in model.calls) == calls_before
 
 
 @pytest.mark.parametrize(
     "queued_output, expected_error",
     [
         (None, PortExecutionError),
-        (CompleteAgentOutput.model_construct(plan="bad", final_hint="bad"), ValidationError),
+        (
+            CompleteAgentOutput.model_construct(plan="bad", final_hint="bad"),
+            ModelOutputInvalid,
+        ),
     ],
 )
 def test_complete_runner_failures_are_fully_atomic(
@@ -619,7 +626,7 @@ def test_complete_captures_full_input_routes_and_is_atomic_on_malformed_output(b
     repository.commit(stored, repository.list_events("s1")[-1].model_copy(update={"event_id": "seed-completing-3"}))
     model.enqueue("complete", CompleteAgentOutput.model_construct(plan="bad", final_hint="bad"))
     event_count = len(repository.list_events("s1"))
-    with pytest.raises(ValidationError):
+    with pytest.raises(ModelOutputInvalid):
         orchestrator.run_complete("s1", completion_status=True)
     assert repository.get("s1").phase is SessionPhase.COMPLETING
     assert len(repository.list_events("s1")) == event_count

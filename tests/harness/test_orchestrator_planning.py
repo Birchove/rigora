@@ -26,6 +26,7 @@ from research_mentor.domain.research import KeyInsight, UserPlanDecision
 from research_mentor.errors import (
     IllegalTransitionError,
     InvariantViolationError,
+    ModelOutputInvalid,
     PortExecutionError,
     SessionNotFoundError,
 )
@@ -41,16 +42,16 @@ from research_mentor.harness.state import (
 class RecordingMemoryModelAdapter(MemoryModelAdapter):
     def __init__(self) -> None:
         super().__init__()
-        self.calls: list[dict[str, object]] = []
+        self.calls = []
 
-    def invoke(self, **kwargs):
-        self.calls.append(kwargs.copy())
-        return super().invoke(**kwargs)
+    async def generate(self, request):
+        self.calls.append(request.model_copy(deep=True))
+        return await super().generate(request)
 
 
 def latest_payload(model: RecordingMemoryModelAdapter, agent_name: str, tag: str) -> dict:
-    call = next(call for call in reversed(model.calls) if call["agent_name"] == agent_name)
-    user_input = call["user_input"]
+    call = next(call for call in reversed(model.calls) if call.agent_name == agent_name)
+    user_input = call.user_input
     assert isinstance(user_input, str)
     return json.loads(user_input.split(f"<{tag}>", 1)[1].rsplit(f"</{tag}>", 1)[0])
 
@@ -574,7 +575,7 @@ def test_malformed_runner_outputs_leave_state_and_event_history_unchanged(
             expected_phase = SessionPhase.CHECKING_KEY_INSIGHT
     count_before = len(repository.list_events("s1"))
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ModelOutputInvalid):
         call()
 
     assert repository.get("s1").phase is expected_phase
@@ -610,7 +611,7 @@ def test_sixth_check_never_invokes_runner(
 
     with pytest.raises(IllegalTransitionError):
         orchestrator.run_key_insight_check("s1")
-    assert sum(call["agent_name"] == "key_insight_check" for call in model.calls) == 5
+    assert sum(call.agent_name == "key_insight_check" for call in model.calls) == 5
 
 
 def test_public_results_cannot_mutate_persisted_plan_state(

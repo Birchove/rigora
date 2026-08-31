@@ -127,12 +127,13 @@ def test_idea_review_rejects_invalid_type_action_combinations(
         )
 
 
-def test_runner_invokes_model_once_with_idea_review_contract() -> None:
+@pytest.mark.asyncio
+async def test_runner_invokes_model_once_with_idea_review_contract() -> None:
     model = MemoryModelAdapter()
     model.enqueue("idea_review", output())
     runner = IdeaReviewRunner(model)
 
-    result = runner.run(request())
+    result = await runner.run(request())
 
     assert result == output()
 
@@ -197,28 +198,29 @@ class SpyModel:
     def __init__(self) -> None:
         self.calls = []
 
-    def invoke(self, **kwargs):
-        self.calls.append(kwargs)
-        return output()
+    async def generate(self, request):
+        self.calls.append(request)
+        return getattr(self, "result", output())
 
 
-def test_runner_passes_agent_and_output_model_and_invokes_once() -> None:
+@pytest.mark.asyncio
+async def test_runner_passes_agent_and_output_model_and_invokes_once() -> None:
     model = SpyModel()
-    result = IdeaReviewRunner(model).run(request())
+    result = await IdeaReviewRunner(model).run(request())
     assert result == output()
     assert len(model.calls) == 1
-    assert model.calls[0]["agent_name"] == "idea_review"
-    assert model.calls[0]["instructions"] == build_idea_review_invocation(request()).instructions
-    assert model.calls[0]["user_input"] == build_idea_review_invocation(request()).user_input
-    assert model.calls[0]["output_model"] is IdeaReviewOutput
+    assert model.calls[0].agent_name == "idea_review"
+    assert model.calls[0].instructions == build_idea_review_invocation(request()).instructions
+    assert model.calls[0].user_input == build_idea_review_invocation(request()).user_input
+    assert model.calls[0].output_model is IdeaReviewOutput
 
 
-def test_runner_revalidates_constructed_output() -> None:
+@pytest.mark.asyncio
+async def test_runner_revalidates_constructed_output() -> None:
     invalid = IdeaReviewOutput.model_construct(
         idea_type="bogus", action="bogus", normalized_idea="n", reason="r", next_action="n"
     )
     model = SpyModel()
     model.result = invalid
-    model.invoke = lambda **kwargs: model.result
     with pytest.raises(ValidationError):
-        IdeaReviewRunner(model).run(request())
+        await IdeaReviewRunner(model).run(request())

@@ -29,6 +29,7 @@ from research_mentor.domain.experiments import (
 )
 from research_mentor.domain.completion import ValidationCandidate
 from research_mentor.domain.research import InitialInput, ResearchPlan
+from research_mentor.ports.model import ModelRequest
 
 
 def working_request(
@@ -315,21 +316,15 @@ def test_complete_builder_has_complete_expected_instructions_and_isolates_data(
 class RecordingModel:
     def __init__(self, responses: dict[AgentName, BaseModel]) -> None:
         self.responses = responses
-        self.calls: list[tuple[AgentName, str, str, type[BaseModel]]] = []
+        self.calls: list[ModelRequest[BaseModel]] = []
 
-    def invoke(
-        self,
-        *,
-        agent_name: AgentName,
-        instructions: str,
-        user_input: str,
-        output_model: type[BaseModel],
-    ) -> BaseModel:
-        self.calls.append((agent_name, instructions, user_input, output_model))
-        return self.responses[agent_name]
+    async def generate(self, request: ModelRequest) -> BaseModel:
+        self.calls.append(request)
+        return self.responses[request.agent_name]
 
 
-def test_runners_use_own_queue_once_and_pass_four_invocation_arguments(
+@pytest.mark.asyncio
+async def test_runners_use_own_queue_once_and_pass_typed_requests(
     initial_input: InitialInput,
     research_plan: ResearchPlan,
 ) -> None:
@@ -340,18 +335,23 @@ def test_runners_use_own_queue_once_and_pass_four_invocation_arguments(
         }
     )
 
-    working_result = WorkingQARunner(model).run(working_request(initial_input, research_plan))
-    complete_result = CompleteRunner(model).run(complete_request(initial_input, research_plan))
+    working_result = await WorkingQARunner(model).run(
+        working_request(initial_input, research_plan)
+    )
+    complete_result = await CompleteRunner(model).run(
+        complete_request(initial_input, research_plan)
+    )
 
     assert working_result == working_output()
     assert complete_result == complete_output(research_plan)
-    assert [call[0] for call in model.calls] == ["working_qa", "complete"]
-    assert model.calls[0][3] is WorkingQAOutput
-    assert model.calls[1][3] is CompleteAgentOutput
+    assert [call.agent_name for call in model.calls] == ["working_qa", "complete"]
+    assert model.calls[0].output_model is WorkingQAOutput
+    assert model.calls[1].output_model is CompleteAgentOutput
     assert len(model.calls) == 2
 
 
-def test_working_runner_rejects_constructed_invalid_output(
+@pytest.mark.asyncio
+async def test_working_runner_rejects_constructed_invalid_output(
     initial_input: InitialInput,
     research_plan: ResearchPlan,
 ) -> None:
@@ -365,12 +365,13 @@ def test_working_runner_rejects_constructed_invalid_output(
     model = RecordingModel({"working_qa": invalid})
 
     with pytest.raises(ValidationError):
-        WorkingQARunner(model).run(working_request(initial_input, research_plan))
+        await WorkingQARunner(model).run(working_request(initial_input, research_plan))
 
     assert len(model.calls) == 1
 
 
-def test_complete_runner_rejects_constructed_invalid_output(
+@pytest.mark.asyncio
+async def test_complete_runner_rejects_constructed_invalid_output(
     initial_input: InitialInput,
     research_plan: ResearchPlan,
 ) -> None:
@@ -381,6 +382,6 @@ def test_complete_runner_rejects_constructed_invalid_output(
     model = RecordingModel({"complete": invalid})
 
     with pytest.raises(ValidationError):
-        CompleteRunner(model).run(complete_request(initial_input, research_plan))
+        await CompleteRunner(model).run(complete_request(initial_input, research_plan))
 
     assert len(model.calls) == 1

@@ -134,7 +134,7 @@ class ResearchMentorOrchestrator:
             {SessionPhase.AWAITING_IDEA, SessionPhase.AWAITING_IDEA_REFINEMENT},
         )
         phase_before = session.phase
-        output = self._idea_review_runner.run(
+        output = self._idea_review_runner.run_sync(
             IdeaReviewInput(
                 idea=idea.model_copy(deep=True),
                 sys_input=IdeaReviewSysInput(current_date=self._current_date()),
@@ -184,7 +184,7 @@ class ResearchMentorOrchestrator:
             raise InvariantViolationError("planning session has an invalid revision-input combination")
 
         phase_before = session.phase
-        output = self._plan_loop_runner.run(
+        output = self._plan_loop_runner.run_sync(
             PlanLoopInput(
                 idea=session.initial_input.model_copy(deep=True),
                 sys_input=PlanLoopSysInput(current_date=self._current_date()),
@@ -236,7 +236,7 @@ class ResearchMentorOrchestrator:
 
         phase_before = session.phase
         session.check_round += 1
-        assessment = self._key_insight_check_runner.run(
+        assessment = self._key_insight_check_runner.run_sync(
             KeyInsightCheckInput(
                 idea=session.initial_input.model_copy(deep=True),
                 sys_input=KeyInsightCheckSysInput(current_date=self._current_date()),
@@ -384,7 +384,7 @@ class ResearchMentorOrchestrator:
             )
 
         phase_before = session.phase
-        output = self._working_qa_runner.run(
+        output = self._working_qa_runner.run_sync(
             WorkingQAInput(
                 idea=session.initial_input.model_copy(deep=True),
                 question=question,
@@ -488,7 +488,7 @@ class ResearchMentorOrchestrator:
             )
 
         phase_before = session.phase
-        output = self._complete_runner.run(
+        output = self._complete_runner.run_sync(
             CompleteAgentInput(
                 idea=session.initial_input.model_copy(deep=True),
                 normalized_idea=session.idea_review.normalized_idea,

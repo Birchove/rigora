@@ -50,3 +50,11 @@ class DocumentParseFailed(ResearchMentorError):
 
 class LiteratureSearchUnavailable(ResearchMentorError):
     """文献 provider 当前不可用或拒绝了请求。"""
+
+
+class ModelOutputInvalid(ResearchMentorError):
+    """模型返回内容不符合请求的 structured output schema。"""
+
+    def __init__(self, errors: list[dict[str, object]]) -> None:
+        self.errors = errors
+        super().__init__("Structured model output is invalid")

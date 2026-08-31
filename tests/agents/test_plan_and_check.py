@@ -129,31 +129,34 @@ def test_plan_loop_rejects_check_and_user_feedback_together(
         )
 
 
-def test_plan_runner_returns_plan_output(plan_input, plan_output) -> None:
+@pytest.mark.asyncio
+async def test_plan_runner_returns_plan_output(plan_input, plan_output) -> None:
     model = MemoryModelAdapter()
     model.enqueue("plan_loop", plan_output)
 
-    assert PlanLoopRunner(model).run(plan_input) == plan_output
+    assert await PlanLoopRunner(model).run(plan_input) == plan_output
 
 
-def test_check_runner_returns_assessment(assessment, check_input) -> None:
+@pytest.mark.asyncio
+async def test_check_runner_returns_assessment(assessment, check_input) -> None:
     model = MemoryModelAdapter()
     model.enqueue("key_insight_check", assessment)
 
-    result = KeyInsightCheckRunner(model).run(check_input)
+    result = await KeyInsightCheckRunner(model).run(check_input)
 
     assert result == assessment
     assert isinstance(result, KeyInsightAssessment)
     assert not isinstance(result, KeyInsightCheckOutput)
 
 
-def test_runners_use_isolated_memory_queues(assessment, check_input, plan_input, plan_output) -> None:
+@pytest.mark.asyncio
+async def test_runners_use_isolated_memory_queues(assessment, check_input, plan_input, plan_output) -> None:
     model = MemoryModelAdapter()
     model.enqueue("key_insight_check", assessment)
     model.enqueue("plan_loop", plan_output)
 
-    assert PlanLoopRunner(model).run(plan_input) == plan_output
-    assert KeyInsightCheckRunner(model).run(check_input) == assessment
+    assert await PlanLoopRunner(model).run(plan_input) == plan_output
+    assert await KeyInsightCheckRunner(model).run(check_input) == assessment
 
 
 class SpyModel:
@@ -161,8 +164,8 @@ class SpyModel:
         self.result = result
         self.calls = []
 
-    def invoke(self, **kwargs):
-        self.calls.append(kwargs)
+    async def generate(self, request):
+        self.calls.append(request)
         return self.result
 
 
@@ -173,7 +176,8 @@ class SpyModel:
         (KeyInsightCheckRunner, "key_insight_check", "KeyInsightAssessment"),
     ],
 )
-def test_runner_invokes_once_with_exactly_four_port_parameters(
+@pytest.mark.asyncio
+async def test_runner_invokes_once_with_typed_model_request(
     assessment,
     check_input,
     plan_input,
@@ -186,11 +190,12 @@ def test_runner_invokes_once_with_exactly_four_port_parameters(
     expected = plan_output if agent_name == "plan_loop" else assessment
     model = SpyModel(expected)
 
-    assert runner_class(model).run(request) == expected
+    assert await runner_class(model).run(request) == expected
     assert len(model.calls) == 1
-    assert set(model.calls[0]) == {"agent_name", "instructions", "user_input", "output_model"}
-    assert model.calls[0]["agent_name"] == agent_name
-    assert model.calls[0]["output_model"].__name__ == output_model_name
+    assert model.calls[0].agent_name == agent_name
+    assert model.calls[0].output_model.__name__ == output_model_name
+    assert model.calls[0].timeout == 30.0
+    assert model.calls[0].trace_id == "local"
 
 
 def test_plan_prompt_has_exact_segments_and_keeps_user_data_out_of_instructions(
@@ -266,7 +271,8 @@ def test_check_prompt_has_exact_segments_and_only_allowed_guidelines(
         ),
     ],
 )
-def test_runners_reject_constructed_invalid_outputs(
+@pytest.mark.asyncio
+async def test_runners_reject_constructed_invalid_outputs(
     check_input,
     plan_input,
     runner_class,
@@ -274,4 +280,4 @@ def test_runners_reject_constructed_invalid_outputs(
 ) -> None:
     request = plan_input if runner_class is PlanLoopRunner else check_input
     with pytest.raises(ValidationError):
-        runner_class(SpyModel(invalid)).run(request)
+        await runner_class(SpyModel(invalid)).run(request)

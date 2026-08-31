@@ -1,24 +1,41 @@
 """Runner for the Working QA Agent."""
 
+import asyncio
+
 from pydantic import BaseModel
 
 from research_mentor.agents.working_qa.contracts import WorkingQAInput, WorkingQAOutput
 from research_mentor.agents.working_qa.prompting import build_working_qa_invocation
-from research_mentor.ports.model import StructuredModelPort
+from research_mentor.ports.model import ModelRequest, StructuredModelPort
 
 
 class WorkingQARunner:
     def __init__(self, model: StructuredModelPort) -> None:
         self._model = model
 
-    def run(self, request: WorkingQAInput) -> WorkingQAOutput:
+    async def run(
+        self,
+        request: WorkingQAInput,
+        *,
+        model_profile: str = "default",
+        timeout: float = 30.0,
+        trace_id: str = "local",
+    ) -> WorkingQAOutput:
         invocation = build_working_qa_invocation(request)
-        result = self._model.invoke(
-            agent_name=invocation.agent_name,
-            instructions=invocation.instructions,
-            user_input=invocation.user_input,
-            output_model=invocation.output_model,
+        result = await self._model.generate(
+            ModelRequest(
+                agent_name=invocation.agent_name,
+                model_profile=model_profile,
+                instructions=invocation.instructions,
+                user_input=invocation.user_input,
+                output_model=invocation.output_model,
+                timeout=timeout,
+                trace_id=trace_id,
+            )
         )
         if isinstance(result, BaseModel):
             result = result.model_dump(mode="python", warnings=False)
         return WorkingQAOutput.model_validate(result)
+
+    def run_sync(self, request: WorkingQAInput) -> WorkingQAOutput:
+        return asyncio.run(self.run(request))
