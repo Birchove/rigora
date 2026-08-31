@@ -1,11 +1,15 @@
 """Contracts for the Idea Review Agent."""
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 from research_mentor.agents.common import RetrievalSysInput
-from research_mentor.domain.evidence import EvidenceRef, LiteratureRecord
+from research_mentor.domain.evidence import (
+    EvidenceRef,
+    LiteratureRecord,
+    RetrievalDiagnostics,
+)
 from research_mentor.domain.research import ForwardResearchContext, InitialInput
 
 DEFAULT_IDEA_REVIEW_GUIDELINES = [
@@ -34,6 +38,18 @@ class IdeaReviewSysInput(RetrievalSysInput):
 class IdeaReviewInput(BaseModel):
     idea: InitialInput
     sys_input: IdeaReviewSysInput
+    literature_records: list[LiteratureRecord] = Field(default_factory=list)
+    retrieval_diagnostics: list[RetrievalDiagnostics] = Field(default_factory=list)
+
+
+SearchQuery = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=200),
+]
+
+
+class SearchPlan(BaseModel):
+    queries: list[SearchQuery] = Field(min_length=1, max_length=4)
 
 
 class IdeaReviewOutput(BaseModel):
