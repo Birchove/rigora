@@ -189,7 +189,8 @@ class ResearchMentorOrchestrator:
                 idea=session.initial_input.model_copy(deep=True),
                 sys_input=PlanLoopSysInput(current_date=self._current_date()),
                 review_result=session.idea_review.model_copy(deep=True),
-                loop_round=self._config.max_check_rounds,
+                check_round=session.check_round,
+                max_check_rounds=self._config.max_check_rounds,
                 previous_insight_check=(
                     previous_check.model_copy(deep=True) if previous_check else None
                 ),

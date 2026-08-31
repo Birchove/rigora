@@ -9,6 +9,7 @@ from research_mentor.domain.checks import (
     KeyInsightScores,
 )
 from research_mentor.harness.scoring import finalize_key_insight_check
+from research_mentor.harness.scoring import score_check
 
 
 def assessment(**overrides: float) -> KeyInsightAssessment:
@@ -57,6 +58,22 @@ def test_scoring_passes_high_total_even_when_one_dimension_is_low() -> None:
     assert output.final_score == 6.3
     assert output.check_decision is True
     assert output.revision_request == []
+
+
+def test_harness_score_has_no_dimension_veto() -> None:
+    decision = score_check(
+        assessment(
+            research_fit=8,
+            novelty=8,
+            research_value=8,
+            testability_feasibility=8,
+            evidence_support=1,
+        ).scores,
+        pass_score=6.0,
+    )
+
+    assert decision.final_score == 7.0
+    assert decision.passed is True
 
 
 def test_scoring_rejects_total_below_threshold() -> None:

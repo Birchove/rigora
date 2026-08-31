@@ -33,6 +33,7 @@ class SessionPhase(StrEnum):
     AWAITING_RESULT_RECORD = "awaiting_result_record"
     COMPLETING = "completing"
     AWAITING_VALIDATION_SELECTION = "awaiting_validation_selection"
+    AWAITING_PLAN_REVISION_DECISION = "awaiting_plan_revision_decision"
     COMPLETED = "completed"
     REJECTED = "rejected"
     CHECK_LOOP_EXHAUSTED = "check_loop_exhausted"

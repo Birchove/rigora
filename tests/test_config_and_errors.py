@@ -26,6 +26,8 @@ def clear_settings_environment(monkeypatch):
         "RESEARCH_MENTOR_UPLOAD_ROOT",
         "RESEARCH_MENTOR_PUBLIC_BASE_URL",
         "RESEARCH_MENTOR_DEMO_MODE",
+        "RESEARCH_MENTOR_MAX_CHECK_ROUNDS",
+        "RESEARCH_MENTOR_CHECK_PASS_SCORE",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -65,6 +67,8 @@ def test_settings_defaults_to_demo_and_sqlite():
     assert settings.upload_root == Path("./data/uploads")
     assert str(settings.public_base_url) == "http://localhost:8000/"
     assert settings.demo_mode is True
+    assert settings.max_check_rounds == 5
+    assert settings.check_pass_score == 6.0
 
 
 @pytest.mark.parametrize("provider", ("demo", "openai", "openai_compatible"))

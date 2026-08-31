@@ -491,7 +491,9 @@ def test_plan_derives_only_the_defined_input_mode(
     orchestrator.run_plan_loop("s1")
 
     request = latest_payload(model, "plan_loop", "plan_loop_data")
-    assert request["loop_round"] == 5
+    assert request["check_round"] == (1 if mode == "check_revision" else 0)
+    assert request["max_check_rounds"] == 5
+    assert "loop_round" not in request
     assert request["sys_input"]["current_date"] == "2026-08-30"
     if mode == "initial":
         assert request["previous_plan"] is None

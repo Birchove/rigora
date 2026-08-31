@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from pydantic import HttpUrl, SecretStr
+from pydantic import Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     upload_root: Path = Path("./data/uploads")
     public_base_url: HttpUrl = HttpUrl("http://localhost:8000")
     demo_mode: bool = True
+    max_check_rounds: int = Field(default=5, ge=1)
+    check_pass_score: float = Field(default=6.0, ge=0.0, le=10.0)
 
 
 @dataclass(frozen=True, slots=True)

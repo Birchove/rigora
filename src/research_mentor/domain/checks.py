@@ -47,3 +47,15 @@ class KeyInsightCheckOutput(BaseModel):
     decision_reason: str
     revision_request: list[str] = Field(default_factory=list)
     scoring_rule_version: str
+
+
+class CheckDecision(BaseModel):
+    final_score: float = Field(ge=0.0, le=10.0)
+    passed: bool
+
+
+class CheckRound(BaseModel):
+    check_round: int = Field(ge=1)
+    output: KeyInsightCheckOutput
+    final_score: float = Field(ge=0.0, le=10.0)
+    passed: bool

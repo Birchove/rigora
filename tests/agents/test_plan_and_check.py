@@ -66,6 +66,24 @@ def test_plan_loop_accepts_each_defined_input_mode(
     )
 
 
+def test_plan_loop_round_fields_are_explicit(
+    initial_input,
+    plan_sys_input,
+    review_output,
+) -> None:
+    value = PlanLoopInput(
+        idea=initial_input,
+        sys_input=plan_sys_input,
+        review_result=review_output,
+        check_round=0,
+        max_check_rounds=5,
+    )
+
+    assert value.check_round == 0
+    assert value.max_check_rounds == 5
+    assert "loop_round" not in value.__class__.model_fields
+
+
 @pytest.mark.parametrize(
     ("previous_plan", "previous_insight_check", "has_user_feedback"),
     [(False, False, True), (False, True, False), (False, True, True), (True, False, False), (True, True, True)],

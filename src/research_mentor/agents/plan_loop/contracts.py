@@ -40,7 +40,8 @@ class PlanLoopInput(BaseModel):
     idea: InitialInput
     sys_input: PlanLoopSysInput
     review_result: IdeaReviewOutput
-    loop_round: int = 5
+    check_round: int = Field(default=0, ge=0)
+    max_check_rounds: int = Field(default=5, ge=1)
     previous_insight_check: KeyInsightCheckOutput | None = None
     previous_plan: ResearchPlan | None = None
     user_feedback: UserPlanFeedback | None = None

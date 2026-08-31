@@ -90,6 +90,7 @@ def test_session_phase_and_event_type_values_are_exact() -> None:
         "awaiting_result_record",
         "completing",
         "awaiting_validation_selection",
+        "awaiting_plan_revision_decision",
         "completed",
         "rejected",
         "check_loop_exhausted",
