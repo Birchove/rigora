@@ -25,7 +25,9 @@ from research_mentor.domain.experiments import (
     ExperimentInfo,
     ExperimentTaskContext,
     MainExperimentResult,
+    ValidationTask,
 )
+from research_mentor.domain.completion import ValidationCandidate
 from research_mentor.domain.research import InitialInput, ResearchPlan
 
 
@@ -69,6 +71,8 @@ def complete_request(
             method="比较状态压缩和基线",
             actual_result="压缩组正确率低于基线",
             conclusion="当前结果不支持预期假设",
+            execution_status="completed",
+            impact="contradicts",
         ),
     )
 
@@ -83,8 +87,25 @@ def working_output() -> WorkingQAOutput:
 
 def complete_output(research_plan: ResearchPlan) -> CompleteAgentOutput:
     return CompleteAgentOutput(
+        mode="validation",
         plan=research_plan,
         final_hint="优先进行相同数据切分下的重复运行。",
+        validation_candidates=[
+            ValidationCandidate(
+                candidate_id="v1",
+                task=ValidationTask(
+                    paradigm="robustness_reliability",
+                    validation_type="multiple_runs",
+                    name="重复运行",
+                    purpose="验证结果稳定性",
+                    method="固定切分重复运行",
+                ),
+                priority="critical",
+                rank=1,
+                rationale="主结果与预期相反",
+                addresses_claims=["状态压缩提升恢复稳定性"],
+            )
+        ],
     )
 
 
@@ -159,8 +180,16 @@ def test_working_input_requires_initialized_current_experiment(
         )
 
 
-def test_complete_output_has_exactly_plan_and_final_hint_fields() -> None:
-    assert set(CompleteAgentOutput.model_fields) == {"plan", "final_hint"}
+def test_complete_output_has_v1_structured_fields() -> None:
+    assert set(CompleteAgentOutput.model_fields) == {
+        "mode",
+        "plan",
+        "final_hint",
+        "validation_candidates",
+        "excluded_validations",
+        "writing_guidance",
+        "revision_reason",
+    }
 
 
 def test_working_prompt_matches_fixed_sha256_oracle() -> None:
@@ -189,7 +218,7 @@ def test_complete_prompt_matches_fixed_sha256_oracle() -> None:
     )
 
     assert hashlib.sha256(prompt.read_bytes()).hexdigest() == (
-        "3de5819eae581f8460021793894174ed7b104a866603811b26a1910129d23027"
+        "7d7459a10e650b8b58006462984d90b0e96153abda32cd728101040eeab0ea89"
     )
 
 

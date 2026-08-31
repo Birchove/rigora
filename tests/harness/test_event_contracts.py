@@ -15,6 +15,7 @@ from research_mentor.agents.plan_loop.runner import PlanLoopRunner
 from research_mentor.agents.working_qa.contracts import WorkingQAOutput
 from research_mentor.agents.working_qa.runner import WorkingQARunner
 from research_mentor.config import HarnessConfig
+from research_mentor.domain.completion import WritingGuidance
 from research_mentor.harness.scoring import finalize_key_insight_check
 from research_mentor.domain.experiments import (
     ExperimentInfo,
@@ -114,11 +115,23 @@ def _main_result() -> MainExperimentResult:
         expected_result="压缩组更稳定",
         actual_result="压缩组恢复正确率低于基线",
         conclusion="当前主实验不支持预期。",
+        execution_status="completed",
+        impact="contradicts",
     )
 
 
 def _complete_output(plan: object) -> CompleteAgentOutput:
-    return CompleteAgentOutput(plan=plan, final_hint="保留负面结果并说明局限。")
+    return CompleteAgentOutput(
+        mode="writing",
+        plan=plan,
+        final_hint="保留负面结果并说明局限。",
+        writing_guidance=WritingGuidance(
+            suggested_structure=["方法", "结果", "局限"],
+            key_results_to_report=["恢复正确率低于基线"],
+            key_discussion_points=["结果与预期相反"],
+            limitations=["固定数据切分"],
+        ),
+    )
 
 
 def _assert_event_metadata(events: list[SessionEvent]) -> None:
@@ -302,6 +315,8 @@ def test_validation_result_and_false_completion_event_table_branches(
         actual_result="五次运行均复现负向结果",
         conclusion="负向结果稳定",
         is_success=True,
+        execution_status="completed",
+        impact="contradicts",
     )
     orchestrator.record_validation_result("validation", validation)
     validation_event = repository.list_events("validation")[-1]

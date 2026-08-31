@@ -1,3 +1,5 @@
+from typing import get_args
+
 import pytest
 from pydantic import ValidationError
 
@@ -5,6 +7,8 @@ from research_mentor.domain.experiments import (
     ExperimentInfo,
     ExperimentTaskContext,
     MainExperimentResult,
+    ExecutionStatus,
+    ResultImpact,
     ValidationTask,
 )
 
@@ -62,6 +66,8 @@ def test_completed_main_result_can_record_negative_actual_result():
         method="run experiment",
         actual_result="hypothesis not supported",
         conclusion="revise hypothesis",
+        execution_status="completed",
+        impact="contradicts",
     )
     context = ExperimentTaskContext(
         task_id="main-1",
@@ -72,6 +78,29 @@ def test_completed_main_result_can_record_negative_actual_result():
     )
     assert context.status == "completed"
     assert context.experiment_info.actual_result == "hypothesis not supported"
+
+
+def test_negative_scientific_finding_is_completed_execution() -> None:
+    result = MainExperimentResult(
+        objective="比较延迟",
+        method="基准测试",
+        actual_result="尾延迟升高",
+        conclusion="不支持预期",
+        execution_status="completed",
+        impact="contradicts",
+    )
+
+    assert result.failure_reason is None
+
+
+def test_result_enums_are_exact() -> None:
+    assert set(get_args(ResultImpact)) == {
+        "supports",
+        "neutral",
+        "contradicts",
+        "invalidates",
+    }
+    assert set(get_args(ExecutionStatus)) == {"completed", "failed", "cancelled"}
 
 
 def test_valid_main_and_validation_contexts_are_accepted():

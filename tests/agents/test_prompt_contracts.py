@@ -99,6 +99,8 @@ def _complete_request(initial_input: Any, research_plan: Any) -> CompleteAgentIn
             method="固定数据切分比较",
             actual_result="压缩组低于基线",
             conclusion="当前不支持预期",
+            execution_status="completed",
+            impact="contradicts",
         ),
     )
 

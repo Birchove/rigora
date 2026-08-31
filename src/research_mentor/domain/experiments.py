@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -45,6 +45,23 @@ ValidationType = Literal[
     "multiple_runs",
     "significance_test",
 ]
+ResultImpact = Literal["supports", "neutral", "contradicts", "invalidates"]
+ExecutionStatus = Literal["completed", "failed", "cancelled"]
+
+
+class _ExperimentResult(BaseModel):
+    execution_status: ExecutionStatus
+    impact: ResultImpact
+    failure_reason: str | None = None
+
+    @model_validator(mode="after")
+    def validate_execution_result(self) -> Self:
+        if self.execution_status == "completed" and self.failure_reason is not None:
+            raise ValueError("completed execution cannot include failure_reason")
+        if self.execution_status != "completed":
+            if self.failure_reason is None or not self.failure_reason.strip():
+                raise ValueError("failed or cancelled execution requires failure_reason")
+        return self
 
 
 class ValidationTask(BaseModel):
@@ -56,7 +73,7 @@ class ValidationTask(BaseModel):
     expected_result: str | None = None
 
 
-class ValidationResult(BaseModel):
+class ValidationResult(_ExperimentResult):
     task: ValidationTask
     actual_result: str
     conclusion: str
@@ -64,7 +81,7 @@ class ValidationResult(BaseModel):
     evidence_files: list[str] = Field(default_factory=list)
 
 
-class MainExperimentResult(BaseModel):
+class MainExperimentResult(_ExperimentResult):
     objective: str
     method: str
     expected_result: str | None = None

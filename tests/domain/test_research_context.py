@@ -15,6 +15,8 @@ MAIN_RESULT = MainExperimentResult(
     method="基准测试",
     actual_result="尾延迟下降 8%",
     conclusion="支持继续验证",
+    execution_status="completed",
+    impact="supports",
 )
 PLAN = ResearchPlan(
     research_question="缓存策略是否降低尾延迟？",

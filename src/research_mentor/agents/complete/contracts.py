@@ -3,6 +3,7 @@
 from pydantic import BaseModel, Field
 
 from research_mentor.agents.common import SysInput
+from research_mentor.domain.completion import CompleteAgentOutput
 from research_mentor.domain.experiments import MainExperimentResult, ValidationResult
 from research_mentor.domain.research import InitialInput, ResearchPlan
 
@@ -42,8 +43,3 @@ class CompleteAgentInput(BaseModel):
     plan: ResearchPlan
     main_experiment: MainExperimentResult
     completed_validations: list[ValidationResult] = Field(default_factory=list)
-
-
-class CompleteAgentOutput(BaseModel):
-    plan: ResearchPlan
-    final_hint: str

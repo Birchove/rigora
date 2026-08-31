@@ -129,6 +129,8 @@ def completed_phase_main_result() -> MainExperimentResult:
         method="比较压缩与基线",
         actual_result="结果未支持假设",
         conclusion="当前设置下不成立",
+        execution_status="completed",
+        impact="contradicts",
     )
 
 
@@ -144,6 +146,8 @@ def completed_phase_validation_result() -> ValidationResult:
         actual_result="方差未降低",
         conclusion="未支持稳定性改善",
         is_success=False,
+        execution_status="completed",
+        impact="contradicts",
     )
 
 
