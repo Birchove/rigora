@@ -9,8 +9,8 @@
 - 实现审计基线：`65755f0`（不含本状态文档后续产生的 commit）
 - 目标版本：v1.0
 - 当前版本定位：可安装、可测试的 deterministic multi-agent backend core；尚不是可运行的完整产品
-- 当前测试基线：应以 Task 15 commit 后的本地全量回归与继续开发时重新执行结果为准，早期 `229 passed` 已失效
-- v1 implementation plan：Task 1–15 已有独立 commit；Task 16 正在工作区中开发；Task 17–32 尚未达到对应验收标准
+- 当前测试基线：Task 16 完成后 `333 passed`
+- v1 implementation plan：Task 1–16 已有独立 commit；Task 17–32 尚未达到对应验收标准
 
 分支关系：
 
@@ -265,7 +265,7 @@ Task 7–12 已完成并各有独立 commit：repository/UoW/event ports、SQLAl
 
 ### 5.3 Milestone C：真实 structured model 与 RAG
 
-Task 13–15 已完成：async typed model port、OpenAI Responses/OpenAI-compatible adapters 和 Idea Review 两阶段检索上下文已有独立 commit。Task 16 正在实现 Working QA 相关性选择、project chunks/文献/会话合并、Context Assembler 投影、context budget、provenance 与 Harness compaction；工作区已有未提交源码/测试，必须保留并先完成该 Task。
+Task 13–16 已完成：async typed model port、OpenAI Responses/OpenAI-compatible adapters、Idea Review 两阶段检索、Working QA 相关性选择、Context Assembler 投影、context budget、provenance 与 Harness compaction 均已有独立 commit。
 
 ### 5.4 Milestone D：完整 Orchestrator 与 Application commands
 
@@ -331,7 +331,7 @@ FastAPI 等依赖已加入，但没有 API 代码。尚未实现：
 
 1. **Milestone A（Task 2–6）已完成**：不得重复实现；
 2. **Milestone B（Task 7–12）已完成**：不得重复实现；
-3. **继续 Milestone C 的 Task 16**：完成 Working Context/Context Assembler、全量回归和独立 commit；
+3. **Milestone C（Task 13–16）已完成**：不得重复实现；
 4. **完成 Milestone D（Task 17–21）**：将 domain、provider 和 durable run 组合成完整 application journey；
 5. **完成 Milestone E（Task 22–26）**：建立 API、SSE 和 deterministic demo；
 6. **完成 Milestone F（Task 27–29）**：实现 React 工作台；

@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     demo_mode: bool = True
     max_check_rounds: int = Field(default=5, ge=1)
     check_pass_score: float = Field(default=6.0, ge=0.0, le=10.0)
+    rag_relevance_threshold: float = Field(default=0.3, ge=0.0, le=1.0)
+    working_context_character_budget: int = Field(default=12000, ge=1000)
 
 
 @dataclass(frozen=True, slots=True)

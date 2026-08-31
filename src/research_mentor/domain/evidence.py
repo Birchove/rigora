@@ -39,6 +39,7 @@ class RetrievalDiagnostics(BaseModel):
 
 
 class EvidenceRef(BaseModel):
+    source_id: str | None = None
     title: str
     authors: list[str] = Field(default_factory=list)
     year: int | None = None

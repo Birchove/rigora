@@ -246,13 +246,21 @@ def test_idea_review_and_key_insight_check_use_fixed_shanghai_date(
     orchestrator.create_session("s1")
     model.enqueue("idea_review", opinion_output())
     orchestrator.review_idea("s1", initial_input)
-    assert latest_payload(model, "idea_review", "idea_review_data")["sys_input"]["current_date"] == "2026-08-30"
+    review_call = next(call for call in reversed(model.calls) if call.agent_name == "idea_review")
+    assert "## Current date\n2026-08-30" in review_call.instructions
+    assert "sys_input" not in latest_payload(model, "idea_review", "idea_review_data")
 
     model.enqueue("plan_loop", plan_output)
     orchestrator.run_plan_loop("s1")
     model.enqueue("key_insight_check", assessment)
     orchestrator.run_key_insight_check("s1")
-    assert latest_payload(model, "key_insight_check", "key_insight_check_data")["sys_input"]["current_date"] == "2026-08-30"
+    check_call = next(
+        call for call in reversed(model.calls) if call.agent_name == "key_insight_check"
+    )
+    assert "## Current date\n2026-08-30" in check_call.instructions
+    assert "sys_input" not in latest_payload(
+        model, "key_insight_check", "key_insight_check_data"
+    )
 
 
 def test_review_routes_range_and_records_exact_event(orchestration_bundle, initial_input):
@@ -495,7 +503,7 @@ def test_plan_derives_only_the_defined_input_mode(
     assert request["check_round"] == (1 if mode == "check_revision" else 0)
     assert request["max_check_rounds"] == 5
     assert "loop_round" not in request
-    assert request["sys_input"]["current_date"] == "2026-08-30"
+    assert "sys_input" not in request
     if mode == "initial":
         assert request["previous_plan"] is None
         assert request["previous_insight_check"] is None

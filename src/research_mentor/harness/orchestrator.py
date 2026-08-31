@@ -34,6 +34,7 @@ from research_mentor.domain.experiments import (
 from research_mentor.domain.research import (
     InitialInput,
     OverrideRecord,
+    ResearchContext,
     ResearchPlan,
     UserPlanDecision,
     UserPlanFeedback,
@@ -389,10 +390,14 @@ class ResearchMentorOrchestrator:
                 idea=session.initial_input.model_copy(deep=True),
                 question=question,
                 sys_input=WorkingQASysInput(current_date=self._current_date()),
-                normalized_idea=session.idea_review.normalized_idea,
-                plan=session.active_plan.model_copy(deep=True),
+                research_context=ResearchContext(
+                    normalized_idea=session.idea_review.normalized_idea,
+                    research_question=session.active_plan.research_question,
+                    plan=session.active_plan.model_copy(deep=True),
+                ),
                 task_context=session.current_task.model_copy(deep=True),
-                compact_context=[],
+                conversation_turns=[],
+                compact_context=None,
             )
         )
         if output.updated_experiment_info is not None:

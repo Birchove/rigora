@@ -4,13 +4,14 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
-from research_mentor.agents.common import SysInput
-from research_mentor.domain.evidence import EvidenceRef
+from research_mentor.agents.common import RetrievalSysInput
+from research_mentor.domain.conversations import ConversationTurn
+from research_mentor.domain.evidence import EvidenceRef, RetrievalDiagnostics
 from research_mentor.domain.experiments import ExperimentInfo, ExperimentTaskContext
-from research_mentor.domain.research import InitialInput, ResearchPlan
+from research_mentor.domain.research import InitialInput, ResearchContext
 
 DEFAULT_QA_GUIDELINES = [
-    "只回答与 normalized_idea、ResearchPlan 或 task_context 指定的当前实验任务直接相关的问题。",
+    "只回答与 research_context 或 task_context 指定的当前研究和实验任务直接相关的问题。",
     "task_context 中的 task_id、task_kind、origin、status、parent_task_id 和 validation_task 由 Harness 管理；不得建议或声称已经修改这些字段。",
     "信息足以回答时使用 answer；只缺少少量关键事实时使用 clarify，并只询问继续判断所需的最少信息。",
     "问题与当前研究无关、超出职责边界或无法在有效信息和证据基础上回答时使用 decline，并说明边界。",
@@ -26,18 +27,51 @@ DEFAULT_QA_GUIDELINES = [
 ]
 
 
-class WorkingQASysInput(SysInput):
+class WorkingQASysInput(RetrievalSysInput):
     qa_guidelines: list[str] = Field(default_factory=DEFAULT_QA_GUIDELINES.copy)
+
+
+class CompactContext(BaseModel):
+    summary: str
+    source_turn_ids: list[str]
+    facts: list[str]
+    unresolved_questions: list[str]
+
+
+class WorkingContext(BaseModel):
+    research_context: ResearchContext
+    current_task: ExperimentTaskContext
+    recent_turns: list[ConversationTurn] = Field(default_factory=list)
+    compact_context: CompactContext | None = None
+    evidence_refs: list[EvidenceRef] = Field(default_factory=list)
+    retrieval_diagnostics: list[RetrievalDiagnostics] = Field(default_factory=list)
+    rank_status: Literal["ok", "unavailable"]
+    top_relevance: float | None = Field(default=None, ge=0.0, le=1.0)
+    decline_as_unrelated: bool = False
+
+    @model_validator(mode="after")
+    def validate_rank_decision(self) -> Self:
+        if self.rank_status == "unavailable":
+            if self.top_relevance is not None or self.decline_as_unrelated:
+                raise ValueError("unavailable rank cannot reject a question")
+        elif self.decline_as_unrelated and self.top_relevance is None:
+            raise ValueError("unrelated decision requires a successful score")
+        return self
 
 
 class WorkingQAInput(BaseModel):
     idea: InitialInput
     question: str
     sys_input: WorkingQASysInput
-    normalized_idea: str
-    plan: ResearchPlan
+    research_context: ResearchContext
     task_context: ExperimentTaskContext
-    compact_context: list[str] = Field(default_factory=list)
+    conversation_turns: list[ConversationTurn] = Field(default_factory=list)
+    compact_context: CompactContext | None = None
+    evidence_refs: list[EvidenceRef] = Field(default_factory=list)
+    retrieval_diagnostics: list[RetrievalDiagnostics] = Field(default_factory=list)
+    rank_status: Literal["ok", "unavailable"] = "ok"
+    top_relevance: float | None = Field(default=None, ge=0.0, le=1.0)
+    decline_as_unrelated: bool = False
 
     @model_validator(mode="after")
     def validate_active_task(self) -> Self:
@@ -46,6 +80,11 @@ class WorkingQAInput(BaseModel):
         current_experiment = self.task_context.experiment_info.current_experiment
         if current_experiment is None or not current_experiment.strip():
             raise ValueError("调用 working_qa_agent 前，Harness 必须初始化 current_experiment")
+        if self.rank_status == "unavailable":
+            if self.top_relevance is not None or self.decline_as_unrelated:
+                raise ValueError("unavailable rank cannot reject a question")
+        elif self.decline_as_unrelated and self.top_relevance is None:
+            raise ValueError("unrelated decision requires a successful score")
         return self
 
 

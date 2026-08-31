@@ -271,12 +271,12 @@ def test_accepted_plan_rejects_replacement_and_start_event_has_no_active_plan(
 
     payload = parse_latest_call(model, "working_qa", "working_qa_data")
     assert payload["idea"] == accepted_session.initial_input.model_dump(mode="json")
-    assert payload["normalized_idea"] == accepted_session.idea_review.normalized_idea
+    assert payload["research_context"]["normalized_idea"] == accepted_session.idea_review.normalized_idea
     assert payload["task_context"] == accepted_session.current_task.model_dump(mode="json")
-    assert payload["plan"] == accepted_session.active_plan.model_dump(mode="json")
+    assert payload["research_context"]["plan"] == accepted_session.active_plan.model_dump(mode="json")
     assert payload["question"] == "已接受方案的下一步？"
-    assert payload["sys_input"]["current_date"] == "2026-08-30"
-    assert payload["compact_context"] == []
+    assert "sys_input" not in payload
+    assert payload["compact_context"] is None
 
 
 def test_working_replaces_snapshot_for_non_success_and_success_completes_task(
@@ -299,12 +299,12 @@ def test_working_replaces_snapshot_for_non_success_and_success_completes_task(
     assert repository.list_events("s1")[-1].payload == answer.model_dump(mode="json")
     first_payload = parse_latest_call(model, "working_qa", "working_qa_data")
     assert first_payload["idea"] == request_session.initial_input.model_dump(mode="json")
-    assert first_payload["normalized_idea"] == request_session.idea_review.normalized_idea
+    assert first_payload["research_context"]["normalized_idea"] == request_session.idea_review.normalized_idea
     assert first_payload["task_context"] == request_session.current_task.model_dump(mode="json")
-    assert first_payload["plan"] == request_session.active_plan.model_dump(mode="json")
+    assert first_payload["research_context"]["plan"] == request_session.active_plan.model_dump(mode="json")
     assert first_payload["question"] == "记录了什么？"
-    assert first_payload["sys_input"]["current_date"] == "2026-08-30"
-    assert first_payload["compact_context"] == []
+    assert "sys_input" not in first_payload
+    assert first_payload["compact_context"] is None
     success = WorkingQAOutput(
         action="success", reason="实验运行完成", reply="",
         updated_experiment_info=ExperimentInfo(current_experiment="完成测量", actual_result="正确率下降", observations=["负面结果"]),
@@ -318,9 +318,9 @@ def test_working_replaces_snapshot_for_non_success_and_success_completes_task(
     assert stored.phase is SessionPhase.AWAITING_RESULT_RECORD
     assert stored.current_task is not None and stored.current_task.status == "completed"
     assert stored.current_task.experiment_info == success.updated_experiment_info
-    assert payload["sys_input"]["current_date"] == "2026-08-30"
-    assert payload["compact_context"] == []
-    assert payload["plan"] == research_plan.model_dump(mode="json")
+    assert "sys_input" not in payload
+    assert payload["compact_context"] is None
+    assert payload["research_context"]["plan"] == research_plan.model_dump(mode="json")
 
 
 @pytest.mark.parametrize(
@@ -599,8 +599,10 @@ def test_complete_captures_full_input_routes_and_is_atomic_on_malformed_output(b
     assert payload["plan"] == session_before_false.active_plan.model_dump(mode="json")
     assert payload["main_experiment"] == main_result().model_dump(mode="json")
     assert payload["completed_validations"] == [validation_result().model_dump(mode="json")]
-    assert payload["sys_input"]["current_date"] == "2026-08-30"
-    assert payload["sys_input"]["completion_status"] is False
+    assert "sys_input" not in payload
+    false_call = next(call for call in reversed(model.calls) if call.agent_name == "complete")
+    assert "## Current date\n2026-08-30" in false_call.instructions
+    assert "## Completion status\nfalse" in false_call.instructions
     assert event.payload == {**false_output.model_dump(mode="json"), "completion_status": False}
 
     stored = repository.get("s1")
@@ -617,8 +619,10 @@ def test_complete_captures_full_input_routes_and_is_atomic_on_malformed_output(b
     assert true_payload["plan"] == session_before_false.active_plan.model_dump(mode="json")
     assert true_payload["main_experiment"] == main_result().model_dump(mode="json")
     assert true_payload["completed_validations"] == [validation_result().model_dump(mode="json")]
-    assert true_payload["sys_input"]["current_date"] == "2026-08-30"
-    assert true_payload["sys_input"]["completion_status"] is True
+    assert "sys_input" not in true_payload
+    true_call = next(call for call in reversed(model.calls) if call.agent_name == "complete")
+    assert "## Current date\n2026-08-30" in true_call.instructions
+    assert "## Completion status\ntrue" in true_call.instructions
     assert repository.list_events("s1")[-1].payload == {**true_output.model_dump(mode="json"), "completion_status": True}
 
     stored = repository.get("s1")
