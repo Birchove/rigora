@@ -1,0 +1,1 @@
+"""Structured model provider adapters."""
