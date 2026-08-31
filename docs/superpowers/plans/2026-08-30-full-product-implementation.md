@@ -1235,7 +1235,7 @@ class WorkingContext(BaseModel):
     decline_as_unrelated: bool
 ```
 
-把 `WorkingQAInput` 的 plan/normalized idea/字符串列表压缩字段替换为 `research_context`、`conversation_turns` 和 `compact_context: CompactContext | None`。compaction 只能总结已有 turn，必须记录 source IDs，不能创造实验事实；原始 turns 永久保存在 SQL。
+把 `WorkingQAInput` 的 plan/normalized idea/字符串列表压缩字段替换为 `research_context`、`conversation_turns` 和 `compact_context: CompactContext | None`。compaction 由 Harness application service 负责，不新增压缩 Agent 或第六个 Agent runner；它只能总结已有 turn，必须记录 source IDs，不能创造实验事实；原始 turns 永久保存在 SQL。
 
 - [ ] **Step 4: 运行 GREEN 与长上下文 regression**
 
@@ -2037,7 +2037,7 @@ git add frontend
 git commit -m "功能：建立 React 前端与类型化 API client"
 ```
 
-### Task 28: 实现项目工作台、阶段视图与证据面板
+### Task 28: 实现项目工作台、阶段视图、证据面板与导师 microcopy
 
 **Files:**
 - Create: `frontend/src/components/AppShell.tsx`
@@ -2055,14 +2055,16 @@ git commit -m "功能：建立 React 前端与类型化 API client"
 - Create: `frontend/src/components/WritingGuidanceView.tsx`
 - Create: `frontend/src/components/CollapsibleRunTrace.tsx`
 - Create: `frontend/src/components/ExportPanel.tsx`
+- Create: `frontend/src/ui/mentorMicrocopy.ts`
 - Create: `frontend/src/features/idea/IdeaView.tsx`
 - Create: `frontend/src/features/plan/PlanView.tsx`
 - Create: `frontend/src/features/working/WorkingView.tsx`
 - Create: `frontend/src/features/completion/CompletionView.tsx`
 - Create: `frontend/src/features/project/ProjectWorkspace.tsx`
 - Test: `frontend/src/features/project/ProjectWorkspace.test.tsx`
+- Test: `frontend/src/ui/mentorMicrocopy.test.ts`
 
-- [ ] **Step 1: 写 phase/command/a11y tests**
+- [ ] **Step 1: 写 phase/command/a11y 和 microcopy tests**
 
 ```typescript
 it.each([
@@ -2086,11 +2088,31 @@ it("marks demo content visibly", () => {
 });
 ```
 
+`frontend/src/ui/mentorMicrocopy.test.ts`：
+
+```typescript
+import { describe, expect, it } from "vitest";
+
+import { MENTOR_MICROCOPY } from "./mentorMicrocopy";
+
+describe("MENTOR_MICROCOPY", () => {
+  it("keeps mentor microcopy limited to non-substantive UI states", () => {
+    expect(MENTOR_MICROCOPY).toEqual({
+      inputTooLong: "这么多内容我可不会假装一眼看完。请拆分或上传文件。",
+      validationRequired: "至少先决定这一轮做什么。空着可不算选择。",
+      runCheckingEvidence: "正在核对证据，先别急着催。",
+    });
+    expect(MENTOR_MICROCOPY).not.toHaveProperty("reviewDecision");
+    expect(MENTOR_MICROCOPY).not.toHaveProperty("riskExplanation");
+  });
+});
+```
+
 - [ ] **Step 2: 运行 RED**
 
-Run: `npm test -- --run src/features/project/ProjectWorkspace.test.tsx`
+Run: `npm test -- --run src/features/project/ProjectWorkspace.test.tsx src/ui/mentorMicrocopy.test.ts`
 
-Expected: FAIL，workspace components 不存在。
+Expected: FAIL，workspace components 和 `MENTOR_MICROCOPY` 不存在。
 
 - [ ] **Step 3: 实现 responsive research workspace**
 
@@ -2109,11 +2131,23 @@ Desktop 三栏：project/nav 240px、main minmax(0,1fr)、evidence 360px；窄�
 
 暖橙是唯一强调色；phase/score/error 同时使用文字、图标和边框形态，不增加第二强调色。dialog/sheet 具有 heading/description，citation hover 同时支持 focus/click，所有动画和 typewriter 在 `prefers-reduced-motion` 下关闭。
 
+在 `frontend/src/ui/mentorMicrocopy.ts` 中只导出确定性的非实质状态文案：
+
+```typescript
+export const MENTOR_MICROCOPY = {
+  inputTooLong: "这么多内容我可不会假装一眼看完。请拆分或上传文件。",
+  validationRequired: "至少先决定这一轮做什么。空着可不算选择。",
+  runCheckingEvidence: "正在核对证据，先别急着催。",
+} as const;
+```
+
+组件只能在超长输入、遗漏确定性选择和等待状态中按固定 key 使用这些文案。科研评价、Agent action、评分、证据、拒绝理由和风险说明必须直接呈现 server view 中的实质内容，不得经过 microcopy 层改写。v1 不建立独立语气 Agent。
+
 - [ ] **Step 4: 运行 GREEN/build 与 keyboard check**
 
 Run: `npm test -- --run && npm run build`
 
-Expected: PASS；所有 form 有 label，焦点可见，dialog 可 Esc 关闭，颜色不作为唯一状态提示。
+Expected: PASS；所有 form 有 label，焦点可见，dialog 可 Esc 关闭，颜色不作为唯一状态提示；microcopy 只覆盖已声明的非实质状态，不处理 server 返回的科研内容。
 
 - [ ] **Step 5: Commit**
 

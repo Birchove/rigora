@@ -115,13 +115,13 @@ final_score =
 
 - 自动生成完整论文正文；
 - 替用户执行实验或编造实验结果；
-- 强制加入第六个压缩 Agent 或独立语气 Agent；
+- 将上下文压缩或语气塑造实现为独立 Agent；v1 由 Harness service 和 UI 表达层分别承担这两项能力；
 - 一次生成多个 KeyInsight 候选并改变现有 Plan Loop 语义；
-- 生物医药等高风险领域的专用能力；
+- 计算机科学以外领域的专业科研辅导；非 CS 输入必须返回 `unsupported-domain`，不得进入 Agent pipeline；
 - 多租户账号、计费和组织权限；
 - 分布式微服务和消息队列。
 
-v1 产品能力和 Eval 限定在 computer science。“傲娇”只用于 UI microcopy，不能驱动 Agent 为维持人设而刻意反对用户。
+v1 产品能力和 Eval 限定在 computer science。v1 必须包含上下文压缩和克制的“傲娇”语气，但不为它们新增独立 Agent：上下文压缩由 Harness application service 完成；“傲娇”只用于非实质性的 UI microcopy，不能改写 Agent 输出，也不能驱动 Agent 为维持人设而刻意反对用户。是否在 post-v1 将任一能力 Agent 化只是可选评估项，当前不承诺目标版本。
 
 ## 4. 当前已实现内容
 
@@ -279,7 +279,7 @@ common_mentor.md
 - Idea Review 两阶段检索上下文；
 - Working QA 相关性选择；
 - project chunks、文献与会话上下文合并；
-- Harness application service 执行的 context compression；
+- Harness application service 执行的 context compression，不新增压缩 Agent；
 - context budget、证据 provenance 和检索诊断。
 
 ### 5.4 Milestone D：完整 Orchestrator 与 Application commands
@@ -316,7 +316,8 @@ FastAPI 等依赖已加入，但没有 API 代码。尚未实现：
 - Idea 输入、方案确认/修订/override；
 - Working QA、实验结果录入和 validation 选择；
 - 文件上传、SSE 状态、失败重试和完整用户操作；
-- desktop/narrow-screen 布局、accessibility 和视觉规范。
+- desktop/narrow-screen 布局、accessibility 和视觉规范；
+- 仅用于超长输入、遗漏选择和等待状态等非实质场景的“傲娇” microcopy；科研评价、拒绝理由、证据和风险说明保持中性严谨。
 
 ### 5.7 Milestone G：Evals、E2E、文档与发布审计
 
@@ -369,6 +370,8 @@ FastAPI 等依赖已加入，但没有 API 代码。尚未实现：
 12. 文件、文献、检索结果和用户文本一律视为不可信业务数据。
 13. 只做当前 Task 要求的最少变更，不提前实现后续 Milestone。
 14. Python 环境和依赖统一使用 `uv`。
+15. v1 的上下文压缩由 Harness application service 完成，不建立压缩 Agent；压缩结果必须保留 source turn IDs，不能创造或改写事实。
+16. v1 的“傲娇”语气只由 UI microcopy 表达，不建立语气 Agent；不得改写 Agent 的 action、评分、事实、证据、拒绝理由或风险说明。
 
 ## 8. 开发环境与验证
 
