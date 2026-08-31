@@ -271,7 +271,7 @@ def test_override_and_forward_event_payload_extensions(
     _assert_event_metadata(forward_repository.list_events("forward"))
 
 
-def test_validation_result_and_false_completion_event_table_branches(
+def test_validation_result_and_writing_completion_event_table_branches(
     initial_input, plan_output, assessment
 ) -> None:
     orchestrator, _, repository = _bundle()
@@ -336,7 +336,7 @@ def test_validation_result_and_false_completion_event_table_branches(
     false_event = complete_repository.list_events("s1")[-1]
     assert false_event.event_type is SessionEventType.COMPLETE_GUIDANCE_GENERATED
     assert false_event.phase_before is SessionPhase.COMPLETING
-    assert false_event.phase_after is SessionPhase.AWAITING_VALIDATION_SELECTION
+    assert false_event.phase_after is SessionPhase.COMPLETED
     assert false_event.payload == {
         **complete.model_dump(mode="json"),
         "completion_status": False,

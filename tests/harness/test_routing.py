@@ -6,6 +6,7 @@ import pytest
 
 from research_mentor.agents.idea_review.contracts import IdeaReviewOutput
 from research_mentor.agents.working_qa.contracts import WorkingQAOutput
+from research_mentor.domain.completion import CompleteAgentOutput
 from research_mentor.domain.checks import (
     DimensionScore,
     KeyInsightAssessment,
@@ -21,7 +22,8 @@ from research_mentor.domain.research import (
 )
 from research_mentor.errors import InvariantViolationError
 from research_mentor.harness.routing import (
-    route_complete_output,
+    RoutingDecision,
+    route_complete,
     route_idea_review,
     route_key_insight_check,
     route_plan_decision,
@@ -241,19 +243,6 @@ def test_non_success_working_actions_stay_working(action: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("completion_status", "phase"),
-    [
-        (False, SessionPhase.AWAITING_VALIDATION_SELECTION),
-        (True, SessionPhase.COMPLETED),
-    ],
-)
-def test_complete_status_selects_final_phase(
-    completion_status: bool, phase: SessionPhase
-) -> None:
-    assert route_complete_output(completion_status=completion_status) is phase
-
-
-@pytest.mark.parametrize(
     "output",
     [
         idea_output_factory("opinion", "proceed_to_plan"),
@@ -291,7 +280,7 @@ def test_routing_has_fixed_public_functions_and_signatures() -> None:
         "route_key_insight_check",
         "route_plan_decision",
         "route_working_output",
-        "route_complete_output",
+        "route_complete",
     }
     assert set(functions) == expected
 
@@ -340,12 +329,12 @@ def test_routing_has_fixed_public_functions_and_signatures() -> None:
     assert_annotation(working_signature.parameters["output"].annotation, WorkingQAOutput)
     assert_annotation(working_signature.return_annotation, SessionPhase)
 
-    complete_signature = inspect.signature(route_complete_output)
-    assert list(complete_signature.parameters) == ["completion_status"]
-    assert complete_signature.parameters["completion_status"].kind is inspect.Parameter.KEYWORD_ONLY
-    assert complete_signature.parameters["completion_status"].default is inspect.Parameter.empty
-    assert_annotation(complete_signature.parameters["completion_status"].annotation, bool)
-    assert_annotation(complete_signature.return_annotation, SessionPhase)
+    complete_signature = inspect.signature(route_complete)
+    assert list(complete_signature.parameters) == ["output"]
+    assert complete_signature.parameters["output"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+    assert complete_signature.parameters["output"].default is inspect.Parameter.empty
+    assert_annotation(complete_signature.parameters["output"].annotation, CompleteAgentOutput)
+    assert_annotation(complete_signature.return_annotation, RoutingDecision)
 
 
 def test_routing_imports_only_allowed_project_modules() -> None:

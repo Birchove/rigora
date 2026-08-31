@@ -23,3 +23,7 @@ class PortExecutionError(ResearchMentorError):
 
 class SessionNotFoundError(ResearchMentorError):
     """会话不存在异常。"""
+
+
+class ValidationSelectionError(ResearchMentorError):
+    """验证候选选择不满足队列约束。"""

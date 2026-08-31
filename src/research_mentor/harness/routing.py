@@ -1,11 +1,19 @@
 """Pure deterministic routing for Harness state transitions."""
 
+from pydantic import BaseModel
+
 from research_mentor.agents.idea_review.contracts import IdeaReviewOutput
 from research_mentor.agents.working_qa.contracts import WorkingQAOutput
+from research_mentor.domain.completion import CompleteAgentOutput
 from research_mentor.domain.checks import KeyInsightCheckOutput
 from research_mentor.domain.research import UserPlanDecision
 from research_mentor.errors import InvariantViolationError
 from research_mentor.harness.state import SessionPhase
+
+
+class RoutingDecision(BaseModel):
+    next_phase: SessionPhase
+    reason: str
 
 
 def route_idea_review(output: IdeaReviewOutput) -> SessionPhase:
@@ -67,10 +75,13 @@ def route_working_output(
     raise InvariantViolationError(f"未知的 working action: {output.action}")
 
 
-def route_complete_output(
-    *,
-    completion_status: bool,
-) -> SessionPhase:
-    if completion_status:
-        return SessionPhase.COMPLETED
-    return SessionPhase.AWAITING_VALIDATION_SELECTION
+def route_complete(output: CompleteAgentOutput) -> RoutingDecision:
+    phase_by_mode = {
+        "validation": SessionPhase.AWAITING_VALIDATION_SELECTION,
+        "plan_revision": SessionPhase.AWAITING_PLAN_REVISION_DECISION,
+        "writing": SessionPhase.COMPLETED,
+    }
+    return RoutingDecision(
+        next_phase=phase_by_mode[output.mode],
+        reason=output.final_hint,
+    )

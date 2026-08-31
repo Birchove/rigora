@@ -41,7 +41,7 @@ from research_mentor.domain.research import (
 from research_mentor.errors import IllegalTransitionError, InvariantViolationError
 from research_mentor.harness.routing import (
     route_idea_review,
-    route_complete_output,
+    route_complete,
     route_key_insight_check,
     route_plan_decision,
     route_working_output,
@@ -503,7 +503,7 @@ class ResearchMentorOrchestrator:
                 ],
             )
         )
-        phase_after = route_complete_output(completion_status=completion_status)
+        phase_after = route_complete(output).next_phase
         session.latest_complete_output = output.model_copy(deep=True)
         session.phase = phase_after
         payload = output.model_dump(mode="json")
