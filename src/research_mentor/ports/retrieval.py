@@ -6,5 +6,6 @@ from research_mentor.domain.evidence import LiteratureRecord
 
 
 class LiteratureSearchPort(Protocol):
-    def search(self, query: str, *, limit: int) -> list[LiteratureRecord]:
-        raise NotImplementedError
+    async def search(
+        self, query: str, *, limit: int = 10
+    ) -> list[LiteratureRecord]: ...

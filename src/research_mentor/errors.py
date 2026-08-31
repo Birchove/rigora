@@ -46,3 +46,7 @@ class InvalidStorageIdentifier(ResearchMentorError):
 
 class DocumentParseFailed(ResearchMentorError):
     """上传文档无法转换为规范 Markdown。"""
+
+
+class LiteratureSearchUnavailable(ResearchMentorError):
+    """文献 provider 当前不可用或拒绝了请求。"""

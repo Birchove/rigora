@@ -1,0 +1,1 @@
+"""OpenAlex literature retrieval adapter."""
