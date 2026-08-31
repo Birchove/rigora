@@ -20,6 +20,11 @@ dependencies = [
     "uvicorn[standard]>=0.52.4",
 ]
 
+[project.optional-dependencies]
+local-ranking = [
+    "flagembedding>=1.4.2",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=8,<9",
