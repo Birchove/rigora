@@ -256,18 +256,22 @@ def test_override_and_forward_event_payload_extensions(
 
     forward_orchestrator, forward_model, forward_repository = _bundle()
     forward_orchestrator.create_session("forward")
-    forward_model.enqueue("idea_review", _forward())
+    forward_output = _forward()
+    forward_model.enqueue("idea_review", forward_output)
     forward_orchestrator.review_idea("forward", initial_input)
-    task = _main_task()
-    forward_orchestrator.start_working("forward", task, plan=plan_output.plan)
     start_event = forward_repository.list_events("forward")[-1]
-    assert start_event.event_type is SessionEventType.WORKING_STARTED
-    assert start_event.phase_before is SessionPhase.AWAITING_WORKING_CONTEXT
+    assert start_event.event_type is SessionEventType.IDEA_REVIEWED
+    assert start_event.phase_before is SessionPhase.AWAITING_IDEA
     assert start_event.phase_after is SessionPhase.WORKING
-    assert start_event.payload == {
-        **task.model_dump(mode="json"),
-        "active_plan": plan_output.plan.model_dump(mode="json"),
-    }
+    assert start_event.payload == forward_output.model_dump(mode="json")
+    forward_session = forward_repository.get("forward")
+    assert forward_session.current_task is not None
+    assert forward_session.current_task.origin == "forward"
+    assert forward_session.research_context is not None
+    assert (
+        forward_session.research_context.forward_context
+        == forward_output.forward_context
+    )
     _assert_event_metadata(forward_repository.list_events("forward"))
 
 

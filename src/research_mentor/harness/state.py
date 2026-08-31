@@ -16,6 +16,7 @@ from research_mentor.domain.experiments import (
 from research_mentor.domain.research import (
     InitialInput,
     OverrideRecord,
+    ResearchContext,
     ResearchPlan,
     UserPlanDecision,
     UserPlanFeedback,
@@ -44,6 +45,8 @@ class ResearchSession(BaseModel):
     phase: SessionPhase = SessionPhase.AWAITING_IDEA
     initial_input: InitialInput | None = None
     idea_review: IdeaReviewOutput | None = None
+    research_context: ResearchContext | None = None
+    refinement_code: str | None = None
     latest_plan_output: PlanLoopOutput | None = None
     active_plan: ResearchPlan | None = None
     latest_check: KeyInsightCheckOutput | None = None

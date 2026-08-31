@@ -35,3 +35,5 @@ class HarnessConfig:
     pass_score: float = 6.0
     rag_relevance_threshold: float = 0.3
     scoring_rule_version: str = "v1"
+    supported_domains: tuple[str, ...] = ("computer science",)
+    supported_domain_aliases: tuple[str, ...] = ("cs", "计算机科学", "计算机")

@@ -49,6 +49,7 @@ from research_mentor.harness.routing import (
 )
 from research_mentor.harness.scoring import finalize_key_insight_check
 from research_mentor.harness.state import ResearchSession, SessionEvent, SessionEventType, SessionPhase
+from research_mentor.harness.task_factory import TaskFactory
 from research_mentor.ports.clock import ClockPort
 from research_mentor.ports.repository import ResearchSessionRepository
 
@@ -135,15 +136,56 @@ class ResearchMentorOrchestrator:
             {SessionPhase.AWAITING_IDEA, SessionPhase.AWAITING_IDEA_REFINEMENT},
         )
         phase_before = session.phase
-        output = self._idea_review_runner.run_sync(
-            IdeaReviewInput(
-                idea=idea.model_copy(deep=True),
-                sys_input=IdeaReviewSysInput(current_date=self._current_date()),
+        supported_domains = {
+            item.casefold()
+            for item in (
+                *self._config.supported_domains,
+                *self._config.supported_domain_aliases,
             )
-        )
+        }
+        if idea.domain.strip().casefold() not in supported_domains:
+            output = IdeaReviewOutput(
+                idea_type="range",
+                action="request_refinement",
+                normalized_idea=idea.original_idea,
+                reason="当前版本仅支持 computer science 领域。",
+                next_action="请将问题限定为 computer science 研究，或使用通用 Agent。",
+            )
+            refinement_code = "unsupported_domain"
+        else:
+            output = self._idea_review_runner.run_sync(
+                IdeaReviewInput(
+                    idea=idea.model_copy(deep=True),
+                    sys_input=IdeaReviewSysInput(current_date=self._current_date()),
+                )
+            )
+            refinement_code = (
+                "idea_refinement" if output.action == "request_refinement" else None
+            )
         phase_after = route_idea_review(output)
         session.initial_input = idea.model_copy(deep=True)
         session.idea_review = output.model_copy(deep=True)
+        session.refinement_code = refinement_code
+        if output.action == "proceed_to_working":
+            if output.forward_context is None:
+                raise InvariantViolationError("forward working requires forward_context")
+            session.research_context = ResearchContext(
+                normalized_idea=output.normalized_idea,
+                research_question=output.forward_context.research_question,
+                forward_context=output.forward_context.model_copy(deep=True),
+            )
+            session.current_task = TaskFactory.from_forward_context(
+                output.forward_context
+            )
+            session.main_experiment = (
+                output.forward_context.main_result.model_copy(deep=True)
+                if output.forward_context.main_result is not None
+                else None
+            )
+            session.completed_validations = [
+                item.model_copy(deep=True)
+                for item in output.forward_context.completed_validations
+            ]
         session.phase = phase_after
         event = self._event(
             session_id,
@@ -348,11 +390,21 @@ class ResearchMentorOrchestrator:
             if plan is None:
                 raise InvariantViolationError("forward working requires an explicit plan")
             session.active_plan = plan.model_copy(deep=True)
+            session.research_context = ResearchContext(
+                normalized_idea=session.idea_review.normalized_idea,
+                research_question=plan.research_question,
+                plan=plan.model_copy(deep=True),
+            )
             payload = task_context.model_dump(mode="json")
             payload["active_plan"] = plan.model_dump(mode="json")
         else:
             if plan is not None:
                 raise InvariantViolationError("accepted working plan cannot be replaced")
+            session.research_context = ResearchContext(
+                normalized_idea=session.idea_review.normalized_idea,
+                research_question=session.active_plan.research_question,
+                plan=session.active_plan.model_copy(deep=True),
+            )
             payload = task_context.model_dump(mode="json")
 
         phase_before = session.phase
@@ -377,11 +429,11 @@ class ResearchMentorOrchestrator:
         if (
             session.initial_input is None
             or session.idea_review is None
-            or session.active_plan is None
+            or session.research_context is None
             or session.current_task is None
         ):
             raise InvariantViolationError(
-                "working QA requires initial_input, idea_review, active_plan, and current_task"
+                "working QA requires initial_input, idea_review, research_context, and current_task"
             )
 
         phase_before = session.phase
@@ -390,11 +442,7 @@ class ResearchMentorOrchestrator:
                 idea=session.initial_input.model_copy(deep=True),
                 question=question,
                 sys_input=WorkingQASysInput(current_date=self._current_date()),
-                research_context=ResearchContext(
-                    normalized_idea=session.idea_review.normalized_idea,
-                    research_question=session.active_plan.research_question,
-                    plan=session.active_plan.model_copy(deep=True),
-                ),
+                research_context=session.research_context.model_copy(deep=True),
                 task_context=session.current_task.model_copy(deep=True),
                 conversation_turns=[],
                 compact_context=None,

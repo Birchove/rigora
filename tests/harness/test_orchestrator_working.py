@@ -173,6 +173,21 @@ def enter_forward_context(bundle, initial_input):
     orchestrator.create_session("s1")
     model.enqueue("idea_review", forward_review())
     orchestrator.review_idea("s1", initial_input)
+    stored = repository.get("s1")
+    stored.phase = SessionPhase.AWAITING_WORKING_CONTEXT
+    stored.research_context = None
+    stored.current_task = None
+    stored.main_experiment = None
+    stored.completed_validations = []
+    repository.commit(
+        stored,
+        repository.list_events("s1")[-1].model_copy(
+            update={
+                "event_id": "legacy-forward-context",
+                "phase_after": SessionPhase.AWAITING_WORKING_CONTEXT,
+            }
+        ),
+    )
     return orchestrator, model, repository
 
 

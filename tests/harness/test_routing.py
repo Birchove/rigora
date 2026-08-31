@@ -129,7 +129,7 @@ def working_output_factory(action: str) -> WorkingQAOutput:
         ("opinion", "request_refinement", SessionPhase.AWAITING_IDEA_REFINEMENT),
         ("opinion", "reject", SessionPhase.REJECTED),
         ("range", "request_refinement", SessionPhase.AWAITING_IDEA_REFINEMENT),
-        ("forward", "proceed_to_working", SessionPhase.AWAITING_WORKING_CONTEXT),
+        ("forward", "proceed_to_working", SessionPhase.WORKING),
         ("forward", "request_refinement", SessionPhase.AWAITING_IDEA_REFINEMENT),
         ("forward", "reject", SessionPhase.REJECTED),
     ],

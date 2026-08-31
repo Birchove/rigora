@@ -8,6 +8,7 @@ from research_mentor.domain.experiments import (
     ExperimentTaskOrigin,
     ValidationTask,
 )
+from research_mentor.domain.research import ForwardResearchContext
 
 
 class TaskFactory:
@@ -48,4 +49,24 @@ class TaskFactory:
                 current_experiment=task.name,
                 expected_result=task.expected_result,
             ),
+        )
+
+    @staticmethod
+    def from_forward_context(
+        context: ForwardResearchContext,
+    ) -> ExperimentTaskContext:
+        if context.stage in {"main_experiment_completed", "research_completed"}:
+            experiment_info = ExperimentInfo(
+                current_experiment="核对已有结果与补充验证需求"
+            )
+        elif context.current_experiment is not None:
+            experiment_info = context.current_experiment.model_copy(deep=True)
+        else:
+            raise ValueError("forward context requires a current working task")
+        return ExperimentTaskContext(
+            task_id=str(uuid4()),
+            task_kind="main",
+            origin="forward",
+            status="in_progress",
+            experiment_info=experiment_info,
         )

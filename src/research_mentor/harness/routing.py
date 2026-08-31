@@ -34,7 +34,7 @@ def route_idea_review(output: IdeaReviewOutput) -> SessionPhase:
     if output.action == "proceed_to_plan":
         return SessionPhase.PLANNING
     if output.action == "proceed_to_working":
-        return SessionPhase.AWAITING_WORKING_CONTEXT
+        return SessionPhase.WORKING
     if output.action == "request_refinement":
         return SessionPhase.AWAITING_IDEA_REFINEMENT
     return SessionPhase.REJECTED
