@@ -5,19 +5,19 @@
 ## 1. 状态基准
 
 - 记录日期：2026-09-01
-- 当前开发分支：`feature/full-product-v1`
+- 团队统一开发分支：`main`
 - Task 26 开发基线：`50c5a56`
 - 目标版本：v1.0
 - 当前版本定位：具备 project/command/view/document/export/SSE API、deterministic demo、统一错误 contract、FastAPI composition root 和 durable worker lifecycle 的 backend；尚不是完整产品
 - 当前测试基线：Task 26 完成后 `438 passed`
 - v1 implementation plan：Task 1–26 已有独立 commit；Task 27–32 尚未达到对应验收标准
 
-分支关系：
+当前分支关系：
 
 ```text
-main (3eebca6，v0.1 初始核心)
-  └── design/full-product（完整产品设计与实施计划）
-        └── feature/full-product-v1（当前实现分支）
+main / origin/main（Task 1–26 实现基线为 661c0c6，另含最新交接文档）
+  ├── feature/full-product-v1（与 main 同步，历史开发分支）
+  └── design/full-product（历史设计分支，未并入其额外本地 commit）
 ```
 
 ## 2. 设计依据与裁决顺序
@@ -294,6 +294,8 @@ Task 24 已提供文档与研究日志 API：upload 的 MIME、extension、单�
 Task 25 已提供 `GET /api/v1/projects/{project_id}/events` public SSE：`Last-Event-ID` 与 `after` 同时出现时取较大非负 cursor，按 project 隔离重放 `sequence > cursor` 的持久事件并严格递增去重，随后每秒 polling；15 秒无公开事件仅发送非持久化 comment heartbeat。公开 event type 固定为 13 项 whitelist，现有 session/outbox event 经显式 projection 后才发送，payload 同时使用字段 allowlist 与递归敏感 key 过滤；未知/内部 event 不公开。stream 每次查询均关闭 UoW，识别 client disconnect/cancellation，支持 deterministic service 测试而不会永久挂起。
 
 Task 26 已完成 Milestone E：`demo_mode` 启动时通过 SQL UoW 幂等预置三个固定项目，真实阶段分别为 `PLANNING / WORKING / AWAITING_VALIDATION_SELECTION`，并包含 schema-valid idea、plan、实验结果、validation candidates、writing guidance、`demo://` evidence 和可导出的研究日志。`projects.is_demo` 由 `0005` migration 持久化，`ProjectView` 对 demo/real 使用同一 contract 并分别返回 `true/false`；`DemoModelAdapter` 与 `DemoRetrievalAdapter` 复用生产 ports 和 Pydantic schemas，固定 public event script 延迟为 `0/120/240/360ms`。重复或并发 seed 不会创建副本，real mode 不 seed。
+
+真实模型状态必须单独说明：OpenAI Responses/OpenAI-compatible adapter 与 mock contract tests 已实现，但当前没有 API Key，也没有真实 provider 成功调用记录。默认运行 `demo` provider。`bootstrap.py` 中 production `AgentRunWorker.handlers` 仍为空，CommandBus production map 目前只注册 cancel/restart；完整 command → worker → 五 Agent → Harness → persistence 链路尚未接通，必须在 Task 29/32 前闭合，不能用 demo 结果代替真实联调。
 
 ### 5.6 Milestone F：React 前端
 
