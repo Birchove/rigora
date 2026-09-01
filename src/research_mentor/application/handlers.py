@@ -7,8 +7,10 @@ from uuid import uuid4
 
 from research_mentor.application.commands import (
     AgentCommandReceipt,
+    CancelRunCommand,
     CommandBase,
     CommandResult,
+    DeterministicCommandResult,
     RestartResearchCommand,
 )
 from research_mentor.domain.jobs import AgentRun
@@ -20,6 +22,7 @@ from research_mentor.harness.state import (
     SessionEventType,
 )
 from research_mentor.ports.events import OutboxEvent
+from research_mentor.errors import IllegalTransitionError
 
 
 CommandHandler: TypeAlias = Callable[
@@ -92,6 +95,7 @@ class RestartResearchHandler:
                 agent_name="idea_review",
                 status="queued",
                 attempt=0,
+                input_snapshot=command.model_dump(mode="json"),
             )
         )
         event = SessionEvent(
@@ -121,4 +125,38 @@ class RestartResearchHandler:
             project_id=project.project_id,
             command_id=command.command_id,
             run_id=run_id,
+        )
+
+
+class CancelRunHandler:
+    """Record a cooperative cancellation request without unlocking the project."""
+
+    async def __call__(
+        self,
+        command: CommandBase,
+        uow: Any,
+        project: ResearchProject,
+        session: ResearchSession,
+    ) -> CommandResult:
+        if not isinstance(command, CancelRunCommand):
+            raise TypeError("CancelRunHandler requires cancel_run")
+        run = (
+            await uow.runs.get(command.run_id)
+            if command.run_id is not None
+            else await uow.runs.find_active_for_project(project.project_id)
+        )
+        if (
+            run is None
+            or run.project_id != project.project_id
+            or run.status not in {"queued", "running"}
+            or not await uow.runs.request_cancel(run.run_id)
+        ):
+            raise IllegalTransitionError("no cancellable run")
+        return DeterministicCommandResult(
+            project_id=project.project_id,
+            command_id=command.command_id,
+            session_id=session.session_id,
+            version=project.version,
+            phase=session.phase,
+            payload={"run_id": run.run_id, "cancel_requested": True},
         )

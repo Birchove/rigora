@@ -78,6 +78,7 @@ class SessionEventType(StrEnum):
     COMPLETE_GUIDANCE_GENERATED = "complete_guidance_generated"
     VALIDATIONS_SELECTED = "validations_selected"
     PLAN_REVISION_DECIDED = "plan_revision_decided"
+    RUN_FAILED = "run_failed"
 
 
 class SessionEvent(BaseModel):

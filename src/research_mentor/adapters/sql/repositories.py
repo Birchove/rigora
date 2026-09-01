@@ -30,6 +30,12 @@ from research_mentor.ports.events import OutboxEvent
 from research_mentor.ports.repository import AgentOutputRecord, ProcessedCommand
 
 
+def _as_utc(value: datetime | None) -> datetime | None:
+    if value is None or value.tzinfo is not None:
+        return value
+    return value.replace(tzinfo=timezone.utc)
+
+
 class SqlSessionRepository:
     def __init__(self, db: AsyncSession) -> None:
         self._db = db
@@ -142,10 +148,16 @@ class SqlAgentRunRepository:
             agent_name=row.agent_name,
             status=row.status,
             attempt=row.attempt,
-            started_at=row.started_at,
-            finished_at=row.finished_at,
+            started_at=_as_utc(row.started_at),
+            finished_at=_as_utc(row.finished_at),
             public_message=row.public_message,
             error_code=row.error_code,
+            available_at=_as_utc(row.available_at),
+            lease_owner=row.lease_owner,
+            lease_expires_at=_as_utc(row.lease_expires_at),
+            row_version=row.row_version,
+            cancel_requested=row.cancel_requested,
+            input_snapshot=row.input_snapshot or {},
         )
 
     async def get(self, run_id: str) -> AgentRun | None:
@@ -175,6 +187,216 @@ class SqlAgentRunRepository:
         )
         if result.rowcount != 1:
             raise SessionNotFoundError(f"Run not found: {run.run_id}")
+
+    async def claim_next(
+        self, *, worker_id: str, now: datetime, lease_expires_at: datetime
+    ) -> AgentRun | None:
+        run_ids = (
+            await self._db.scalars(
+                select(AgentRunRow.run_id)
+                .where(
+                    AgentRunRow.status == "queued",
+                    (AgentRunRow.available_at.is_(None) | (AgentRunRow.available_at <= now)),
+                )
+                .order_by(AgentRunRow.available_at, AgentRunRow.run_id)
+            )
+        ).all()
+        for run_id in run_ids:
+            claimed = await self.claim(
+                run_id,
+                worker_id=worker_id,
+                now=now,
+                lease_expires_at=lease_expires_at,
+            )
+            if claimed is not None:
+                return claimed
+        return None
+
+    async def claim(
+        self,
+        run_id: str,
+        *,
+        worker_id: str,
+        now: datetime,
+        lease_expires_at: datetime,
+    ) -> AgentRun | None:
+        row = await self._db.get(AgentRunRow, run_id)
+        if row is None or row.status != "queued":
+            return None
+        available_at = _as_utc(row.available_at)
+        if available_at is not None and available_at > now:
+            return None
+        result = await self._db.execute(
+            update(AgentRunRow)
+            .where(
+                AgentRunRow.run_id == run_id,
+                AgentRunRow.status == "queued",
+                AgentRunRow.row_version == row.row_version,
+            )
+            .values(
+                status="running",
+                attempt=AgentRunRow.attempt + 1,
+                started_at=func.coalesce(AgentRunRow.started_at, now),
+                available_at=None,
+                lease_owner=worker_id,
+                lease_expires_at=lease_expires_at,
+                row_version=AgentRunRow.row_version + 1,
+            )
+        )
+        if result.rowcount != 1:
+            return None
+        await self._db.flush()
+        refreshed = await self._db.get(AgentRunRow, run_id, populate_existing=True)
+        return self._from_row(refreshed) if refreshed is not None else None
+
+    async def renew_lease(
+        self,
+        run_id: str,
+        *,
+        worker_id: str,
+        now: datetime,
+        lease_expires_at: datetime,
+    ) -> AgentRun | None:
+        row = await self._db.get(AgentRunRow, run_id)
+        if (
+            row is None
+            or row.status != "running"
+            or row.lease_owner != worker_id
+            or _as_utc(row.lease_expires_at) is None
+            or _as_utc(row.lease_expires_at) <= now
+        ):
+            return None
+        result = await self._db.execute(
+            update(AgentRunRow)
+            .where(
+                AgentRunRow.run_id == run_id,
+                AgentRunRow.status == "running",
+                AgentRunRow.lease_owner == worker_id,
+                AgentRunRow.lease_expires_at > now,
+                AgentRunRow.row_version == row.row_version,
+            )
+            .values(
+                lease_expires_at=lease_expires_at,
+                row_version=AgentRunRow.row_version + 1,
+            )
+            .execution_options(synchronize_session=False)
+        )
+        if result.rowcount != 1:
+            return None
+        await self._db.flush()
+        row = await self._db.get(AgentRunRow, run_id, populate_existing=True)
+        return self._from_row(row) if row is not None else None
+
+    async def request_cancel(self, run_id: str) -> bool:
+        result = await self._db.execute(
+            update(AgentRunRow)
+            .where(
+                AgentRunRow.run_id == run_id,
+                AgentRunRow.status.in_(("queued", "running")),
+            )
+            .values(cancel_requested=True, row_version=AgentRunRow.row_version + 1)
+        )
+        return result.rowcount == 1
+
+    async def finish(
+        self,
+        run_id: str,
+        *,
+        worker_id: str,
+        expected_version: int,
+        status: str,
+        now: datetime,
+        public_message: str,
+        error_code: str | None,
+    ) -> bool:
+        owner_clause = (
+            AgentRunRow.lease_owner == worker_id
+            if worker_id
+            else AgentRunRow.status == "queued"
+        )
+        result = await self._db.execute(
+            update(AgentRunRow)
+            .where(
+                AgentRunRow.run_id == run_id,
+                AgentRunRow.status.in_(("queued", "running")),
+                AgentRunRow.row_version == expected_version,
+                owner_clause,
+            )
+            .values(
+                status=status,
+                finished_at=now,
+                public_message=public_message,
+                error_code=error_code,
+                lease_owner=None,
+                lease_expires_at=None,
+                row_version=AgentRunRow.row_version + 1,
+            )
+        )
+        return result.rowcount == 1
+
+    async def requeue_retry(
+        self,
+        run_id: str,
+        *,
+        worker_id: str,
+        expected_version: int,
+        available_at: datetime,
+        public_message: str,
+        error_code: str,
+    ) -> bool:
+        result = await self._db.execute(
+            update(AgentRunRow)
+            .where(
+                AgentRunRow.run_id == run_id,
+                AgentRunRow.status == "running",
+                AgentRunRow.lease_owner == worker_id,
+                AgentRunRow.row_version == expected_version,
+            )
+            .values(
+                status="queued",
+                available_at=available_at,
+                lease_owner=None,
+                lease_expires_at=None,
+                public_message=public_message,
+                error_code=error_code,
+                row_version=AgentRunRow.row_version + 1,
+            )
+        )
+        return result.rowcount == 1
+
+    async def requeue_expired(self, *, now: datetime) -> tuple[str, ...]:
+        candidates = (
+            await self._db.execute(
+                select(AgentRunRow.run_id, AgentRunRow.row_version)
+                .where(
+                    AgentRunRow.status == "running",
+                    AgentRunRow.lease_expires_at <= now,
+                )
+                .order_by(AgentRunRow.run_id)
+            )
+        ).all()
+        requeued: list[str] = []
+        for run_id, row_version in candidates:
+            result = await self._db.execute(
+                update(AgentRunRow)
+                .where(
+                    AgentRunRow.run_id == run_id,
+                    AgentRunRow.status == "running",
+                    AgentRunRow.lease_expires_at <= now,
+                    AgentRunRow.row_version == row_version,
+                )
+                .values(
+                    status="queued",
+                    available_at=now,
+                    lease_owner=None,
+                    lease_expires_at=None,
+                    row_version=AgentRunRow.row_version + 1,
+                )
+                .execution_options(synchronize_session=False)
+            )
+            if result.rowcount == 1:
+                requeued.append(run_id)
+        return tuple(requeued)
 
 
 class SqlSessionEventRepository:

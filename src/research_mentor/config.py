@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     check_pass_score: float = Field(default=6.0, ge=0.0, le=10.0)
     rag_relevance_threshold: float = Field(default=0.3, ge=0.0, le=1.0)
     working_context_character_budget: int = Field(default=12000, ge=1000)
+    run_lease_seconds: float = Field(default=30.0, gt=0.0)
+    run_lease_renewal_seconds: float = Field(default=10.0, gt=0.0)
+    run_timeout_seconds: float = Field(default=120.0, gt=0.0)
+    run_retry_limit: int = Field(default=3, ge=1)
 
 
 @dataclass(frozen=True, slots=True)

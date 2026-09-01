@@ -6,11 +6,11 @@
 
 - 记录日期：2026-09-01
 - 当前开发分支：`feature/full-product-v1`
-- Task 20 开发基线：`94a2c4d`
+- Task 21 开发基线：`bd0c182`
 - 目标版本：v1.0
 - 当前版本定位：可安装、可测试的 deterministic multi-agent backend core；尚不是可运行的完整产品
-- 当前测试基线：Task 20 并发修复后 `400 passed`
-- v1 implementation plan：Task 1–20 已有独立 commit；Task 21–32 尚未达到对应验收标准
+- 当前测试基线：Task 21 完成后 `408 passed`
+- v1 implementation plan：Task 1–21 已有独立 commit；Task 22–32 尚未达到对应验收标准
 
 分支关系：
 
@@ -281,7 +281,7 @@ Task 17–19 已闭合 Idea Review 四种 action、非 CS domain guard、forward
 
 Task 20 已建立完整 discriminated command union、application command bus、processed-command 幂等返回、project version/phase/active-run guard 和 server-authoritative `allowed_commands`。所有 mutation 强制 `command_id/expected_version`；Agent command 返回 typed run receipt，确定性 command 返回 typed updated view。command bus 在 handler 前使用 project version CAS 预留本次 mutation，同 command 并发输家在新 UoW 返回赢家的原始 typed result，不同 Agent command 的同版本竞争只有一个可以创建 run，另一个稳定得到 stale-version conflict。`restart_research(confirm_restart=True)` 会在单一 UoW 中保留旧 session、创建并切换到同 project 的新 session、追加 event/outbox、排队新的 Idea Review run，运行中则在创建任何新 run 前拒绝抢占。
 
-Milestone D 尚未实现 Task 21：durable AgentRun worker，以及 retry、cooperative cancel、timeout、lease 和服务重启恢复。
+Task 21 已实现 durable AgentRun worker：数据库 CAS claim、可续租 lease、冻结 input snapshot、有限 transient retry 与持久化 `available_at`、最多两次 schema repair、cooperative cancel、timeout/最终失败状态及 public failure event、过期 lease 重排和服务重启恢复均已闭合。取消请求保持 run active，只有 worker 确认 `cancelled` 后才解除项目锁；terminal 写入使用 owner/version CAS，业务 phase 在失败、超时和 recovery 中保持不变。Task 20 的多 research cycle migration 后新增单链 `0003` durable-run migration。
 
 ### 5.5 Milestone E：FastAPI、SSE 与 Demo
 
@@ -325,7 +325,7 @@ FastAPI 等依赖已加入，但没有 API 代码。尚未实现：
 - 文件路径、MIME、大小和项目隔离尚未实现；
 - API key、连接字符串和用户文档的日志脱敏尚未实现；
 - provider、文档解析和外部检索的失败恢复尚未实现；
-- 多进程 AgentRun lease/CAS 尚未实现；重复 command 与 stale project version 已由 Task 20 command bus 覆盖；
+- 多进程 AgentRun lease/CAS、retry、cooperative cancel 与 expired-lease recovery 已由 Task 21 覆盖；Task 22 仍需在 FastAPI lifecycle 接线 worker/recovery；
 - Prompt 已有基本数据/指令隔离，但尚无端到端 adversarial 测试。
 
 ## 6. 推荐继续开发顺序
@@ -335,8 +335,8 @@ FastAPI 等依赖已加入，但没有 API 代码。尚未实现：
 1. **Milestone A（Task 2–6）已完成**：不得重复实现；
 2. **Milestone B（Task 7–12）已完成**：不得重复实现；
 3. **Milestone C（Task 13–16）已完成**：不得重复实现；
-4. **完成 Milestone D（Task 21）**：实现 durable run worker、retry、cancel、timeout 与恢复；
-5. **完成 Milestone E（Task 22–26）**：建立 API、SSE 和 deterministic demo；
+4. **Milestone D（Task 17–21）已完成**：不得重复实现；
+5. **完成 Milestone E（Task 22–26）**：从 Task 22 composition root 与 FastAPI lifecycle 开始，随后建立 API、SSE 和 deterministic demo；
 6. **完成 Milestone F（Task 27–29）**：实现 React 工作台；
 7. **完成 Milestone G（Task 30–32）**：补齐 Eval、E2E、34 项验收和发布审计。
 

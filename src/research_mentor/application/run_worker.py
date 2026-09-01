@@ -1,0 +1,314 @@
+"""Durable Agent run execution with leases, retries and cooperative cancellation."""
+
+import asyncio
+from collections.abc import Awaitable, Callable, Mapping
+from copy import deepcopy
+from datetime import datetime, timedelta, timezone
+from typing import Any, TypeAlias
+from uuid import uuid4
+
+from research_mentor.adapters.model.errors import ModelTemporarilyUnavailable
+from research_mentor.domain.jobs import AgentRun
+from research_mentor.errors import ModelOutputInvalid
+from research_mentor.harness.state import SessionEvent, SessionEventType
+from research_mentor.ports.events import OutboxEvent
+
+
+RunHandler: TypeAlias = Callable[
+    [AgentRun, dict[str, Any], list[dict[str, Any]] | None], Awaitable[Any]
+]
+
+
+class _RunCancelled(Exception):
+    pass
+
+
+class RunService:
+    """Run controls used by command handlers and API composition."""
+
+    def __init__(
+        self,
+        uow_factory: Callable[[], Any],
+        *,
+        now: Callable[[], datetime] | None = None,
+    ) -> None:
+        self._uow_factory = uow_factory
+        self._now = now or (lambda: datetime.now(timezone.utc))
+
+    async def request_cancel(self, run_id: str) -> bool:
+        async with self._uow_factory() as uow:
+            return await uow.runs.request_cancel(run_id)
+
+    async def has_active_run(self, project_id: str) -> bool:
+        async with self._uow_factory() as uow:
+            return await uow.runs.find_active_for_project(project_id) is not None
+
+
+class AgentRunWorker:
+    """Claims one queued run and advances it through the durable state machine."""
+
+    def __init__(
+        self,
+        uow_factory: Callable[[], Any],
+        *,
+        handlers: Mapping[str, RunHandler],
+        worker_id: str,
+        lease_seconds: float = 30.0,
+        lease_renewal_seconds: float = 10.0,
+        run_timeout: float = 120.0,
+        retry_limit: int = 3,
+        now: Callable[[], datetime] | None = None,
+        new_id: Callable[[], str] | None = None,
+    ) -> None:
+        if lease_seconds <= 0 or lease_renewal_seconds <= 0 or run_timeout <= 0:
+            raise ValueError("worker durations must be positive")
+        if retry_limit < 1:
+            raise ValueError("retry_limit must be positive")
+        self._uow_factory = uow_factory
+        self._handlers = handlers
+        self.worker_id = worker_id
+        self._lease_seconds = lease_seconds
+        self._renewal_seconds = lease_renewal_seconds
+        self._run_timeout = run_timeout
+        self._retry_limit = retry_limit
+        self._now = now or (lambda: datetime.now(timezone.utc))
+        self._new_id = new_id or (lambda: str(uuid4()))
+
+    async def drain_once(self) -> str | None:
+        run = await self._claim_next()
+        if run is None:
+            return None
+        await self._execute_claimed(run)
+        return run.run_id
+
+    async def claim(self, run_id: str) -> bool:
+        now = self._now()
+        async with self._uow_factory() as uow:
+            run = await uow.runs.claim(
+                run_id,
+                worker_id=self.worker_id,
+                now=now,
+                lease_expires_at=now + timedelta(seconds=self._lease_seconds),
+            )
+        return run is not None
+
+    async def renew_lease(self, run_id: str) -> bool:
+        now = self._now()
+        async with self._uow_factory() as uow:
+            run = await uow.runs.renew_lease(
+                run_id,
+                worker_id=self.worker_id,
+                now=now,
+                lease_expires_at=now + timedelta(seconds=self._lease_seconds),
+            )
+        return run is not None
+
+    async def confirm_cancelled(self, run_id: str) -> bool:
+        async with self._uow_factory() as uow:
+            run = await uow.runs.get(run_id)
+            if run is None or not run.cancel_requested:
+                return False
+            owner = self.worker_id if run.status == "running" else ""
+            return await uow.runs.finish(
+                run_id,
+                worker_id=owner,
+                expected_version=run.row_version,
+                status="cancelled",
+                now=self._now(),
+                public_message="运行已取消。",
+                error_code="run_cancelled",
+            )
+
+    async def _claim_next(self) -> AgentRun | None:
+        now = self._now()
+        async with self._uow_factory() as uow:
+            return await uow.runs.claim_next(
+                worker_id=self.worker_id,
+                now=now,
+                lease_expires_at=now + timedelta(seconds=self._lease_seconds),
+            )
+
+    async def _execute_claimed(self, run: AgentRun) -> None:
+        if await self._cancel_requested(run.run_id):
+            await self.confirm_cancelled(run.run_id)
+            return
+        handler = self._handlers.get(run.agent_name)
+        if handler is None:
+            await self._terminal(
+                run.run_id,
+                "failed",
+                public_message="运行无法执行。",
+                error_code="run_handler_missing",
+            )
+            return
+
+        renewal = asyncio.create_task(self._renew_during_call(run.run_id))
+        outcome = "succeeded"
+        public_message = "运行已完成。"
+        error_code: str | None = None
+        try:
+            async with asyncio.timeout(self._run_timeout):
+                await self._call_with_schema_repair(handler, run)
+        except _RunCancelled:
+            outcome = "cancelled"
+        except TimeoutError:
+            outcome = "timed_out"
+            public_message = "模型调用超时，请重试。"
+            error_code = "run_timeout"
+        except ModelTemporarilyUnavailable as exc:
+            outcome = "retry"
+            public_message = str(exc)
+        except ModelOutputInvalid:
+            outcome = "failed"
+            public_message = "模型输出格式校验失败。"
+            error_code = "model_output_invalid"
+        except Exception:
+            outcome = "failed"
+            public_message = "运行失败，请重试。"
+            error_code = "run_failed"
+        finally:
+            renewal.cancel()
+            try:
+                await renewal
+            except asyncio.CancelledError:
+                pass
+
+        if outcome == "cancelled" or await self._cancel_requested(run.run_id):
+            await self.confirm_cancelled(run.run_id)
+        elif outcome == "retry":
+            await self._retry_or_fail(run.run_id)
+        else:
+            await self._terminal(
+                run.run_id,
+                outcome,
+                public_message=public_message,
+                error_code=error_code,
+            )
+
+    async def _call_with_schema_repair(
+        self, handler: RunHandler, run: AgentRun
+    ) -> Any:
+        repair_errors: list[dict[str, Any]] | None = None
+        for repair_count in range(3):
+            if await self._cancel_requested(run.run_id):
+                raise _RunCancelled
+            try:
+                return await handler(
+                    run.model_copy(deep=True),
+                    deepcopy(run.input_snapshot),
+                    repair_errors,
+                )
+            except ModelOutputInvalid as exc:
+                if repair_count == 2:
+                    raise
+                repair_errors = self._minimal_schema_errors(exc.errors)
+            if await self._cancel_requested(run.run_id):
+                raise _RunCancelled
+        raise AssertionError("unreachable")
+
+    async def _renew_during_call(self, run_id: str) -> None:
+        while True:
+            await asyncio.sleep(self._renewal_seconds)
+            if not await self.renew_lease(run_id):
+                return
+
+    async def _cancel_requested(self, run_id: str) -> bool:
+        async with self._uow_factory() as uow:
+            run = await uow.runs.get(run_id)
+        return run is None or run.cancel_requested or run.status != "running"
+
+    async def _terminal(
+        self,
+        run_id: str,
+        status: str,
+        *,
+        public_message: str,
+        error_code: str | None,
+    ) -> bool:
+        async with self._uow_factory() as uow:
+            run = await uow.runs.get(run_id)
+            if run is None or run.status != "running":
+                return False
+            finished = await uow.runs.finish(
+                run_id,
+                worker_id=self.worker_id,
+                expected_version=run.row_version,
+                status=status,
+                now=self._now(),
+                public_message=public_message,
+                error_code=error_code,
+            )
+            if not finished or status not in {"failed", "timed_out"}:
+                return finished
+            project = await uow.projects.get(run.project_id)
+            if project is None:
+                return finished
+            session = await uow.sessions.get(project.session_id)
+            if session is None:
+                return finished
+            event_id = self._new_id()
+            occurred_at = self._now()
+            event = SessionEvent(
+                event_id=event_id,
+                session_id=session.session_id,
+                event_type=SessionEventType.RUN_FAILED,
+                phase_before=session.phase,
+                phase_after=session.phase,
+                payload={
+                    "run_id": run_id,
+                    "status": status,
+                    "error_code": error_code,
+                    "public_message": public_message,
+                },
+                occurred_at=occurred_at.isoformat(),
+            )
+            await uow.events.append(event)
+            await uow.outbox.append(
+                OutboxEvent(
+                    outbox_id=self._new_id(),
+                    session_event_id=event_id,
+                    project_id=run.project_id,
+                    topic="run.failed",
+                    payload=event.payload,
+                    created_at=occurred_at,
+                )
+            )
+            return True
+
+    async def _retry_or_fail(self, run_id: str) -> None:
+        exhausted = False
+        async with self._uow_factory() as uow:
+            run = await uow.runs.get(run_id)
+            if run is None or run.status != "running":
+                return
+            if run.attempt >= self._retry_limit:
+                exhausted = True
+            else:
+                delay = min(2**run.attempt, 30)
+                await uow.runs.requeue_retry(
+                    run_id,
+                    worker_id=self.worker_id,
+                    expected_version=run.row_version,
+                    available_at=self._now() + timedelta(seconds=delay),
+                    public_message="模型服务暂时不可用，已安排重试。",
+                    error_code="model_temporarily_unavailable",
+                )
+        if exhausted:
+            await self._terminal(
+                run_id,
+                "failed",
+                public_message="模型服务暂时不可用，重试次数已用尽。",
+                error_code="model_temporarily_unavailable",
+            )
+
+    @staticmethod
+    def _minimal_schema_errors(
+        errors: list[dict[str, object]],
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "loc": list(error.get("loc", ())),
+                "msg": str(error.get("msg", "invalid output")),
+            }
+            for error in errors[:10]
+        ]

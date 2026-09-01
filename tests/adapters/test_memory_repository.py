@@ -108,6 +108,7 @@ def test_session_phase_and_event_type_values_are_exact() -> None:
         "complete_guidance_generated",
         "validations_selected",
         "plan_revision_decided",
+        "run_failed",
     }
 
 

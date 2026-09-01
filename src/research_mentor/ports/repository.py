@@ -70,6 +70,45 @@ class AgentRunRepository(Protocol):
 
     async def find_active_for_project(self, project_id: str) -> AgentRun | None: ...
 
+    async def claim_next(
+        self, *, worker_id: str, now: datetime, lease_expires_at: datetime
+    ) -> AgentRun | None: ...
+
+    async def claim(
+        self, run_id: str, *, worker_id: str, now: datetime, lease_expires_at: datetime
+    ) -> AgentRun | None: ...
+
+    async def renew_lease(
+        self, run_id: str, *, worker_id: str, now: datetime, lease_expires_at: datetime
+    ) -> AgentRun | None: ...
+
+    async def request_cancel(self, run_id: str) -> bool: ...
+
+    async def finish(
+        self,
+        run_id: str,
+        *,
+        worker_id: str,
+        expected_version: int,
+        status: str,
+        now: datetime,
+        public_message: str,
+        error_code: str | None,
+    ) -> bool: ...
+
+    async def requeue_retry(
+        self,
+        run_id: str,
+        *,
+        worker_id: str,
+        expected_version: int,
+        available_at: datetime,
+        public_message: str,
+        error_code: str,
+    ) -> bool: ...
+
+    async def requeue_expired(self, *, now: datetime) -> tuple[str, ...]: ...
+
 
 class DocumentRepository(Protocol):
     async def get(self, document_id: str) -> UploadedDocument | None: ...
