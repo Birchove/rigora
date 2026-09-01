@@ -123,6 +123,12 @@ def candidate(candidate_id: str, rank: int) -> ValidationCandidate:
     )
 
 
+def candidate_alias(candidate_id: str, rank: int, original: ValidationCandidate):
+    return original.model_copy(
+        update={"candidate_id": candidate_id, "rank": rank}, deep=True
+    )
+
+
 def propose_success(orchestrator, model):
     model.enqueue(
         "working_qa",
@@ -390,7 +396,10 @@ def test_completed_candidate_is_not_reoffered(completion_bundle):
         "complete",
         CompleteAgentOutput(
             mode="validation", plan=None, final_hint="追加验证",
-            validation_candidates=[candidate("v1", 1), candidate("v3", 3)],
+            validation_candidates=[
+                candidate_alias("v1-alias", 2, candidate("v1", 1)),
+                candidate("v3", 3),
+            ],
         ),
     )
 
@@ -400,6 +409,31 @@ def test_completed_candidate_is_not_reoffered(completion_bundle):
     assert [item.candidate_id for item in queue.offered] == ["v3"]
     assert [item.candidate.candidate_id for item in queue.selected] == ["v1"]
     assert queue.selected[0].status == "completed"
+
+
+def test_same_validation_task_with_different_ids_is_deduplicated_in_one_batch(
+    completion_bundle
+):
+    orchestrator, model, repository = completion_bundle
+    propose_success(orchestrator, model)
+    orchestrator.record_main_result("s1", main_result())
+    original = candidate("v1", 1)
+    model.enqueue(
+        "complete",
+        CompleteAgentOutput(
+            mode="validation", plan=None, final_hint="候选去重",
+            validation_candidates=[
+                original,
+                candidate_alias("v1-alias", 2, original),
+            ],
+        ),
+    )
+
+    orchestrator.run_complete("s1", completion_status=False)
+
+    assert [
+        item.candidate_id for item in repository.get("s1").validation_queue.offered
+    ] == ["v1"]
 
 
 @pytest.mark.parametrize(
@@ -472,6 +506,29 @@ def test_plan_revision_decisions_preserve_results(completion_bundle):
     assert continued.plan_revision_records[-1].mentor_reason == "负面结果动摇主张"
     assert continued.plan_revision_records[-1].user_reason == "接受风险"
     assert continued.main_experiment == main_result()
+
+
+def test_working_plan_issue_continue_without_main_result_returns_working(
+    completion_bundle
+):
+    orchestrator, model, repository = completion_bundle
+    model.enqueue(
+        "working_qa",
+        WorkingQAOutput(
+            action="report_plan_issue",
+            reason="当前设置无法检验核心主张",
+            reply="建议先调整实验设置",
+        ),
+    )
+    orchestrator.run_working_qa("s1", "方案有根本问题")
+
+    continued = orchestrator.decide_plan_revision(
+        "s1", "continue_with_warning", user_reason="先继续补充实验"
+    )
+
+    assert continued.phase is SessionPhase.WORKING
+    assert continued.main_experiment is None
+    assert repository.list_events("s1")[-1].phase_after is SessionPhase.WORKING
 
 
 def test_plan_revision_revise_resets_round_without_erasing_facts(completion_bundle):

@@ -5,8 +5,20 @@ from typing import Literal, Self
 from pydantic import BaseModel, Field, ValidationError
 
 from research_mentor.domain.completion import ValidationCandidate, ValidationSelection
+from research_mentor.domain.experiments import ValidationTask
 from research_mentor.errors import ValidationSelectionError
 from research_mentor.harness.phase import SessionPhase
+
+
+def validation_task_identity(task: ValidationTask) -> tuple[str, ...]:
+    return (
+        task.paradigm,
+        task.validation_type,
+        task.name,
+        task.purpose,
+        task.method,
+        task.expected_result or "",
+    )
 
 
 class QueuedValidation(BaseModel):

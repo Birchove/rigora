@@ -59,7 +59,10 @@ from research_mentor.harness.routing import (
 from research_mentor.harness.scoring import finalize_key_insight_check
 from research_mentor.harness.state import PlanRevisionRecord, ResearchSession, SessionEvent, SessionEventType, SessionPhase
 from research_mentor.harness.task_factory import TaskFactory
-from research_mentor.harness.validation import ValidationQueue
+from research_mentor.harness.validation import (
+    ValidationQueue,
+    validation_task_identity,
+)
 from research_mentor.ports.clock import ClockPort
 from research_mentor.ports.repository import ResearchSessionRepository
 
@@ -1009,24 +1012,42 @@ class ResearchMentorOrchestrator:
         session.latest_complete_output = output.model_copy(deep=True)
         if output.mode == "validation":
             handled_ids = set()
+            handled_task_identities = set()
             previous_queue = session.validation_queue
             existing_candidates = []
             if previous_queue is not None:
+                handled = [
+                    *previous_queue.selected,
+                    *previous_queue.skipped,
+                ]
                 handled_ids = {
                     item.candidate.candidate_id
-                    for item in [*previous_queue.selected, *previous_queue.skipped]
+                    for item in handled
                 }
-                existing_candidates = [
-                    item.model_copy(deep=True)
-                    for item in previous_queue.offered
-                    if item.candidate_id not in handled_ids
-                ]
+                handled_task_identities = {
+                    validation_task_identity(item.candidate.task)
+                    for item in handled
+                }
+                for item in previous_queue.offered:
+                    identity = validation_task_identity(item.task)
+                    if (
+                        item.candidate_id not in handled_ids
+                        and identity not in handled_task_identities
+                    ):
+                        existing_candidates.append(item.model_copy(deep=True))
+                        handled_task_identities.add(identity)
             merged_candidates = list(existing_candidates)
             merged_ids = {item.candidate_id for item in merged_candidates}
             for item in output.validation_candidates:
-                if item.candidate_id not in handled_ids and item.candidate_id not in merged_ids:
+                identity = validation_task_identity(item.task)
+                if (
+                    item.candidate_id not in handled_ids
+                    and item.candidate_id not in merged_ids
+                    and identity not in handled_task_identities
+                ):
                     merged_candidates.append(item.model_copy(deep=True))
                     merged_ids.add(item.candidate_id)
+                    handled_task_identities.add(identity)
             next_queue = ValidationQueue.from_candidates(
                 merged_candidates,
             )
@@ -1159,7 +1180,11 @@ class ResearchMentorOrchestrator:
                 session.pending_plan_feedback = UserPlanFeedback(user_reason=user_reason)
             session.phase = SessionPhase.PLANNING
         elif decision == "continue_with_warning":
-            session.phase = SessionPhase.COMPLETING
+            session.phase = (
+                SessionPhase.COMPLETING
+                if session.main_experiment is not None
+                else SessionPhase.WORKING
+            )
         else:
             session.phase = SessionPhase.COMPLETED
         session.pending_plan_issue_reason = None
