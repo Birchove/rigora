@@ -6,11 +6,11 @@
 
 - 记录日期：2026-09-01
 - 当前开发分支：`feature/full-product-v1`
-- Task 21 开发基线：`bd0c182`
+- Task 22 开发基线：`d6d5fe3`
 - 目标版本：v1.0
-- 当前版本定位：可安装、可测试的 deterministic multi-agent backend core；尚不是可运行的完整产品
-- 当前测试基线：Task 21 完成后 `408 passed`
-- v1 implementation plan：Task 1–21 已有独立 commit；Task 22–32 尚未达到对应验收标准
+- 当前版本定位：具备 FastAPI composition root、durable worker lifecycle 和 health endpoint 的 backend；尚不是完整产品
+- 当前测试基线：Task 22 完成后 `413 passed`
+- v1 implementation plan：Task 1–22 已有独立 commit；Task 23–32 尚未达到对应验收标准
 
 分支关系：
 
@@ -285,9 +285,10 @@ Task 21 已实现 durable AgentRun worker：数据库 CAS claim、可续租 leas
 
 ### 5.5 Milestone E：FastAPI、SSE 与 Demo
 
-FastAPI 等依赖已加入，但没有 API 代码。尚未实现：
+Task 22 已建立 FastAPI composition root：同一注入 `Settings` 决定 demo/OpenAI/OpenAI-compatible model adapter 与 SQL engine，集中组装 UoW、CommandBus、RunService、durable worker 和 recovery。应用 lifecycle 按 recovery → worker start 启动、worker stop → provider/engine cleanup 关闭，startup 失败也释放已创建资源；`/api/v1/health` 已提供稳定状态 contract。
 
-- composition root 与 FastAPI lifecycle；
+尚未实现：
+
 - project、command、view 和统一 error envelope API；
 - 文档上传、状态、retry/delete API；
 - 研究日志 JSON/Markdown export API；
@@ -336,7 +337,7 @@ FastAPI 等依赖已加入，但没有 API 代码。尚未实现：
 2. **Milestone B（Task 7–12）已完成**：不得重复实现；
 3. **Milestone C（Task 13–16）已完成**：不得重复实现；
 4. **Milestone D（Task 17–21）已完成**：不得重复实现；
-5. **完成 Milestone E（Task 22–26）**：从 Task 22 composition root 与 FastAPI lifecycle 开始，随后建立 API、SSE 和 deterministic demo；
+5. **完成 Milestone E（Task 23–26）**：从 Task 23 project/command/view API 开始，随后建立文件、SSE 和 deterministic demo；
 6. **完成 Milestone F（Task 27–29）**：实现 React 工作台；
 7. **完成 Milestone G（Task 30–32）**：补齐 Eval、E2E、34 项验收和发布审计。
 

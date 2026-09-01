@@ -57,10 +57,16 @@ class AgentRunWorker:
         lease_renewal_seconds: float = 10.0,
         run_timeout: float = 120.0,
         retry_limit: int = 3,
+        poll_interval: float = 0.25,
         now: Callable[[], datetime] | None = None,
         new_id: Callable[[], str] | None = None,
     ) -> None:
-        if lease_seconds <= 0 or lease_renewal_seconds <= 0 or run_timeout <= 0:
+        if (
+            lease_seconds <= 0
+            or lease_renewal_seconds <= 0
+            or run_timeout <= 0
+            or poll_interval <= 0
+        ):
             raise ValueError("worker durations must be positive")
         if retry_limit < 1:
             raise ValueError("retry_limit must be positive")
@@ -71,8 +77,36 @@ class AgentRunWorker:
         self._renewal_seconds = lease_renewal_seconds
         self._run_timeout = run_timeout
         self._retry_limit = retry_limit
+        self._poll_interval = poll_interval
         self._now = now or (lambda: datetime.now(timezone.utc))
         self._new_id = new_id or (lambda: str(uuid4()))
+        self._polling_task: asyncio.Task[None] | None = None
+
+    @property
+    def is_running(self) -> bool:
+        return self._polling_task is not None and not self._polling_task.done()
+
+    async def start(self) -> None:
+        if self.is_running:
+            return
+        self._polling_task = asyncio.create_task(self._poll())
+
+    async def stop(self) -> None:
+        task = self._polling_task
+        self._polling_task = None
+        if task is None:
+            return
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    async def _poll(self) -> None:
+        while True:
+            run_id = await self.drain_once()
+            if run_id is None:
+                await asyncio.sleep(self._poll_interval)
 
     async def drain_once(self) -> str | None:
         run = await self._claim_next()
