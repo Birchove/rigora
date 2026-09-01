@@ -14,7 +14,13 @@ from research_mentor.domain.conversations import ConversationTurn
 from research_mentor.domain.documents import DocumentChunk
 from research_mentor.domain.evidence import EvidenceRef
 from research_mentor.domain.experiments import ExperimentInfo, ExperimentTaskContext
-from research_mentor.domain.research import KeyInsight, Milestone, ResearchContext, ResearchPlan
+from research_mentor.domain.research import (
+    ForwardResearchContext,
+    KeyInsight,
+    Milestone,
+    ResearchContext,
+    ResearchPlan,
+)
 from research_mentor.ports.retrieval import RankResult
 
 
@@ -162,10 +168,34 @@ async def test_short_follow_up_uses_deterministic_research_and_task_rank_query()
     assert ranker.queries == [
         "normalized_idea: 比较缓存策略对尾延迟的影响\n"
         "research_question: 缓存策略是否降低尾延迟？\n"
+        "current_stage: working\n"
         "task_kind: main\n"
         "current_experiment: 缓存基准实验\n"
         "question: 那第二个方案呢"
     ]
+
+
+@pytest.mark.asyncio
+async def test_forward_rank_query_contains_current_stage() -> None:
+    ranker = RecordingRanker()
+    source = long_source()
+    forward = ForwardResearchContext(
+        stage="experiment_in_progress",
+        research_question=source.research_context.research_question,
+        current_experiment=source.current_task.experiment_info,
+    )
+    source.research_context = ResearchContext(
+        normalized_idea=source.research_context.normalized_idea,
+        research_question=forward.research_question,
+        forward_context=forward,
+    )
+
+    await WorkingContextBuilder(Settings(), ranker).build(
+        source, "那第二个方案呢", character_budget=12000
+    )
+
+    assert "current_stage: experiment_in_progress" in ranker.queries[0]
+    assert "forward_stage:" not in ranker.queries[0]
 
 
 @pytest.mark.asyncio

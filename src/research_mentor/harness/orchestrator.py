@@ -16,7 +16,12 @@ from research_mentor.agents.idea_review.contracts import IdeaReviewInput, IdeaRe
 from research_mentor.agents.idea_review.runner import IdeaReviewRunner
 from research_mentor.agents.key_insight_check.contracts import KeyInsightCheckInput, KeyInsightCheckSysInput
 from research_mentor.agents.key_insight_check.runner import KeyInsightCheckRunner
-from research_mentor.agents.plan_loop.contracts import PlanLoopInput, PlanLoopOutput, PlanLoopSysInput
+from research_mentor.agents.plan_loop.contracts import (
+    PlanLoopInput,
+    PlanLoopOutput,
+    PlanLoopSysInput,
+    PlanRevisionContext,
+)
 from research_mentor.agents.plan_loop.runner import PlanLoopRunner
 from research_mentor.agents.working_qa.contracts import (
     WorkingQAInput,
@@ -244,6 +249,11 @@ class ResearchMentorOrchestrator:
                 ),
                 previous_plan=previous_plan.model_copy(deep=True) if previous_plan else None,
                 user_feedback=user_feedback.model_copy(deep=True) if user_feedback else None,
+                revision_context=(
+                    session.pending_plan_revision_context.model_copy(deep=True)
+                    if session.pending_plan_revision_context is not None
+                    else None
+                ),
             )
         )
         if is_initial and output.change_summary:
@@ -255,6 +265,7 @@ class ResearchMentorOrchestrator:
         session.active_plan = output.plan.model_copy(deep=True)
         session.latest_check = None
         session.pending_plan_feedback = None
+        session.pending_plan_revision_context = None
         session.phase = phase_after
         event = self._event(
             session_id,
@@ -296,6 +307,11 @@ class ResearchMentorOrchestrator:
                     max_check_rounds=self._config.max_check_rounds,
                     candidate_index=index + 1,
                     candidate_focus=focus_hints[index],
+                    revision_context=(
+                        session.pending_plan_revision_context.model_copy(deep=True)
+                        if session.pending_plan_revision_context is not None
+                        else None
+                    ),
                 )
             )
             if output.change_summary:
@@ -318,6 +334,7 @@ class ResearchMentorOrchestrator:
         session.plan_candidates = candidates
         session.latest_plan_output = outputs[0].model_copy(deep=True)
         session.active_plan = outputs[0].plan.model_copy(deep=True)
+        session.pending_plan_revision_context = None
         session.phase = SessionPhase.CHECKING_KEY_INSIGHT
         event = self._event(
             session_id,
@@ -381,12 +398,18 @@ class ResearchMentorOrchestrator:
                 ),
                 candidate_index=candidate.candidate_index,
                 candidate_focus=candidate.focus_hint,
+                revision_context=(
+                    session.pending_plan_revision_context.model_copy(deep=True)
+                    if session.pending_plan_revision_context is not None
+                    else None
+                ),
             )
         )
         candidate.plan = output.plan.model_copy(deep=True)
         candidate.response_to_user = output.response_to_user
         candidate.change_summary = list(output.change_summary)
         session.pending_plan_feedback = None
+        session.pending_plan_revision_context = None
         session.active_plan = candidate.plan.model_copy(deep=True)
         session.latest_plan_output = output.model_copy(deep=True)
         session.phase = SessionPhase.CHECKING_KEY_INSIGHT
@@ -820,6 +843,8 @@ class ResearchMentorOrchestrator:
             )
         if output.action == "report_plan_issue" and session.current_task.task_kind != "main":
             raise InvariantViolationError("only a main task may report a plan issue")
+        if output.action == "report_plan_issue":
+            session.pending_plan_issue_reason = output.reason
         phase_after = route_working_output(output)
         session.phase = phase_after
         event = self._event(
@@ -928,24 +953,12 @@ class ResearchMentorOrchestrator:
         if session.research_context.plan is not None and session.active_plan is None:
             raise InvariantViolationError("planned completion requires active_plan")
 
+        pending = None
         if session.validation_queue is not None:
             pending = next(
                 (item for item in session.validation_queue.selected if item.status == "pending"),
                 None,
             )
-            if pending is not None:
-                self._activate_validation(session, pending)
-                event = self._event(
-                    session_id,
-                    SessionEventType.VALIDATIONS_SELECTED,
-                    SessionPhase.COMPLETING,
-                    session.phase,
-                    {"candidate_id": pending.candidate.candidate_id, "source": "existing_queue"},
-                )
-                self._commit(session, event)
-                if session.latest_complete_output is None:
-                    raise InvariantViolationError("validation queue requires prior complete output")
-                return session.latest_complete_output.model_copy(deep=True)
 
         phase_before = session.phase
         output = self._complete_runner.run_sync(
@@ -966,7 +979,10 @@ class ResearchMentorOrchestrator:
         )
         phase_after = route_complete(output).next_phase
         session.latest_complete_output = output.model_copy(deep=True)
-        if output.mode == "validation":
+        if output.mode != "plan_revision" and pending is not None:
+            self._activate_validation(session, pending)
+            phase_after = session.phase
+        elif output.mode == "validation":
             handled_ids = set()
             previous_queue = session.validation_queue
             if session.validation_queue is not None:
@@ -1057,7 +1073,8 @@ class ResearchMentorOrchestrator:
             session.latest_complete_output.revision_reason
             if session.latest_complete_output is not None
             and session.latest_complete_output.revision_reason is not None
-            else "Working 报告当前方案存在关键问题"
+            else session.pending_plan_issue_reason
+            or "Working 报告当前方案存在关键问题"
         )
         if decision in {"continue_with_warning", "end_project"}:
             if user_reason is None or not user_reason.strip():
@@ -1070,6 +1087,26 @@ class ResearchMentorOrchestrator:
         )
         session.plan_revision_records.append(record)
         if decision == "revise":
+            if session.current_task is None:
+                raise InvariantViolationError(
+                    "plan revision requires current experiment facts"
+                )
+            session.pending_plan_revision_context = PlanRevisionContext(
+                main_experiment=(
+                    session.main_experiment.model_copy(deep=True)
+                    if session.main_experiment is not None
+                    else None
+                ),
+                completed_validations=[
+                    item.model_copy(deep=True)
+                    for item in session.completed_validations
+                ],
+                current_experiment=session.current_task.experiment_info.model_copy(
+                    deep=True
+                ),
+                mentor_issue_reason=mentor_reason,
+                user_feedback=user_reason,
+            )
             session.check_round = 0
             session.latest_check = None
             session.plan_decision = None
@@ -1080,6 +1117,7 @@ class ResearchMentorOrchestrator:
             session.phase = SessionPhase.COMPLETING
         else:
             session.phase = SessionPhase.COMPLETED
+        session.pending_plan_issue_reason = None
         event = self._event(
             session_id,
             SessionEventType.PLAN_REVISION_DECIDED,

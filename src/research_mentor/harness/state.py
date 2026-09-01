@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, JsonValue
 
 from research_mentor.agents.complete.contracts import CompleteAgentOutput
 from research_mentor.agents.idea_review.contracts import IdeaReviewOutput
-from research_mentor.agents.plan_loop.contracts import PlanLoopOutput
+from research_mentor.agents.plan_loop.contracts import PlanLoopOutput, PlanRevisionContext
 from research_mentor.domain.checks import KeyInsightCheckOutput
 from research_mentor.domain.experiments import (
     ExperimentTaskContext,
@@ -47,6 +47,7 @@ class ResearchSession(BaseModel):
     latest_check: KeyInsightCheckOutput | None = None
     check_round: int = 0
     pending_plan_feedback: UserPlanFeedback | None = None
+    pending_plan_revision_context: PlanRevisionContext | None = None
     plan_decision: UserPlanDecision | None = None
     override_record: OverrideRecord | None = None
     plan_generation_mode: PlanGenerationMode = "low"
@@ -61,6 +62,7 @@ class ResearchSession(BaseModel):
     validation_queue: ValidationQueue | None = None
     writing_guidance: WritingGuidance | None = None
     plan_revision_records: list[PlanRevisionRecord] = Field(default_factory=list)
+    pending_plan_issue_reason: str | None = None
 
 
 class SessionEventType(StrEnum):

@@ -2,11 +2,16 @@
 
 from typing import Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from research_mentor.agents.common import SysInput
 from research_mentor.agents.idea_review.contracts import IdeaReviewOutput
 from research_mentor.domain.checks import KeyInsightCheckOutput
+from research_mentor.domain.experiments import (
+    ExperimentInfo,
+    MainExperimentResult,
+    ValidationResult,
+)
 from research_mentor.domain.research import InitialInput, ResearchPlan, UserPlanFeedback
 
 DEFAULT_PLANNING_GUIDELINES = [
@@ -19,6 +24,7 @@ DEFAULT_PLANNING_GUIDELINES = [
     "收到 previous_insight_check 时，只处理 revision_request 指向的问题，同时保持方案其余部分稳定。",
     "收到 user_feedback 时，判断其合理性后再修改方案，不得无条件接受或机械拒绝。",
     "每轮只做解决当前反馈所需的最小修改，并通过 change_summary 记录相对上一版的实际变化。",
+    "revision_context 中的实验结果和当前实验事实是不可改写事实；修订方案不得覆盖、美化或删除这些记录。",
 ]
 
 DEFAULT_INTERACTION_GUIDELINES = [
@@ -36,6 +42,16 @@ class PlanLoopSysInput(SysInput):
     interaction_guidelines: list[str] = Field(default_factory=DEFAULT_INTERACTION_GUIDELINES.copy)
 
 
+class PlanRevisionContext(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    main_experiment: MainExperimentResult | None = None
+    completed_validations: list[ValidationResult] = Field(default_factory=list)
+    current_experiment: ExperimentInfo
+    mentor_issue_reason: str
+    user_feedback: str | None = None
+
+
 class PlanLoopInput(BaseModel):
     idea: InitialInput
     sys_input: PlanLoopSysInput
@@ -45,6 +61,7 @@ class PlanLoopInput(BaseModel):
     previous_insight_check: KeyInsightCheckOutput | None = None
     previous_plan: ResearchPlan | None = None
     user_feedback: UserPlanFeedback | None = None
+    revision_context: PlanRevisionContext | None = None
     candidate_index: int = Field(default=1, ge=1, le=3)
     candidate_focus: str | None = None
 

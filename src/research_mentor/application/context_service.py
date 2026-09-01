@@ -24,6 +24,7 @@ class WorkingContextSource(BaseModel):
     retrieval_diagnostics: list[RetrievalDiagnostics] = Field(default_factory=list)
     facts: list[str] = Field(default_factory=list)
     unresolved_questions: list[str] = Field(default_factory=list)
+    current_stage: str | None = None
 
 
 class WorkingContextBuilder:
@@ -135,8 +136,10 @@ class WorkingContextBuilder:
             f"normalized_idea: {research.normalized_idea}",
             f"research_question: {research.research_question}",
         ]
-        if research.forward_context is not None:
-            parts.append(f"forward_stage: {research.forward_context.stage}")
+        current_stage = source.current_stage
+        if current_stage is None and research.forward_context is not None:
+            current_stage = research.forward_context.stage
+        parts.append(f"current_stage: {current_stage or 'working'}")
         parts.extend(
             [
                 f"task_kind: {task.task_kind}",

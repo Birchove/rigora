@@ -9,7 +9,7 @@
 - Task 19 开发基线：`4111298`
 - 目标版本：v1.0
 - 当前版本定位：可安装、可测试的 deterministic multi-agent backend core；尚不是可运行的完整产品
-- 当前测试基线：Task 19 完成后 `365 passed`
+- 当前测试基线：Task 19 规格修复后 `368 passed`
 - v1 implementation plan：Task 1–19 已有独立 commit；Task 20–32 尚未达到对应验收标准
 
 分支关系：
@@ -273,11 +273,11 @@ Task 13–16 已完成：async typed model port、OpenAI Responses/OpenAI-compat
 
 Task 17–19 已闭合 Idea Review 四种 action、非 CS domain guard、forward `ResearchContext` 与 stage task 初始化，`low/mid/high` 的 1/2/3 路 Plan/Check 候选隔离、单选和 exhausted override，以及 Working → 用户结果确认 → Complete 的 writing / validation / plan revision 三路闭环。Task 19 同时完成：
 
-- Working RAG 确定性上下文化 query；low/empty/unavailable 只进入 diagnostics，不再触发硬拒；
+- Working RAG 确定性上下文化 query，plan/forward 均显式包含 `current_stage`；low/empty/unavailable 只进入 diagnostics，不再触发硬拒；
 - `success` 只提出 completion proposal，`resume_working` 可无模型调用恢复，用户记录结果时才完成 task；
 - forward `plan=None` 可携带 `ResearchContext` 与主实验结果进入 Complete，不反推虚假 plan；
-- validation queue 按 rank 激活，保留 critical skip 双方理由，pending 优先且 queued/completed candidate 不重复；
-- plan revision 三种用户决策与 WritingGuidance 持久化，实验失败、负面和反对结果均按结构化字段如实保留。
+- validation queue 按 rank 激活，保留 critical skip 双方理由；每项结果先经 Complete 复核，plan revision 可中断 pending queue，否则继续既有 pending，且 queued/completed candidate 不重复；
+- plan revision 三种用户决策与 WritingGuidance 持久化；revise 的下一次 PlanLoop 接收 typed、不可改写的主实验、validation、当前实验与双方理由，实验失败、负面和反对结果均按结构化字段如实保留。
 
 Milestone D 尚未实现：
 

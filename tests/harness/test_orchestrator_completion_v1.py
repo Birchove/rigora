@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import json
 
 import pytest
 
@@ -36,6 +37,13 @@ class RecordingModel(MemoryModelAdapter):
     async def generate(self, request):
         self.calls.append(request.model_copy(deep=True))
         return await super().generate(request)
+
+
+def parse_latest_call(model: RecordingModel, agent_name: str, tag: str) -> dict:
+    call = next(call for call in reversed(model.calls) if call.agent_name == agent_name)
+    return json.loads(
+        call.user_input.split(f"<{tag}>", 1)[1].rsplit(f"</{tag}>", 1)[0]
+    )
 
 
 @pytest.fixture
@@ -259,6 +267,13 @@ def test_existing_pending_validation_precedes_new_complete_candidates(completion
             execution_status="completed", impact="supports",
         ),
     )
+    model.enqueue(
+        "complete",
+        CompleteAgentOutput(
+            mode="validation", plan=None, final_hint="继续既有队列",
+            validation_candidates=[candidate("v3", 3)],
+        ),
+    )
     complete_calls = len([call for call in model.calls if call.agent_name == "complete"])
 
     orchestrator.run_complete("s1", completion_status=False)
@@ -266,7 +281,53 @@ def test_existing_pending_validation_precedes_new_complete_candidates(completion
     stored = repository.get("s1")
     assert stored.phase is SessionPhase.WORKING
     assert stored.current_task.validation_task == candidate("v2", 2).task
-    assert len([call for call in model.calls if call.agent_name == "complete"]) == complete_calls
+    assert len([call for call in model.calls if call.agent_name == "complete"]) == complete_calls + 1
+
+
+def test_invalidating_validation_complete_interrupts_pending_queue(completion_bundle):
+    orchestrator, model, repository = completion_bundle
+    propose_success(orchestrator, model)
+    orchestrator.record_main_result("s1", main_result())
+    model.enqueue(
+        "complete",
+        CompleteAgentOutput(
+            mode="validation", plan=None, final_hint="先做两项",
+            validation_candidates=[candidate("v1", 1), candidate("v2", 2)],
+        ),
+    )
+    orchestrator.run_complete("s1", completion_status=False)
+    orchestrator.select_validations(
+        "s1", ValidationSelection(selected_candidate_ids=["v1", "v2"])
+    )
+    stored = repository.get("s1")
+    stored.phase = SessionPhase.AWAITING_RESULT_RECORD
+    repository.commit(
+        stored,
+        repository.list_events("s1")[-1].model_copy(update={"event_id": "seed-invalidating"}),
+    )
+    orchestrator.record_validation_result(
+        "s1",
+        ValidationResult(
+            task=candidate("v1", 1).task, actual_result="核心主张失效",
+            conclusion="必须修订方案", is_success=False,
+            execution_status="completed", impact="invalidates",
+        ),
+    )
+    model.enqueue(
+        "complete",
+        CompleteAgentOutput(
+            mode="plan_revision", plan=None, final_hint="停止后续验证",
+            revision_reason="验证结果使核心主张失效",
+        ),
+    )
+
+    orchestrator.run_complete("s1", completion_status=False)
+
+    stored = repository.get("s1")
+    assert stored.phase is SessionPhase.AWAITING_PLAN_REVISION_DECISION
+    assert stored.current_task.validation_task == candidate("v1", 1).task
+    pending = [item for item in stored.validation_queue.selected if item.status == "pending"]
+    assert [item.candidate.candidate_id for item in pending] == ["v2"]
 
 
 def test_completed_candidate_is_not_reoffered(completion_bundle):
@@ -397,6 +458,51 @@ def test_plan_revision_revise_resets_round_without_erasing_facts(completion_bund
     assert revised.phase is SessionPhase.PLANNING
     assert revised.check_round == 0
     assert revised.main_experiment == main_result()
+
+
+def test_revise_plan_loop_payload_contains_typed_immutable_facts(
+    completion_bundle, plan_output
+):
+    orchestrator, model, repository = completion_bundle
+    validation = ValidationResult(
+        task=candidate("v1", 1).task,
+        actual_result="多次运行仍下降",
+        conclusion="负面结果稳定",
+        is_success=False,
+        execution_status="completed",
+        impact="contradicts",
+    )
+    stored = repository.get("s1")
+    stored.phase = SessionPhase.AWAITING_PLAN_REVISION_DECISION
+    stored.main_experiment = main_result()
+    stored.completed_validations = [validation]
+    stored.current_task.experiment_info = ExperimentInfo(
+        current_experiment="复核主实验",
+        expected_result="恢复率提高",
+        actual_result="恢复率下降",
+        observations=["固定切分重复三次"],
+    )
+    stored.latest_complete_output = CompleteAgentOutput(
+        mode="plan_revision", plan=None, final_hint="重估主张",
+        revision_reason="验证显示核心主张不成立",
+    )
+    repository.commit(
+        stored,
+        repository.list_events("s1")[-1].model_copy(update={"event_id": "seed-revision-payload"}),
+    )
+    orchestrator.decide_plan_revision("s1", "revise", user_reason="保留负面事实并缩小主张")
+    model.enqueue("plan_loop", plan_output)
+
+    orchestrator.run_plan_loop("s1")
+
+    payload = parse_latest_call(model, "plan_loop", "plan_loop_data")
+    assert payload["revision_context"] == {
+        "main_experiment": main_result().model_dump(mode="json"),
+        "completed_validations": [validation.model_dump(mode="json")],
+        "current_experiment": stored.current_task.experiment_info.model_dump(mode="json"),
+        "mentor_issue_reason": "验证显示核心主张不成立",
+        "user_feedback": "保留负面事实并缩小主张",
+    }
 
 
 def test_plan_revision_end_project_keeps_negative_result(completion_bundle):
