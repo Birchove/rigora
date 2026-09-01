@@ -2077,6 +2077,8 @@ export interface ProjectView {
 
 API client 固定 base `/api/v1`，command 接受 Task 20 的 discriminated union，不通过 header 建第二套 identity。非 2xx 解析为含 `code/message/retryable/details` 的 `ApiError`；SSE client 保存最后 sequence，以 `?after={sequence}` 重连并刷新一次 ProjectView。
 
+同步实现 frontend 基础安全与恢复 primitives：外部链接统一使用 `noopener/noreferrer` 安全打开；Markdown 必须先清理再渲染；本地 draft storage 按 `project_id + phase` 隔离。前端不保存 API Key，不在浏览器重算评分、路由或 Harness 规则。Idea 输入显示 `0/19999` 计数并在超限时于发请求前阻止提交；后端 `InitialInput` 的 19999 字上限仍是最终权威。
+
 - [ ] **Step 4: 运行 GREEN/build**
 
 Run: `npm test -- --run && npm run build`
@@ -2170,6 +2172,8 @@ Expected: FAIL，workspace components 和 `MENTOR_MICROCOPY` 不存在。
 - [ ] **Step 3: 实现 responsive research workspace**
 
 Desktop 三栏：project/nav 240px、main minmax(0,1fr)、evidence 360px；窄屏左栏变 drawer、右栏变 evidence sheet，中栏始终是主内容，不改成 tabs 替代。主视图按精确 `Phase` exhaustive switch 渲染 typed cards；按钮只从 server `allowed_commands` 产生。证据卡显示 source/support/provenance/安全外链；Check 卡明确区分模型五维分数与 Harness final score；run trace 只呈现公开 events。全局中文 UI，技术标识保留英文。
+
+证据栏必须区分“检索到”与“本轮实际采用”，采用状态随当前 view/event 更新，不能永久绑定首次检索结果；默认列表设可见数量上限与内部滚动，详情视图可查看受限总量，并按 adopted/discarded 筛选。结构化方案、评分、validation 和 writing guidance 必须在后端校验/提交完成后整块渲染，禁止流式拼接 JSON。仅短状态文案和已校验自然语言可使用 typewriter；panel、选择项和表单不得使用。dialog/panel 打开时锁定背景滚动，toast 与状态提示不得遮挡确认按钮，composer 与 panel 不能同时可编辑。
 
 首次使用与空状态要明确产品边界：这是管理科研判断和推进的导师工作台，帮助聚焦选题、审查方案、处理研究过程问题、记录结果和组织验证；不替用户写代码或论文正文，不承诺解决所有科研问题；与当前研究无关的细碎问题引导至通用 Agent/搜索。竞品说明只能表述工作流差异，不得声称基础模型能力优于 ChatGPT、Claude、Deep Research、ResearchAgent、AI Scientist、Co-Scientist、Google Scholar 或 Semantic Scholar。
 
@@ -2266,7 +2270,7 @@ Expected: FAIL，hooks/connected actions 不存在。
 
 `useCommand` 在一次用户动作开始时生成 UUID `command_id`，读取当前 ProjectView `version` 作为 `expected_version`，同一 pending/retry action 复用 command ID；新业务意图生成新 ID。receipt 后保持 `active_run` lock，直到 SSE/project refresh 显示 terminal run；run 期间禁用 composer 和全部普通 mutations，只保留本地 draft 与显式 `cancel_run`。
 
-`useProjectEvents` 以 sequence 严格去重，只应用 `sequence > lastApplied`，断线按 1/2/4/8/15 秒退避并用 `after` 重连，恢复后刷新 view。validation 提交 candidate ID；上传显示 transfer 与 parse status；stale version 刷新 server state但保留未提交 draft。错误 banner显示稳定 code/retryability，不展示 stack trace。
+`useProjectEvents` 以 sequence 严格去重，只应用 `sequence > lastApplied`，断线按 1/2/4/8/15 秒退避并用 `after` 重连，恢复后刷新 view。validation 提交 candidate ID；上传显示 transfer 与 parse status；刷新/断线/stale version 后从 server view 恢复已提交内容，同时按 project/phase 恢复未提交 draft。运行、检索和版本冲突错误显示稳定 code/retryability 与明确 retry 入口，不展示 stack trace，retry 不清除 draft。证据 adopted/discarded filter 只过滤 server 提供的状态，不由 UI 猜测引用关系。
 
 - [ ] **Step 4: 运行 GREEN/build**
 

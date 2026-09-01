@@ -1,6 +1,6 @@
 # 下一名开发者交接文档
 
-> 更新时间：2026-09-01
+> 更新时间：2026-09-02
 > 本文以 GitHub `main` 的当前实现为准。不要沿用历史交接文档中“Task 1–15”“main 仍是 v0.1”或“尚无 SQL/API”的旧结论。
 
 ## 1. 当前基线
@@ -13,6 +13,7 @@
 - 当前 Python 全量测试基线：`438 passed`。
 - 当前 Alembic head：`20260901_0005`。
 - 当前仓库没有 frontend 工程；Task 27 曾尝试启动，但因执行额度中断，没有产生代码或 commit。
+- 2026-09-02 已审阅并同步外部最新版 `design_document/AI+ 创新大赛.md`；仓库副本保留全部内容，仅规范了行尾空白。Task 27–29 计划已补入新版前端约束，但 Task 27 尚未开始实现。
 
 开始工作前执行：
 
@@ -176,6 +177,10 @@ RESEARCH_MENTOR_MODEL_API_KEY=<未设置>
 - 中文正文优先可读性，指标与代码使用等宽字体；
 - 不使用大面积渐变、玻璃拟态、emoji 或无意义 dashboard 指标；
 - keyboard、visible focus、reduced motion 和非颜色单一表达是硬性要求。
+- 证据栏必须区分“检索到”和“本轮实际采用”，限制可见数量并支持 adopted/discarded 筛选；状态由 server view/event 驱动。
+- 只有短状态和已校验自然语言允许 typewriter；结构化卡片、panel、选择项与 JSON 禁止逐字流式拼接。
+- 刷新、SSE 重连和版本冲突后恢复 server state，同时按 project/phase 保留未提交 draft。
+- Markdown 清理后再渲染，外链安全打开；panel 打开时锁背景滚动，composer 与 panel 不得同时可编辑。
 
 ## 7. 开发方法与验证
 

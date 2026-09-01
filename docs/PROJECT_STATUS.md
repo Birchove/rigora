@@ -4,7 +4,7 @@
 
 ## 1. 状态基准
 
-- 记录日期：2026-09-01
+- 记录日期：2026-09-02
 - 团队统一开发分支：`main`
 - Task 26 开发基线：`50c5a56`
 - 目标版本：v1.0
@@ -35,6 +35,8 @@ main / origin/main（Task 1–26 实现基线为 661c0c6，另含最新交接文
 2026-09-01 增量裁决已把验收场景扩充为 34 项，并调整尚未完成的 Task 16、18、19、20、28、30–32。旧/新版《AI+ 创新大赛》的流程图和图片不能绕过这些显式裁决。
 
 同日用户确认《Working RAG 与用户控制增量设计》：v1 取消低分硬拒，Working query 必须带研究/阶段/任务上下文；success 只提出结果确认；forward 正式允许 `plan=None`；等待状态的新 idea 使用显式 restart。Task 19 先修正已完成 Task 16 中与新裁决冲突的低分短路，再继续 completion loop。
+
+2026-09-02 已将外部最新版 `design_document/AI+ 创新大赛.md` 的全部内容同步到 `docs/design/AI+ 创新大赛.md`（仓库副本仅规范行尾空白），并完成前端差异审阅。Task 27–29 计划已显式补充：证据检索/采用状态与筛选、受限证据列表、自然语言与结构化内容分流式呈现、project/phase draft 恢复、Markdown 清理与安全外链、panel/composer 互斥及背景滚动锁定。该同步不代表 Task 27 已完成。
 
 ## 3. 产品设计摘要
 
@@ -308,6 +310,9 @@ Task 26 已完成 Milestone E：`demo_mode` 启动时通过 SQL UoW 幂等预置
 - 文件上传、SSE 状态、失败重试和完整用户操作；
 - desktop/narrow-screen 布局、accessibility 和视觉规范；
 - 仅用于超长输入、遗漏选择和等待状态等非实质场景的“傲娇” microcopy；科研评价、拒绝理由、证据和风险说明保持中性严谨。
+- 证据“检索到/实际采用”动态状态、数量上限与 adopted/discarded 筛选；
+- 结构化结果整块渲染、短自然语言可选 typewriter、刷新/SSE/stale version 后的 draft 恢复；
+- Markdown sanitization、安全外链、panel/composer 互斥和背景滚动锁定。
 
 ### 5.7 Milestone G：Evals、E2E、文档与发布审计
 

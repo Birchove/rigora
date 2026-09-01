@@ -30,6 +30,33 @@
 
 
 
+#### 核心概念
+
+傲娇导师是面向科研的个性化探索导师。**核心理念是用更严格、更具体的用户输入，换更优质、可核对的系统输出**。它不代写论文、不替用户做实验，只做独立判断、指出缺口并给出可执行下一步。
+
+#### 特色介绍
+
+五个 Agent 分别负责想法审查、方案迭代、点睛之笔检查、实验问答与收尾指导；状态流转、评分和确认关口由确定性 Harness 执行，模型不能私自改流程或编造结果。方案须用户接受或坚持，实验结果须用户亲录，补充验证须用户勾选。检索记录与引用证据分开，没有证据就标明不确定。
+
+#### 辅导流程
+
+- 提交 Idea 与领域：主张过宽则先澄清；不合格则说明原因与改进方向。
+
+- 明确主张进入方案设计，并检查**「点睛之笔」**；用户可接受、要求修改或坚持己见。
+
+- 已有实验基础可跳过方案阶段，直接进入实施问答。
+
+- 实验过程只围绕当前任务答疑；完成须用户亲自记录结果，系统不代填、不美化。
+
+- 收尾时给出补实验候选或写作规划；用户勾选后逐项做完，再回来检查是否写得动。
+
+- 全程可导出研究日志：想法、证据、方案争论、实验与验证一并带走。
+
+#### 使用边界
+
+只面向真正想做且能做科研的用户，当前限定计算机领域。为了让用户更容易接受, 消解“导师”身份的高位感, 我们增设了“傲娇”语气, 让对话更容易被接受\. 相应的, 傲娇只出现在界面提示，评审与辅导保持中性严谨，不为维持人设而刻意反对。
+
+
 
 
 
@@ -148,8 +175,7 @@
 
 #### 状态转移过程
 
-
-
+![image\.png](图片和附件/image%201.png)
 
 
 
@@ -269,7 +295,7 @@ Working 阶段；不足时给出需要补充的信息。
 
 `check_guidelines`
 
-1. check\_guidelines 只用于追加当前轮的特殊检查关注点，不得复制或重写固定评分维度、权重和通过阈值。
+1. check\_guidelines 只用于追加当前轮的特殊检查关注点，不得复制或重写固定评分维度、权重、通过阈值和必要条件 gate。
 
 2. 额外规则不得要求 key\_insight\_check\_agent 重写 ResearchPlan、生成新的 KeyInsight 或修改用户研究目标。
 
@@ -361,72 +387,207 @@ Working 阶段；不足时给出需要补充的信息。
 
 \>16000 返回内容"这么多的内容我可看不出来（嫌弃脸）"\(example\)
 
+
+
 ### 前端展示内容
+
+
+
+产品界面是「科研判断与推进工作台」，不是通用聊天机器人。视觉上可以借鉴 Claude / ChatGPT 网页的克制和留白，但中栏必须是按阶段出现的结构化卡片，不能把方案、评分、实验结果全部压成聊天气泡。
 
 
 
 #### 基础架构
 
-1. 选定为claude, chatgpt等网页版ui样式
-
-2. 左侧分项目隔离, 下方聊天框, 右边栏是参考文献的列表\(卡片视图呈现\), 主屏幕展示agent输出内容, 以及跳出用户可选项\(待输入项\)。参考界面⬇️
 
 
-3. 用户交互有三种:
+1. 整体为三栏桌面布局，气质接近严谨的研究工作台，而不是仪表盘或营销落地页。
 
-    1. 默认底部的文本输入
 
-    2. 弹出多选框点选 , 对应的是运行时参数, 不可变且具有确定性
 
-    3. 弹出panel文本输入\(agent运行时, 底部输入框无法输入\[否则会终止\], 这个panel由agent唤醒弹出, 并等待用户输入\); append到agent的上下文中\(?可能有其余方式, 不一定append\)
+```Plain Text
+┌──────────────────────────────────────────────────────────────┐
+│ Logo / 项目名            阶段进度条           运行状态 / Demo │
+├──────────────┬────────────────────────────┬──────────────────┤
+│ 项目列表     │ 研究时间线                 │ 证据栏           │
+│ 历史与阶段   │ Agent 卡片 / 方案 / 问答   │ 文献卡片         │
+│              │ 状态切换提示               │ 文档摘录         │
+├──────────────┴────────────────────────────┴──────────────────┤
+│ 底部输入框，或当前阶段所需的选择 / 表单 panel                 │
+└──────────────────────────────────────────────────────────────┘
+```
 
-4. 前端设计遵照:  /frontend\-design
 
-5. 所有**需**展示内容均需流式呈现, 即打字机式呈现, 如同网页版claude/chatgpt的呈现方式
+
+2. 左栏：项目隔离列表、当前阶段、历史入口。每个项目独立，互不串上下文。
+
+
+
+3. 中栏：主工作区。按当前阶段渲染对应卡片（审查结果、研究方案、点睛之笔评分、实验问答、结果表单、补实验选择、写作规划等）。系统状态变化用短提示，不覆盖主操作。
+
+
+
+4. 右栏：参考文献与证据，卡片视图。只突出「本轮判断真正用到的证据」，并能点回中栏对应内容。检索过程中列表可以增量更新\. 但「搜到了」不等于「引用了」, 需要有 ui 状态 展示“用到了”, 如一个绿色小点, 或者类似的简约但明显的符号, 这些符号应该是随着具体的流程改变的, 因为一篇文献可能之前用到后面没用到, 也可能反过来
+
+
+
+5. 用户交互只有三种，由当前阶段和后端给出的可执行命令决定，不由 Agent 正文唤醒：
+
+
+
+    1. 底部文本输入：用户在空闲、且允许发消息时使用（提交 Idea、实验问答等）。
+
+
+
+    2. 弹出点选：用于确定性选择，选项不可由前端临时编造。例如方案接受 / 修改 / 坚持，以及补充实验勾选。提交必须带后端给出的选项 ID。
+
+
+
+    3. 弹出表单 panel：用于较长的结构化输入，例如实验结果、已有实验材料、澄清补充。Agent 运行期间底部输入框禁用；取消运行必须是明确操作，而不是再打一句就中断。
+
+
+
+6. 前端只展示和提交，不保存 API key，不在浏览器里重跑评分、路由或 Harness 规则。
+
+
+
+7. 窄屏：左栏改为抽屉，右栏改为底部证据面板，中栏始终保留为唯一主操作区。
 
 
 
 #### 细节呈现
 
-1. top设置进度条, 实时展示当前的agent阶段
-
-2. 思考动效\(类似于claude的logo一直在转, 应有明确的内容指示用户, 目前agent在工作\), 且不同阶段的动效最好可以区分
 
 
+1. 顶部进度条实时展示五个主阶段：Idea Review → Plan → Check → Working → Complete。澄清补充、等待选择验证等是阶段内子状态，不要做成第六、第七个主阶段。
 
-#### 需展示的part\(不包含用户通过底部输入框输入\)
 
-1. 每次状态流转发生时, top的状态条转换, 且屏幕中心应有文本输出提示\(卡片式 \- 跃出后逐渐淡出\)
 
-2. harness中需一定时间处理的环节, 不含llm参与的环节, 如调用外部api检索文件时, 应有检索内容的打字机式呈现\(不是最终的输出, 只是短暂的流式展示, 最终输出这些内容被折叠\), 且右侧参考文献列表不断更新
+2. 运行中必须有明确动效和文字，告诉用户「现在在做什么」，例如正在检索、正在评分、正在整理实验记录。不同阶段动效可以区分，但都要从简。只转圈、不说明在干什么，不算合格。
 
-3. llm思考运行的环节, 思考的内容如claude, chatgpt等网页呈现方式一致即可, claude呈现方式更为漂亮, 应更依照于claude
 
-4. 需用户输入/选择的环节\(非底部输入框输入\), 屏幕给出对应的panel/ 输入框/ 或所需的其余内容
+
+3. 思考 / 检索过程只展示对外公开的步骤。完成后默认折叠，用户可展开查看。不要把模型内部长篇思考当作产品功能展示。
+
+
+
+4. 状态切换时：顶部进度条更新；屏幕中心可出现短卡片提示，跃出后淡出，不得挡住正在进行的选择或表单按钮。
+
+
+
+#### 流式呈现
+
+
+
+1. 某些纯文字的输出应使用打字机式呈现\(同chatgpt网页版呈现方式\), 需要给用户「正在推进」感的内容可以流式出现，但规则必须分开，不能「所有内容都打字机」, 对于panel的点选/输入等, 使用打字机式是不合适的。
+
+
+
+2. 短状态文案、已通过校验的自然语言回复：允许打字机式呈现。
+
+
+
+3. 文献检索：右栏卡片随结果到达而增加；过程流式可以短暂展示，结束后折叠，避免和最终证据栏抢位置。同时呈现的文献数量应有上限, 并设置滚动条, 可以滚动查看, 但滚动的数量也应有上限, 避免过长的滚动, 用户可通过详情查看所有文献列表, 并可以通过filter进行筛选, 哪些是用到的, 哪些是被放弃的等;
+
+
+
+4. 最终结构化结果（方案、评分、验证候选、写作规划）：必须等后端校验并提交成功后，再整块渲染成对应卡片。禁止把未校验的 JSON 逐字拼到屏幕上。
+
+
+
+5. 用户刷新页面后，从当前项目视图和事件流恢复，已提交内容不能丢；未提交的输入草稿尽量保留在输入框里。
+
+
+
+#### 需展示的 part（不含底部自由输入）
+
+
+
+1. 阶段卡片，按状态选用，不要用关键词去猜该渲染哪一块：
+
+    1. Idea 审查结果
+
+    2. 研究方案
+
+    3. 点睛之笔评分
+
+    4. 方案确认（接受 / 修改 / 坚持）
+
+    5. 实验问答
+
+    6. 实验结果表单（必须用户亲录）
+
+    7. 补充实验选择
+
+    8. 写作规划
+
+    9. 研究日志导出
+
+
+
+2. Harness 处理、不含模型生成的环节（检索文献、解析文件等）：展示简短过程，结束后折叠；右栏同步更新。
+
+
+
+3. 模型运行环节：展示公开步骤和运行状态；最终输出仍以结构化卡片为准。
+
+
+
+4. 需要用户点选或填表时：屏幕给出对应 panel，底部输入框关闭或禁用，直到本次选择完成、取消或运行结束。
 
 
 
 #### 匹配产品定位
 
-1. 前端语气同样应有边界且傲娇
 
-2. 前端的动态交互
 
-    1. 对应于基础架构\-用户交互
+1. 傲娇只出现在界面提示，不改写评审结论。评分、拒绝理由、风险和证据说明必须中性严谨。
 
-    2. panel可以抖动\(在选择/输入未完成时\)
 
-    3. 可增加文字提示, 文字中允许使用颜文字, 拒绝纯表情包/emoji\(utf8编码的表情包\)
 
-    4. 可以增加光效
+2. 傲娇适用场景仅限：输入过长、必选项没选、正在运行请等待。可用少量颜文字，禁止 emoji 表情包。
 
-    5. 这些内容都是锦上添花, 不应喧宾夺主, 特效均从简, 可以有, 但是应克制
+
+
+3. 动态交互：
+
+    1. 三种输入方式见「基础架构」。
+
+    2. panel 在必填未完成时可以轻微抖动一次，同时给出文字错误，不要反复狂抖。
+
+    3. 可以有克制光效，但不能抢内容。特效从简，宁少勿花。
+
+
+
+4. Demo 模式须在顶栏持续标明，避免被看成真实模型或真实文献结果。真实模式与 Demo 共用同一套界面和接口，不维护两套前端逻辑。
 
 
 
 #### 前端注意事项
 
-1. 不同模块/part的覆盖关系, 注意避免遮挡
+
+
+1. 注意各模块覆盖关系：toast / 进度提示不得挡住 panel 确认按钮；打开表单时锁住背景滚动。
+
+
+
+2. 底部输入框与 panel 不要同时可编辑，避免用户以为两边都会提交。
+
+
+
+3. Idea 原文上限 19999 字，前端计数，后端同样校验。超过阈值先拦截并给出提示，不要把超长文本直接送进模型。
+
+
+
+4. 运行失败、检索失败、版本冲突要有明确说明和重试入口；重试不得清掉用户未提交草稿。
+
+
+
+5. 所有关键操作可键盘完成；动效、抖动、打字机在「减少动态效果」下关闭或改为静态提示。不要只用颜色区分阶段、分数和错误。
+
+
+
+6. 右栏外部链接按安全方式打开；Markdown 渲染前需清理，避免把文献或附件里的指令当成界面命令。
 
 
 
@@ -436,29 +597,29 @@ Working 阶段；不足时给出需要补充的信息。
 
 暂时不修改架构, 所以在当前基础考虑问题即可
 
-1. 用户想要输入某文件供参考，或者说把他的实验数据的文件啊输入进来（语言表达不一定清晰），很常见
+1. ~~用户想要输入某文件供参考，或者说把他的实验数据的文件啊输入进来（语言表达不一定清晰），很常见~~
 
-2. 第二步输出需要加, ValidationTask 哪些类型是不需要做的, 因为这个特异于实验本身
+2. ~~第二步输出需要加, ValidationTask 哪些类型是不需要做的, 因为这个特异于实验本身~~
 
-3. 把agent3的输入修改为两种，一种由agent2传入（主实验），一种由agent4传入（补充实验），harness层变量
+3. ~~把agent3的输入修改为两种，一种由agent2传入（主实验），一种由agent4传入（补充实验），harness层变量~~~~\(validation\_type已处理\)~~
 
-4. 第一次由agent3进入agent4，agent4根据主实验结果来列出需要做的补充实验，弹出panel供用户选择，用户打勾确认内容进入列表，之后agent4按列表内容不断传入给agent3进行补充实验
+4. ~~第一次由agent3进入agent4，agent4根据主实验结果来列出需要做的补充实验，弹出panel供用户选择，用户打勾确认内容进入列表，之后agent4按列表内容不断传入给agent3进行补充实验~~~~\(已实现\)~~
 
-5. validation\_list按重要性依次给出; 但前端展示不一定\(指panel\)
+5. validation\_list按重要性依次给出; 前端展示也相同, 但前端含详细的说明\(指panel, 每个项目下有特异性\)
 
 6. agent3的判断，如果在实验中发现有错，并且是能证明当前结论有误，需要返回，如果是主实验的错误，直接返回agent2重来，如果是补充实验，也就是agent4传入，就回到agent4中，并且validationResult有标记为false，跳过该补充实验，并给出合理理由
 
-7. \(可选\)增加额外的一个agent, 只负责压缩, 独立于整个体系
+7. ~~\(可选\)增加额外的一个agent, 只负责压缩, 独立于整个体系~~
 
-8. 用户已有实验基础，分两种情况，一种是实验进行一半（例如做对比的时候出了问题，来进行询问），一种是实验已经做完，寻求补充（我已经做了主实验、对比，还需要做什么吗），在agent1中均归为forward状态，跳转agent3进入工作
+8. ~~用户已有实验基础，分两种情况，一种是实验进行一半（例如做对比的时候出了问题，来进行询问），一种是实验已经做完，寻求补充（我已经做了主实验、对比，还需要做什么吗），在agent1中均归为forward状态，跳转agent3进入工作~~
 
-9. demo展示只做计算机领域的内容, 不考虑做生物医药等其余领域回复时可能出现的问题
+9. ~~demo展示只做计算机领域的内容, 不考虑做生物医药等其余领域回复时可能出现的问题~~
 
 10. agent2在运行过程中, 用户直接输入了一个新的idea\(即Agent1所需输入\), 并要求重新换思路展开分析, 目前还无法处理
 
 11. agent\(不论哪一步\)等待用户输入时, 用户没有给出输入, 输入超时, 如何处理
 
-12. check\-agent可能增加不同性格, 不同性格带来不同的尺度
+12. ~~check\-agent可能增加不同性格, 不同性格带来不同的尺度~~
 
 
 
@@ -472,6 +633,255 @@ Working 阶段；不足时给出需要补充的信息。
 
 #### 概览\(后续数字化\)
 
+```Plain Text
+flowchart TD
+
+%% ========== 共享跳转入口节点(先声明,保持在最外层) ==========
+Agent3Entry(("入口: Agent3<br/>working_qa_agent"))
+Agent4Entry(("入口: Agent4<br/>complete_agent"))
+
+Start(["开始"]) --> UserInput1
+
+%% ========== Agent1: idea_review_agent ==========
+subgraph Agent1["Agent1: idea_review_agent"]
+direction TB
+UserInput1["用户输入"]
+SysInput1["系统输入<br/>(current_date/guidelines等)"]
+UserInput1 --> A1["idea_review_agent"]
+SysInput1 --> A1
+A1 --> LitSearch1["文献检索"]
+LitSearch1 --> TypeCheck1{"idea_type"}
+TypeCheck1 -->|"forward"| Agent3Entry
+TypeCheck1 -->|"opinion"| LLMReview1["LLM Review"]
+TypeCheck1 -->|"range: 必不通过"| Fail1
+LLMReview1 --> ReviewGate1{"review_decision"}
+ReviewGate1 -->|"pass"| Pass1["Pass 输出"]
+ReviewGate1 -->|"fail"| Fail1["Fail 输出"]
+Fail1 --> Reset1["重置状态"]
+Reset1 -.->|"用户修改输入后重新提交"| UserInput1
+end
+
+%% ========== Agent2: key_sight_agent ↔ check_agent ==========
+subgraph Agent2["Agent2: key_sight_agent ↔ check_agent"]
+direction TB
+ModeGate{"mode: low/mid/high"}
+ModeGate -->|"low: 单路"| KeySightAgent
+ModeGate -->|"mid: 并行2路(结构同)"| KeySightAgent
+ModeGate -->|"high: 并行3路(结构同)"| KeySightAgent
+
+KeySightAgent["key_sight_agent"] --> Sight["sight: plan/change_summary/response"]
+Sight --> CheckAgent["check_agent"]
+CheckAgent --> CheckDecision{"check_decision"}
+
+CheckDecision -->|"fail"| FailOutput2["Fail 输出<br/>reason/evidence/revision"]
+FailOutput2 --> LoopCheck{"循环次数 < loop_round(5)?"}
+LoopCheck -->|"是: 回填上一轮反馈"| KeySightAgent
+LoopCheck -->|"否, 达到上限"| LoopExceed{"用户选择"}
+LoopExceed -->|"a: 不完美版本继续"| CandImperfect(["候选方案(不完美)"])
+LoopExceed -->|"b: 重新修改idea"| Redo2["记录失败经验"]
+
+CheckDecision -->|"pass"| CandPass(["候选方案(check通过)"])
+
+CandPass --> PlanSelect
+CandImperfect --> PlanSelect
+PlanSelect{"low: 直接采用<br/>mid/high: 用户从N个并行候选中选择"} --> CandidateGate
+
+CandidateGate{"候选方案类型"}
+CandidateGate -->|"不完美继续类型"| Agent3Entry
+CandidateGate -->|"pass类型"| FeedbackCheck{"用户是否认可key insight?"}
+FeedbackCheck -->|"同意"| Agent3Entry
+FeedbackCheck -->|"不同意/需更多解释"| AskCheckAgent["用户提问 → check_agent 回复"]
+AskCheckAgent --> UserChoice2{"用户选择"}
+UserChoice2 -->|"接受并继续"| Agent3Entry
+UserChoice2 -->|"还有别的问题"| AskCheckAgent
+UserChoice2 -->|"直接推倒重来"| Redo2
+end
+
+Redo2 -.->|"跳回Agent1"| A1
+Pass1 -.->|"跳转"| ModeGate
+
+%% ========== Agent3: working_qa_agent ==========
+subgraph Agent3["Agent3: working_qa_agent"]
+direction TB
+Agent3Entry --> UserInput3["用户输入"]
+SysInput3["系统输入<br/>(qa_guidelines等)"]
+UserInput3 --> RAG3["RAG检索"]
+RAG3 --> ConfGate{"confidence < relativity(0.3)?"}
+ConfGate -->|"是"| Decline3["短路 → decline"]
+ConfGate -->|"否"| A3Core["working_qa_agent (LLM)"]
+SysInput3 --> A3Core
+
+A3Core --> StateDecision3{"agent 判断"}
+StateDecision3 -->|"可基于现有信息回答"| Answer3["answer"]
+StateDecision3 -->|"信息不足需澄清"| Clarify3["clarify"]
+StateDecision3 -->|"实验已完成"| Success3["success"]
+StateDecision3 -->|"发现错误"| Error3["error"]
+
+Decline3 --> WaitNext3["等待下一次用户输入"]
+Answer3 --> WaitNext3
+Clarify3 --> WaitNext3
+WaitNext3 -.-> UserInput3
+
+Success3 --> SuccessConfirm3{"用户Panel确认<br/>实验是否确实完成?"}
+SuccessConfirm3 -->|"否, 尚未完成"| WaitNext3
+SuccessConfirm3 -->|"是, 确认完成"| Agent4Entry
+
+Error3 --> ErrorGate3{"错误来源/current_stage"}
+ErrorGate3 -->|"主实验错误"| Agent2Restart["跳回check_agent<br/>重新规划/重来"]
+ErrorGate3 -->|"补充实验错误(Agent4传入)"| Agent4Skip["跳回Agent4<br/>跳过当前子实验<br/>validationResult=false"]
+end
+
+Agent2Restart -.->|"重新规划"| CheckAgent
+
+%% ========== Agent4: complete_agent ==========
+subgraph Agent4["Agent4: complete_agent"]
+direction TB
+Agent4Entry --> FirstTimeCheck4{"是否首次进入(3→4)?"}
+FirstTimeCheck4 -->|"是, 仅首次"| UserPanel4["用户输入<br/>(实验类型多选)"]
+UserPanel4 --> InitDict4["初始化实验类型字典<br/>{type: False}"]
+FirstTimeCheck4 -->|"否, 字典已存在"| DictCheck4
+InitDict4 --> DictCheck4{"字典是否全部为True?"}
+
+SysInput4["系统输入<br/>(plan/completion_status等)"]
+SysInput4 --> ModeFinal4
+SysInput4 --> ModeSub4
+
+DictCheck4 -->|"是"| ModeFinal4["mode=论文最后指导"]
+DictCheck4 -->|"否"| ModeSub4["mode=子实验指导<br/>传入第一个False键"]
+
+ModeFinal4 --> End(["全流程结束"])
+
+ModeSub4 --> DictMark4["字典更新: 选中键 False→True"]
+DictMark4 -.->|"plan回传(循环)"| Agent3Entry
+end
+
+Agent4Skip -.->|"继续后续流程(跳过当前子实验)"| DictCheck4
+```
+
+```mermaid
+flowchart TD
+
+%% ========== 共享跳转入口节点(先声明,保持在最外层) ==========
+Agent3Entry(("入口: Agent3<br/>working_qa_agent"))
+Agent4Entry(("入口: Agent4<br/>complete_agent"))
+
+Start(["开始"]) --> UserInput1
+
+%% ========== Agent1: idea_review_agent ==========
+subgraph Agent1["Agent1: idea_review_agent"]
+direction TB
+UserInput1["用户输入"]
+SysInput1["系统输入<br/>(current_date/guidelines等)"]
+UserInput1 --> A1["idea_review_agent"]
+SysInput1 --> A1
+A1 --> LitSearch1["文献检索"]
+LitSearch1 --> TypeCheck1{"idea_type"}
+TypeCheck1 -->|"forward"| Agent3Entry
+TypeCheck1 -->|"opinion"| LLMReview1["LLM Review"]
+TypeCheck1 -->|"range: 必不通过"| Fail1
+LLMReview1 --> ReviewGate1{"review_decision"}
+ReviewGate1 -->|"pass"| Pass1["Pass 输出"]
+ReviewGate1 -->|"fail"| Fail1["Fail 输出"]
+Fail1 --> Reset1["重置状态"]
+Reset1 -.->|"用户修改输入后重新提交"| UserInput1
+end
+
+%% ========== Agent2: key_sight_agent ↔ check_agent ==========
+subgraph Agent2["Agent2: key_sight_agent ↔ check_agent"]
+direction TB
+ModeGate{"mode: low/mid/high"}
+ModeGate -->|"low: 单路"| KeySightAgent
+ModeGate -->|"mid: 并行2路(结构同)"| KeySightAgent
+ModeGate -->|"high: 并行3路(结构同)"| KeySightAgent
+
+KeySightAgent["key_sight_agent"] --> Sight["sight: plan/change_summary/response"]
+Sight --> CheckAgent["check_agent"]
+CheckAgent --> CheckDecision{"check_decision"}
+
+CheckDecision -->|"fail"| FailOutput2["Fail 输出<br/>reason/evidence/revision"]
+FailOutput2 --> LoopCheck{"循环次数 < loop_round(5)?"}
+LoopCheck -->|"是: 回填上一轮反馈"| KeySightAgent
+LoopCheck -->|"否, 达到上限"| LoopExceed{"用户选择"}
+LoopExceed -->|"a: 不完美版本继续"| CandImperfect(["候选方案(不完美)"])
+LoopExceed -->|"b: 重新修改idea"| Redo2["记录失败经验"]
+
+CheckDecision -->|"pass"| CandPass(["候选方案(check通过)"])
+
+CandPass --> PlanSelect
+CandImperfect --> PlanSelect
+PlanSelect{"low: 直接采用<br/>mid/high: 用户从N个并行候选中选择"} --> CandidateGate
+
+CandidateGate{"候选方案类型"}
+CandidateGate -->|"不完美继续类型"| Agent3Entry
+CandidateGate -->|"pass类型"| FeedbackCheck{"用户是否认可key insight?"}
+FeedbackCheck -->|"同意"| Agent3Entry
+FeedbackCheck -->|"不同意/需更多解释"| AskCheckAgent["用户提问 → check_agent 回复"]
+AskCheckAgent --> UserChoice2{"用户选择"}
+UserChoice2 -->|"接受并继续"| Agent3Entry
+UserChoice2 -->|"还有别的问题"| AskCheckAgent
+UserChoice2 -->|"直接推倒重来"| Redo2
+end
+
+Redo2 -.->|"跳回Agent1"| A1
+Pass1 -.->|"跳转"| ModeGate
+
+%% ========== Agent3: working_qa_agent ==========
+subgraph Agent3["Agent3: working_qa_agent"]
+direction TB
+Agent3Entry --> UserInput3["用户输入"]
+SysInput3["系统输入<br/>(qa_guidelines等)"]
+UserInput3 --> RAG3["RAG检索"]
+RAG3 --> ConfGate{"confidence < relativity(0.3)?"}
+ConfGate -->|"是"| Decline3["短路 → decline"]
+ConfGate -->|"否"| A3Core["working_qa_agent (LLM)"]
+SysInput3 --> A3Core
+
+A3Core --> StateDecision3{"agent 判断"}
+StateDecision3 -->|"可基于现有信息回答"| Answer3["answer"]
+StateDecision3 -->|"信息不足需澄清"| Clarify3["clarify"]
+StateDecision3 -->|"实验已完成"| Success3["success"]
+StateDecision3 -->|"发现错误"| Error3["error"]
+
+Decline3 --> WaitNext3["等待下一次用户输入"]
+Answer3 --> WaitNext3
+Clarify3 --> WaitNext3
+WaitNext3 -.-> UserInput3
+
+Success3 --> SuccessConfirm3{"用户Panel确认<br/>实验是否确实完成?"}
+SuccessConfirm3 -->|"否, 尚未完成"| WaitNext3
+SuccessConfirm3 -->|"是, 确认完成"| Agent4Entry
+
+Error3 --> ErrorGate3{"错误来源/current_stage"}
+ErrorGate3 -->|"主实验错误"| Agent2Restart["跳回check_agent<br/>重新规划/重来"]
+ErrorGate3 -->|"补充实验错误(Agent4传入)"| Agent4Skip["跳回Agent4<br/>跳过当前子实验<br/>validationResult=false"]
+end
+
+Agent2Restart -.->|"重新规划"| CheckAgent
+
+%% ========== Agent4: complete_agent ==========
+subgraph Agent4["Agent4: complete_agent"]
+direction TB
+Agent4Entry --> FirstTimeCheck4{"是否首次进入(3→4)?"}
+FirstTimeCheck4 -->|"是, 仅首次"| UserPanel4["用户输入<br/>(实验类型多选)"]
+UserPanel4 --> InitDict4["初始化实验类型字典<br/>{type: False}"]
+FirstTimeCheck4 -->|"否, 字典已存在"| DictCheck4
+InitDict4 --> DictCheck4{"字典是否全部为True?"}
+
+SysInput4["系统输入<br/>(plan/completion_status等)"]
+SysInput4 --> ModeFinal4
+SysInput4 --> ModeSub4
+
+DictCheck4 -->|"是"| ModeFinal4["mode=论文最后指导"]
+DictCheck4 -->|"否"| ModeSub4["mode=子实验指导<br/>传入第一个False键"]
+
+ModeFinal4 --> End(["全流程结束"])
+
+ModeSub4 --> DictMark4["字典更新: 选中键 False→True"]
+DictMark4 -.->|"plan回传(循环)"| Agent3Entry
+end
+
+Agent4Skip -.->|"继续后续流程(跳过当前子实验)"| DictCheck4
+```
 
 
 
@@ -485,9 +895,8 @@ flowchart TD
         ui_available["available_resources"]
         ui_unavailable["unavailable_resources"]
         ui_constraints["other_constraints"]
-        ui_idea_type["idea_type"]
         ui_idea["idea"]
-        ui_time_limit ~~~ ui_available ~~~ ui_unavailable ~~~ ui_constraints ~~~ ui_idea_type ~~~ ui_idea
+        ui_time_limit ~~~ ui_available ~~~ ui_unavailable ~~~ ui_constraints ~~~ ui_idea
     end
 
     subgraph Harness_Input["Harness架构输入"]
@@ -496,26 +905,24 @@ flowchart TD
         h_review_guidelines["review_guidelines"]
         h_retrieval_guidelines["retrieval_guidelines"]
         h_behavior_constraints["behavior_constraints"]
-        h_additional_context["additional_context"]
-        h_date ~~~ h_review_guidelines ~~~ h_retrieval_guidelines ~~~ h_behavior_constraints ~~~ h_additional_context
+        h_date ~~~ h_review_guidelines ~~~ h_retrieval_guidelines ~~~ h_behavior_constraints
     end
 
     UI_Input --> Agent["idea_review_agent"]
     Harness_Input --> Agent
 
     Agent --> LitSearch["文献检索<br/>literature_searches"]
-    LitSearch --> TypeCheck{"idea_type"}
+    LitSearch --> TypeJudgeLLM["LLM 判断<br/>输出 idea_type"]
+    TypeJudgeLLM --> TypeCheck{"idea_type"}
 
     TypeCheck -->|forward| WorkingAgentJump[["跳转 → working_agent (Agent 3)"]]
 
     TypeCheck -->|opinion| LLMReview["LLM Review<br/>review_guidelines / behavior_constraints"]
-    TypeCheck -->|range| LLMReview
-
-    LLMReview -->|opinion: 需判断| ReviewGate{"review_decision"}
-    LLMReview -->|range: 必定通过| PassOutput
-
+    LLMReview --> ReviewGate{"review_decision"}
     ReviewGate -->|pass| PassOutput
     ReviewGate -->|fail| FailOutput
+
+    TypeCheck -->|"range: 保证不通过"| FailOutput
 
     subgraph PassOutput["Pass 输出"]
         direction TB
@@ -547,101 +954,150 @@ flowchart TD
     classDef gray fill:#eee,stroke:#bbb,color:#999,stroke-dasharray: 3 3;
 ```
 
-
-
+![image\.png](图片和附件/image%204.png)
 
 #### agent2 \(`plan_loop_agent`\&`key_insight_check_agent`\)
 
 ```Plain Text
 flowchart TD
-    %% ===== KeySight Agent 输入 =====
-    subgraph KeySight_Sys_Input["key_sight_agent 系统输入"]
+
+    ModeInput["mode: low / mid / high (默认 low)"] --> ModeGate{"mode"}
+
+    %% ===== mode = low: 单路径, 直接使用下方 PathTemplate =====
+    ModeGate -->|"low"| PathTemplate
+
+    %% ===== mode = mid: 并行两路 (结构同 PathTemplate) =====
+    ModeGate -->|"mid: 并行两路"| PathA_Mid[["Path A<br/>(结构同 PathTemplate)"]]
+    ModeGate -->|"mid: 并行两路"| PathB_Mid[["Path B<br/>(结构同 PathTemplate)"]]
+    PathA_Mid --> PlanSelectMid{"用户从 2 个候选方案中选择"}
+    PathB_Mid --> PlanSelectMid
+
+    %% ===== mode = high: 并行三路 (结构同 PathTemplate) =====
+    ModeGate -->|"high: 并行三路"| PathA_High[["Path A<br/>(结构同 PathTemplate)"]]
+    ModeGate -->|"high: 并行三路"| PathB_High[["Path B<br/>(结构同 PathTemplate)"]]
+    ModeGate -->|"high: 并行三路"| PathC_High[["Path C<br/>(结构同 PathTemplate)"]]
+    PathA_High --> PlanSelectHigh{"用户从 3 个候选方案中选择"}
+    PathB_High --> PlanSelectHigh
+    PathC_High --> PlanSelectHigh
+
+    %% ===== PathTemplate: mode=low 时唯一路径; mid/high 每个 Path 内部结构与此完全相同 =====
+    subgraph PathTemplate["PathTemplate: key_sight_agent ↔ check_agent 循环"]
         direction TB
-        ks_current_date["current_date"]
-        ks_review_guidelines["review_guidelines"]
-        ks_retrieval_guidelines["retrieval_guidelines"]
-        ks_behavior_constraints["behavior_constraints"]
-        ks_additional_context["additional_context"]
-        ks_planning_guidelines["planning_guidelines"]
-        ks_interaction_guidelines["interaction_guidelines"]
-        ks_current_date ~~~ ks_review_guidelines ~~~ ks_retrieval_guidelines ~~~ ks_behavior_constraints ~~~ ks_additional_context ~~~ ks_planning_guidelines ~~~ ks_interaction_guidelines
+
+        subgraph KeySight_Sys_Input["key_sight_agent 系统输入"]
+            direction TB
+            ks_current_date["current_date"]
+            ks_review_guidelines["review_guidelines"]
+            ks_retrieval_guidelines["retrieval_guidelines"]
+            ks_behavior_constraints["behavior_constraints"]
+            ks_planning_guidelines["planning_guidelines"]
+            ks_interaction_guidelines["interaction_guidelines"]
+            ks_current_date ~~~ ks_review_guidelines ~~~ ks_retrieval_guidelines ~~~ ks_behavior_constraints ~~~ ks_planning_guidelines ~~~ ks_interaction_guidelines
+        end
+
+        subgraph KeySight_User_Input["key_sight_agent 模块输入"]
+            direction TB
+            ki_idea["idea: InitialInput"]
+            ki_review_result["review_result: IdeaReviewOutput"]
+            ki_previous_insight_check["previous_insight_check: Optional[...]"]
+            ki_previous_plan["previous_plan: Optional[ResearchPlan]"]
+            ki_user_feedback["user_feedback: Optional[str]"]
+            ki_mode["mode: low/mid/high (默认low)"]
+            ki_idea ~~~ ki_review_result ~~~ ki_previous_insight_check ~~~ ki_previous_plan ~~~ ki_user_feedback ~~~ ki_mode
+        end
+
+        KeySight_Sys_Input --> KeySightAgent["key_sight_agent"]
+        KeySight_User_Input --> KeySightAgent
+
+        KeySightAgent --> Sight
+
+        subgraph Sight["sight (JSON输出)"]
+            direction TB
+            s_plan["plan: ResearchPlan"]
+            s_change_summary["change_summary"]
+            s_response["response_to_user"]
+            s_plan ~~~ s_change_summary ~~~ s_response
+        end
+
+        subgraph Check_Sys_Input["check_agent 系统输入(固定)"]
+            direction TB
+            c_current_date["current_date"]
+            c_review_guidelines["review_guidelines"]
+            c_retrieval_guidelines["retrieval_guidelines"]
+            c_behavior_constraints["behavior_constraints"]
+            c_check_guidelines["check_guidelines"]
+            c_current_date ~~~ c_review_guidelines ~~~ c_retrieval_guidelines ~~~ c_behavior_constraints ~~~ c_check_guidelines
+        end
+
+        subgraph Check_User_Input["check_agent 轮变输入"]
+            direction TB
+            cu_idea["idea: InitialInput"]
+            cu_review_result["review_result: IdeaReviewOutput"]
+            cu_plan["plan: ResearchPlan"]
+            cu_prev_feedback["previous_check_feedback: Optional[str]"]
+            cu_idea ~~~ cu_review_result ~~~ cu_plan ~~~ cu_prev_feedback
+        end
+
+        Sight -.->|"plan 传入"| cu_plan
+        Check_Sys_Input --> CheckAgent["check_agent"]
+        Check_User_Input --> CheckAgent
+
+        CheckAgent --> CheckDecision{"check_decision"}
+
+        CheckDecision -->|"fail"| FailOutput
+
+        subgraph FailOutput["Fail 输出"]
+            direction TB
+            f_reason["reason"]
+            f_evidence["evidence: list[EvidenceRef]"]
+            f_revision["revision_request"]
+            f_reason ~~~ f_evidence ~~~ f_revision
+        end
+
+        LoopParam["超参数<br/>loop_round = 5"] -.-> LoopCheck
+        FailOutput --> LoopCheck{"循环次数 < loop_round(5) ?"}
+
+        LoopCheck -->|"是"| LoopBack["回填 previous_insight_check"]
+        LoopBack -.->|"下一轮"| ki_previous_insight_check
+        Sight -.->|"下一轮 previous_plan"| ki_previous_plan
+        LoopBack -.-> KeySightAgent
+
+        LoopCheck -->|"否, 达到上限"| LoopExceedChoice{"前端用户交互选择"}
+        LoopExceedChoice -->|"a: 不完美版本继续"| CandidateImperfect(["候选方案<br/>(不完美, 跳过反馈判定)"])
+        LoopExceedChoice -->|"b: 重新修改idea"| Redo(["回到 Agent1<br/>记录失败经验"])
+
+        CheckDecision -->|"pass"| CandidatePass(["候选方案<br/>(check 已通过)"])
     end
 
-    subgraph KeySight_User_Input["key_sight_agent 模块输入"]
-        direction TB
-        ki_idea["idea: InitialInput"]
-        ki_review_result["review_result: IdeaReviewOutput"]
-        ki_previous_insight_check["previous_insight_check: Optional[KeyInsightCheckOutput]"]
-        ki_previous_plan["previous_plan: Optional[ResearchPlan]"]
-        ki_user_feedback["user_feedback: Optional[str]"]
-        ki_idea ~~~ ki_review_result ~~~ ki_previous_insight_check ~~~ ki_previous_plan ~~~ ki_user_feedback
-    end
+    CandidatePass --> CandidateTypeGate
+    CandidateImperfect --> CandidateTypeGate
+    Redo --> Agent1Jump
 
-    KeySight_Sys_Input --> KeySightAgent["key_sight_agent"]
-    KeySight_User_Input --> KeySightAgent
+    PathA_Mid -.->|"该路选择重新修改idea"| Redo
+    PathB_Mid -.->|"该路选择重新修改idea"| Redo
+    PathA_High -.->|"该路选择重新修改idea"| Redo
+    PathB_High -.->|"该路选择重新修改idea"| Redo
+    PathC_High -.->|"该路选择重新修改idea"| Redo
 
-    KeySightAgent --> Sight
+    PlanSelectMid --> CandidateTypeGate
+    PlanSelectHigh --> CandidateTypeGate
 
-    subgraph Sight["sight (JSON输出)"]
-        direction TB
-        s_plan["plan: ResearchPlan"]
-        s_change_summary["change_summary: list[str]"]
-        s_response["response_to_user: str"]
-        s_plan ~~~ s_change_summary ~~~ s_response
-    end
+    CandidateTypeGate{"选中候选方案的类型?"}
+    CandidateTypeGate -->|"pass 类型"| FeedbackCheck{"用户是否认可当前 key insight & 理由? (harness 层反馈)"}
+    CandidateTypeGate -->|"不完美继续类型"| Agent3Jump[["跳转 → Agent3 (working_qa_agent)"]]
 
-    %% ===== Check Agent 输入 =====
-    subgraph Check_Sys_Input["check_agent 系统输入(固定)"]
-        direction TB
-        c_current_date["current_date"]
-        c_review_guidelines["review_guidelines"]
-        c_retrieval_guidelines["retrieval_guidelines"]
-        c_behavior_constraints["behavior_constraints"]
-        c_additional_context["additional_context"]
-        c_check_guidelines["check_guidelines"]
-        c_current_date ~~~ c_review_guidelines ~~~ c_retrieval_guidelines ~~~ c_behavior_constraints ~~~ c_additional_context ~~~ c_check_guidelines
-    end
+    FeedbackCheck -->|"同意"| Agent3Jump
+    FeedbackCheck -->|"不同意 / 还想要更多解释"| AskAgent2["用户问题 → 输入 Agent2<br/>Agent2 (check_agent) 给出回复"]
 
-    subgraph Check_User_Input["check_agent 轮变输入"]
-        direction TB
-        cu_idea["idea: InitialInput"]
-        cu_review_result["review_result: IdeaReviewOutput"]
-        cu_plan["plan: ResearchPlan"]
-        cu_prev_feedback["previous_check_feedback: Optional[str]"]
-        cu_idea ~~~ cu_review_result ~~~ cu_plan ~~~ cu_prev_feedback
-    end
+    AskAgent2 --> UserChoice{"用户选择"}
+    UserChoice -->|"接受并继续"| Agent3Jump
+    UserChoice -->|"还有别的问题"| AskAgent2
+    UserChoice -->|"直接推倒重来"| Redo
 
-    Sight -->|plan 传入| cu_plan
-    Check_Sys_Input --> CheckAgent["check_agent"]
-    Check_User_Input --> CheckAgent
-
-    CheckAgent --> CheckDecision{"check_decision"}
-
-    CheckDecision -->|pass| NextStepJump[["跳转 → 下一步 (Agent 3 / working_agent)"]]
-
-    CheckDecision -->|fail| FailOutput
-
-    subgraph FailOutput["Fail 输出"]
-        direction TB
-        f_reason["reason: str"]
-        f_evidence["evidence: list[EvidenceRef]"]
-        f_revision["revision_request: list[str]"]
-        f_reason ~~~ f_evidence ~~~ f_revision
-    end
-
-    LoopParam["超参数<br/>loop_round = 5"] -.-> LoopCheck
-    FailOutput --> LoopCheck{"循环次数 < loop_round(5) ?"}
-
-    LoopCheck -->|是| LoopBack["回填为 previous_insight_check"]
-    LoopCheck -->|否, 达到上限| RaiseError["raise Error<br/>超出 loop_round 上限"]
-
-    LoopBack -.->|下一轮 previous_insight_check| ki_previous_insight_check
-    Sight -.->|下一轮 previous_plan| ki_previous_plan
-    LoopBack -.-> KeySightAgent
+    Agent1Jump[["跳转 → Agent1 (idea_review_agent), 记录失败经验"]]
 ```
 
-
-
+![image\.png](图片和附件/image%203.png)
 
 
 
@@ -672,7 +1128,11 @@ flowchart TD
 
     RelativityParam["超参数(全局)<br/>relativity = 0.3"] -.-> ConfidenceGate
 
-    wu_question --> RAG["RAG 检索<br/>仅使用 question"]
+    wu_question --> RAG["RAG 检索<br/>normalized_idea + question + experiment_info + current_stage 拼接"]
+    wu_normalized_idea -.-> RAG
+    wu_experiment_info -.-> RAG
+    wu_current_stage -.-> RAG
+
     RAG --> ConfidenceGate{"confidence < relativity(0.3) ?"}
 
     ConfidenceGate -->|"是, 低于阈值"| DeclineShort["短路 → decline<br/>不进入 LLM"]
@@ -685,20 +1145,23 @@ flowchart TD
     StateDecision -->|"可基于现有信息回答"| StateAnswer["answer"]
     StateDecision -->|"信息不足需澄清"| StateClarify["clarify"]
     StateDecision -->|"实验已完成, 用户输入体现"| StateSuccess["success"]
+    StateDecision -->|"发现错误且能证明当前结论有误"| StateError["error"]
 
     DeclineShort --> Output3
     StateAnswer --> Output3
     StateClarify --> Output3
     StateSuccess --> Output3
+    StateError --> Output3
 
     subgraph Output3["输出"]
         direction TB
-        o_action["action: answer/clarify/decline/success"]
+        o_action["action: answer/clarify/decline/success/error"]
         o_reason["reason: str"]
         o_reply["reply: str"]
         o_updated["updated_experiment_info: Optional[ExperimentContext]"]
         o_evidence["evidence: list[EvidenceRef]"]
-        o_action ~~~ o_reason ~~~ o_reply ~~~ o_updated ~~~ o_evidence
+        o_validation["validationResult: Optional[bool]"]
+        o_action ~~~ o_reason ~~~ o_reply ~~~ o_updated ~~~ o_evidence ~~~ o_validation
     end
 
     Output3 -->|"decline / answer / clarify: 回退等待下次输入"| WaitNext["working_qa_agent 等待下一次用户输入"]
@@ -706,12 +1169,22 @@ flowchart TD
 
     o_updated -.->|"回写"| w_experiment_info_sys
 
-    Output3 -->|"success"| Terminate(["流程终止"])
+    %% ===== success: 用户确认 =====
+    Output3 -->|"success"| SuccessConfirm{"用户 Panel 确认<br/>实验是否确实已完成?"}
+    SuccessConfirm -->|"是, 确认完成"| Terminate(["流程终止"])
+    SuccessConfirm -->|"否, 尚未完成"| WaitNext
 
+    %% ===== error: 判断错误来源 =====
+    Output3 -->|"error"| ErrorStageGate{"错误来源 / current_stage?"}
+
+    ErrorStageGate -->|"主实验错误"| Agent2Restart[["返回 Agent2 (check_agent)<br/>重新规划 / 重来"]]
+
+    ErrorStageGate -->|"补充实验错误<br/>(Agent4 传入)"| Agent4Skip["返回 Agent4<br/>跳过当前补充实验<br/>validationResult = false<br/>reason: 给出合理跳过理由"]
+
+    Agent4Skip --> Agent4Next[["Agent4<br/>继续后续流程"]]
 ```
 
-
-
+![image\.png](图片和附件/image.png)
 
 #### agent4 \(`complete_agent`\)
 
@@ -775,6 +1248,7 @@ flowchart TD
     classDef gray fill:#eee,stroke:#bbb,color:#999,stroke-dasharray: 3 3;
 ```
 
+![image\.png](图片和附件/image%202.png)
 
 
 
@@ -827,6 +1301,34 @@ A: 可以只停在检索。OpenAlex 本质是元数据 API，返回题名、作�
 
 
 
+#### context管理
+
+不同的agent能获取到的信息应是不同的, 需要明确哪些是全部都需传入作为context, 哪些是某agent特有, 而其余agent无需传入的
+
+每个agent接受的context都应是分part的, 因为有些context是harness设定且不变的\(sys\_prompt\); 有些内容有些context是分项目, 项目内不变的\(某个idea, normalized\-idea, 限制条件等\); 有些内容是分轮次增加的\(如reference, working的多轮次问答\)
+
+
+
+harness中需给出 Context Assembler, 给出具体的规则和编排方式; 不使用额外的agent进行上下文压缩, 因为当前harness的设计具有特异性, 压缩后的内容不一定符合当前的harness需求
+
+
+
+cursor给的建议 ⬇️
+
+业界常见是四类手段叠用，而不是「再加一个压缩模型」：
+
+1. 隔离（isolate）
+稳定指令在前、动态数据在后（你们 prompt 仓库已写）。Agent 只看本轮需要的 part，不要把整份 session dump 进去。现在把整个 `request`（含 `sys_input`）打进 XML，是在反着做。
+
+2. 选择（select / 投影）
+按 Agent 裁字段。例如 Check 要 `KeyInsight` \+ `research_question` \+ `milestones` 名，不必每次带齐 `knowledge_requirements` 的全部 references。Plan 修订轮只给 `revision_request` \+ 上一版 plan，不必再塞完整 `IdeaReviewOutput.literature_searches`。
+
+3. 写入结构化记忆（write）
+权威状态已经在 Pydantic 里：`active_plan`、`current_task.experiment_info`、`completed_validations`。Working 每轮应更新这份快照，而不是把聊天记录当真相。你们 `ExperimentInfo` 就是这个思路。
+
+4. 压缩（compact）——只对不可结构化的历史
+对话、长检索列表、文件摘录。典型做法是滑动窗口：最近 K 轮原文 \+ 更早内容的摘要；摘要带「已丢失细节」标记，需要时再从 event log / 检索回拉。
+
 
 
 #### 用到的skill和工具
@@ -865,23 +1367,35 @@ A: 可以只停在检索。OpenAlex 本质是元数据 API，返回题名、作�
 
 2. 傲娇和严谨的边界要写成规范
 
-"耐心严谨"和"傲娇"是有张力的。建议明确：傲娇只出现在 UI 层和固定文案（输入超长、decline、进度提示），所有实质性的评审、计划、回答保持中性严谨。
+"耐心严谨"和"傲娇"是有张力的。明确：傲娇只出现在 UI 层和固定文案（输入超长、decline、进度提示），所有实质性的评审、计划、回答保持中性严谨。超长、漏选、等待可以用颜文字；评分、拒绝理由、风险说明必须中性。Agent 正文不要再套一层傲娇改写。
 
 3. 点睛之笔可以给候选而不是唯一
 
 key\_sight 一次给 2 到 3 个候选 insight，让用户选一个再进 check 循环。这和"频繁交互得到更精准输出"的理念一致，也天然解决了"agent 一个人闭门造车 5 轮"的问题。
 
+\(修改harness层, 模式选择增加为: low, mid, high ; 分别对应于1, 2, 3个agent并行 ; 差异性保证: 至少是使用3组不同的agent, 一个审一个提; 后续需考虑在提示词上再进行进一步的区分, 尽可能保证3次并行是有效的, 有差异性的\)
+
 4. 补一个评估集
 
 文档里没有任何"怎么知道输出好不好"的东西。建议做 20 条左右 CS 领域的 idea（包含应该被拒的：已经成熟的、太宽的、资源不可行的），记录 Agent1 的准入准确率、引用可解析率（DOI 能不能真的打开）、专家对 plan 的评分。这几个数字放在 PPT 上，比流程图更能证明"严格输入换优质输出"不是口号。
 
-5. Demo 要预置项目
+5. Demo 要预制项目
 
 完整流程真实跑一遍要几周，Demo 现场不可能。建议预置三个处于不同阶段的项目（刚准入 / 正在 Working / 进入补充实验），现场只演示每个阶段的一次交互。forward 入口正好可以用来直接跳到 Agent3/4。
 
 6. 把"导师不做什么"也说清楚\(也是前端, 在使用前就告诉用户, 产品的边界\)
 
-产品定位是导师，那就明确不替用户写代码、不替写论文正文、不做超出 CS 的领域。这既是范围控制，也是相对通用 chatbot 的差异化：用户来这里是为了被要求，不是为了被代劳。
+产品定位是导师，那就明确不替用户写代码、不替写论文正文、不做超出 CS 的领域。这既是范围控制，也是相对通用 chatbot 的差异化：用户来这里是为了被指导，不是为了被代劳。
+
+列出一些具体的表述即可, ai 来重新组织语言
+
+A\. 帮你寻找选题
+
+B\. 解决你在科研过程中遇到的所有问题
+
+C\. 不解决细碎的问题, 这种事情你应该去问通用agent, 或者google
+
+D\. 不负责论文的书写, 这是你自己的事情
 
 7. 超参数界定需要测试集
 
@@ -893,15 +1407,34 @@ key\_sight 一次给 2 到 3 个候选 insight，让用户选一个再进 check 
 
 ### 竞品分析
 
-除了同赛道的, 还应补充:
+#### 目标用户
 
-> **“为什么科研人员非要用你们，而不是直接问 ChatGPT / Claude / Deep Research？”**
->
->
+本系统面向具有明确科研意愿和基本研究条件的用户，主要包括绝大部分领域的课程科研、竞赛、毕业设计、论文研究及独立研究用户。目标用户通常已经具有一定研究方向或实验基础，但在 Idea 聚焦、研究方案设计、实验验证及后续迭代等环节存在较高的信息和决策成本。
+
+与通用问答不同，本系统主要解决科研过程中的判断与推进问题，而非单纯提供知识、代码或文献。
+
+#### 竞品差异
+
+通用 LLM：ChatGPT、Claude。 主要提供研究分析、代码生成和论文辅助，具有较强的通用推理与交互能力，但科研流程主要依赖用户自行组织，对 Idea 准入、研究阶段管理和实验迭代缺少明确约束。
+
+Research Agent：Deep Research。 主要通过多轮检索、资料整理和信息综合完成研究任务，适合解决复杂的信息调查问题，但重点仍在研究资料的获取与整理，而非持续管理从 Idea 到实验验证的完整流程。
+
+科研工作流 Agent：ResearchAgent、AI Scientist、Co\-Scientist。 已进一步覆盖 Idea 生成、文献分析、实验设计、实验执行和结果分析等环节，部分系统能够形成较完整的自动化科研闭环。本系统与其相比，更强调流程入口的 Idea 准入与问题聚焦、关键节点的用户裁决，以及根据实验结果进行受控迭代。
+
+学术检索工具：Google Scholar、Semantic Scholar。 主要解决论文发现、检索和引用关系分析问题，为科研流程提供文献基础，但本身不负责研究方案设计、实验决策和流程推进。
+
+#### 架构差异
+
+本系统的架构差异在于将科研过程中原本依赖用户经验完成的判断与迭代纳入统一工作流。系统首先对 Idea 类型、完整程度、可验证性、资源约束和文献证据进行判断，决定是否进入后续研究；进入流程后，由 Harness 管理状态、Agent 输出和流程转移，并通过状态机与结构化 Schema 约束各 Agent 的职责。ResearchPlan 也不是固定终点，实验结果会重新进入系统，根据实际结果决定是否修改方案、重新实验或进行补充验证，形成 Idea → Plan → Experiment → Result → Validation 的闭环。在 Key Insight、ResearchPlan 等关键节点，Agent 提供判断及依据，由用户确认、修改或 Override，保留用户对研究方向的最终决定权。
+
+#### 产品定位
+
+本系统不是基础 LLM 的替代品，而是以 LLM 作为推理和生成组件，通过 Harness、RAG、状态机和结构化 Schema 组织其在科研流程中的使用。
+
+通用 LLM 主要解决“用户提出问题后提供回答”，本系统则进一步解决“研究想法如何进入流程、如何形成方案、如何根据实验结果持续迭代”的问题。其核心竞争力在于对科研过程进行结构化管理，而非单独追求模型本身的能力优势。
 
 
 
-下面三点基本都要给出
 
 
 ### Demo演示剧本
