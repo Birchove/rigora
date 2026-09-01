@@ -1,10 +1,12 @@
 """Transactional command dispatch with idempotency and guards."""
 
+import asyncio
 from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import TypeAdapter
+from sqlalchemy.exc import IntegrityError, OperationalError
 
 from research_mentor.application.allowed_commands import assert_allowed
 from research_mentor.application.commands import (
@@ -39,6 +41,24 @@ class CommandBus:
         self._now = now or (lambda: datetime.now(timezone.utc))
 
     async def dispatch(self, command: Command) -> CommandResult:
+        try:
+            return await self._dispatch_transaction(command)
+        except ConcurrencyConflict:
+            duplicate = await self._find_processed_result(command)
+            if duplicate is not None:
+                return duplicate
+            raise
+        except IntegrityError:
+            duplicate = await self._find_processed_result(command)
+            if duplicate is not None:
+                return duplicate
+            raise
+        except OperationalError as exc:
+            if not self._is_sqlite_lock(exc):
+                raise
+            return await self._recover_after_sqlite_lock(command, exc)
+
+    async def _dispatch_transaction(self, command: Command) -> CommandResult:
         async with self._uow_factory() as uow:
             existing = await uow.processed_commands.find(
                 command.project_id, command.command_id
@@ -63,12 +83,22 @@ class CommandBus:
             await self._assert_no_active_run(command.type, command.project_id, uow)
             assert_allowed(command.type, session)
 
+            reserved_project = project.model_copy(
+                update={
+                    "version": project.version + 1,
+                    "updated_at": self._now(),
+                }
+            )
+            await uow.projects.save(
+                reserved_project, expected_version=project.version
+            )
+
             handler = self._handlers.get(command.type)
             if handler is None:
                 raise InvariantViolationError(
                     f"No command handler registered for {command.type}"
                 )
-            result = await handler(command, uow, project, session)
+            result = await handler(command, uow, reserved_project, session)
             result = _RESULT_ADAPTER.validate_python(result)
             if command.type in AGENT_COMMAND_TYPES and not isinstance(
                 result, AgentCommandReceipt
@@ -96,6 +126,49 @@ class CommandBus:
                 )
             )
             return result
+
+    async def _find_processed_result(
+        self, command: Command
+    ) -> CommandResult | None:
+        async with self._uow_factory() as uow:
+            existing = await uow.processed_commands.find(
+                command.project_id, command.command_id
+            )
+            if existing is None:
+                return None
+            return _RESULT_ADAPTER.validate_python(existing.receipt)
+
+    async def _recover_after_sqlite_lock(
+        self, command: Command, original: OperationalError
+    ) -> CommandResult:
+        for attempt in range(5):
+            duplicate = await self._find_processed_result(command)
+            if duplicate is not None:
+                return duplicate
+            await asyncio.sleep(0.01 * (attempt + 1))
+        try:
+            return await self._dispatch_transaction(command)
+        except ConcurrencyConflict:
+            duplicate = await self._find_processed_result(command)
+            if duplicate is not None:
+                return duplicate
+            raise
+        except IntegrityError:
+            duplicate = await self._find_processed_result(command)
+            if duplicate is not None:
+                return duplicate
+            raise
+        except OperationalError as exc:
+            if self._is_sqlite_lock(exc):
+                raise ConcurrencyConflict(
+                    command.project_id, command.expected_version
+                ) from original
+            raise
+
+    @staticmethod
+    def _is_sqlite_lock(exc: OperationalError) -> bool:
+        message = str(exc.orig).casefold()
+        return "database is locked" in message or "database table is locked" in message
 
     @staticmethod
     async def _assert_no_active_run(

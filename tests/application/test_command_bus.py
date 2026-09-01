@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
@@ -8,6 +9,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from research_mentor.application.command_bus import CommandBus
 from research_mentor.application.commands import (
+    AgentCommandReceipt,
     Command,
     DeterministicCommandResult,
     RestartResearchCommand,
@@ -37,7 +39,12 @@ from research_mentor.errors import (
     InvariantViolationError,
 )
 from research_mentor.harness.phase import SessionPhase
-from research_mentor.harness.state import ResearchSession
+from research_mentor.harness.state import (
+    ResearchSession,
+    SessionEvent,
+    SessionEventType,
+)
+from research_mentor.ports.events import OutboxEvent
 from research_mentor.ports.repository import ProcessedCommand
 
 
@@ -458,3 +465,164 @@ async def test_restart_is_atomic_with_existing_sql_uow(tmp_path) -> None:
         assert await db.scalar(select(func.count()).select_from(OutboxEventRow)) == 1
         assert await db.scalar(select(func.count()).select_from(ProcessedCommandRow)) == 1
     await engine.dispose()
+
+
+async def create_sql_command_context(tmp_path, *, name: str):
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / name}")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    session = ResearchSession(session_id="s1", phase=SessionPhase.AWAITING_IDEA)
+    async with factory.begin() as db:
+        db.add(
+            ProjectRow(
+                project_id="p1",
+                title="研究",
+                domain="AI",
+                session_id="s1",
+                version=1,
+                created_at=NOW,
+                updated_at=NOW,
+            )
+        )
+        db.add(
+            ResearchSessionRow(
+                session_id="s1",
+                project_id="p1",
+                version=1,
+                phase=session.phase.value,
+                updated_at=NOW,
+                payload=session.model_dump(mode="json"),
+            )
+        )
+    return engine, factory
+
+
+def concurrent_agent_handler(calls: list[str]):
+    async def handler(command, uow, project, session):
+        calls.append(command.command_id)
+        call_number = len(calls)
+        await asyncio.sleep(0.05)
+        run_id = f"run-{command.command_id}-{call_number}"
+        event_id = f"event-{command.command_id}-{call_number}"
+        await uow.runs.add(
+            AgentRun(
+                run_id=run_id,
+                project_id=command.project_id,
+                command_id=command.command_id,
+                agent_name="idea_review",
+                status="queued",
+                attempt=0,
+            )
+        )
+        await uow.events.append(
+            SessionEvent(
+                event_id=event_id,
+                session_id=session.session_id,
+                event_type=SessionEventType.IDEA_REVIEWED,
+                phase_before=session.phase,
+                phase_after=session.phase,
+                payload={},
+                occurred_at=NOW.isoformat(),
+            )
+        )
+        await uow.outbox.append(
+            OutboxEvent(
+                outbox_id=f"outbox-{command.command_id}-{call_number}",
+                session_event_id=event_id,
+                project_id=command.project_id,
+                topic="command.test",
+                payload={},
+                created_at=NOW,
+            )
+        )
+        return AgentCommandReceipt(
+            project_id=command.project_id,
+            command_id=command.command_id,
+            run_id=run_id,
+        )
+
+    return handler
+
+
+@pytest.mark.asyncio
+async def test_concurrent_same_command_returns_winner_receipt_and_runs_handler_once(
+    tmp_path,
+) -> None:
+    engine, factory = await create_sql_command_context(
+        tmp_path, name="same-command.db"
+    )
+    calls: list[str] = []
+    bus = CommandBus(
+        lambda: SqlUnitOfWork(factory),
+        handlers={"submit_idea": concurrent_agent_handler(calls)},
+        now=lambda: NOW,
+    )
+    command = SubmitIdeaCommand(
+        project_id="p1",
+        command_id="same",
+        expected_version=1,
+        idea=INITIAL_INPUT,
+    )
+
+    results = await asyncio.gather(
+        bus.dispatch(command), bus.dispatch(command), return_exceptions=True
+    )
+    async with factory() as db:
+        counts = tuple(
+            [
+                await db.scalar(select(func.count()).select_from(row_type))
+                for row_type in (
+                    AgentRunRow,
+                    SessionEventRow,
+                    OutboxEventRow,
+                    ProcessedCommandRow,
+                )
+            ]
+        )
+    await engine.dispose()
+
+    assert all(isinstance(item, AgentCommandReceipt) for item in results), results
+    assert results[0] == results[1]
+    assert calls == ["same"]
+    assert counts == (1, 1, 1, 1)
+
+
+@pytest.mark.asyncio
+async def test_concurrent_agent_commands_with_same_version_reserve_only_one_run(
+    tmp_path,
+) -> None:
+    engine, factory = await create_sql_command_context(
+        tmp_path, name="different-commands.db"
+    )
+    calls: list[str] = []
+    bus = CommandBus(
+        lambda: SqlUnitOfWork(factory),
+        handlers={"submit_idea": concurrent_agent_handler(calls)},
+        now=lambda: NOW,
+    )
+    commands = [
+        SubmitIdeaCommand(
+            project_id="p1",
+            command_id=command_id,
+            expected_version=1,
+            idea=INITIAL_INPUT,
+        )
+        for command_id in ("first", "second")
+    ]
+
+    results = await asyncio.gather(
+        *(bus.dispatch(command) for command in commands), return_exceptions=True
+    )
+    async with factory() as db:
+        run_count = await db.scalar(select(func.count()).select_from(AgentRunRow))
+        processed_count = await db.scalar(
+            select(func.count()).select_from(ProcessedCommandRow)
+        )
+    await engine.dispose()
+
+    assert sum(isinstance(item, AgentCommandReceipt) for item in results) == 1, results
+    assert sum(isinstance(item, ConcurrencyConflict) for item in results) == 1
+    assert len(calls) == 1
+    assert run_count == 1
+    assert processed_count == 1

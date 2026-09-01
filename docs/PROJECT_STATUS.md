@@ -9,7 +9,7 @@
 - Task 20 开发基线：`94a2c4d`
 - 目标版本：v1.0
 - 当前版本定位：可安装、可测试的 deterministic multi-agent backend core；尚不是可运行的完整产品
-- 当前测试基线：Task 20 完成后 `398 passed`
+- 当前测试基线：Task 20 并发修复后 `400 passed`
 - v1 implementation plan：Task 1–20 已有独立 commit；Task 21–32 尚未达到对应验收标准
 
 分支关系：
@@ -279,7 +279,7 @@ Task 17–19 已闭合 Idea Review 四种 action、非 CS domain guard、forward
 - validation queue 按 rank 激活，保留 critical skip 双方理由；每项结果先经 Complete 复核，plan revision 可中断 pending queue，否则先合并非重复新候选再继续旧 pending；queued/completed/skipped/pending、本批候选及 forward 导入的 completed validations 均按 ValidationTask 内容 identity 去重，不能通过更换 candidate ID 重复；
 - plan revision 三种用户决策与 WritingGuidance 持久化；revise 的下一次 PlanLoop 仅凭 typed revision context 即可进入修订模式，user reason 可选，并接收不可改写的主实验、validation、当前实验与双方理由；多候选路径默认修订已 selected candidate，清除旧 Check 输入后重新进入 Check，archived candidates 不参与本轮 Check 聚合，修订候选通过后进入用户 decision gate；Working issue 的 `continue_with_warning` 始终回 `WORKING`，且导师理由取当前 `pending_plan_issue_reason`，不能被残留 Complete reason 覆盖；Complete result revision 才使用 Complete reason 并回 `COMPLETING`；实验失败、负面和反对结果均按结构化字段如实保留。
 
-Task 20 已建立完整 discriminated command union、application command bus、processed-command 幂等返回、project version/phase/active-run guard 和 server-authoritative `allowed_commands`。所有 mutation 强制 `command_id/expected_version`；Agent command 返回 typed run receipt，确定性 command 返回 typed updated view。`restart_research(confirm_restart=True)` 会在单一 UoW 中保留旧 session、创建并切换到同 project 的新 session、追加 event/outbox、排队新的 Idea Review run，运行中则在创建任何新 run 前拒绝抢占。
+Task 20 已建立完整 discriminated command union、application command bus、processed-command 幂等返回、project version/phase/active-run guard 和 server-authoritative `allowed_commands`。所有 mutation 强制 `command_id/expected_version`；Agent command 返回 typed run receipt，确定性 command 返回 typed updated view。command bus 在 handler 前使用 project version CAS 预留本次 mutation，同 command 并发输家在新 UoW 返回赢家的原始 typed result，不同 Agent command 的同版本竞争只有一个可以创建 run，另一个稳定得到 stale-version conflict。`restart_research(confirm_restart=True)` 会在单一 UoW 中保留旧 session、创建并切换到同 project 的新 session、追加 event/outbox、排队新的 Idea Review run，运行中则在创建任何新 run 前拒绝抢占。
 
 Milestone D 尚未实现 Task 21：durable AgentRun worker，以及 retry、cooperative cancel、timeout、lease 和服务重启恢复。
 

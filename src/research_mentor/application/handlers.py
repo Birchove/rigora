@@ -79,7 +79,6 @@ class RestartResearchHandler:
         updated_project = project.model_copy(
             update={
                 "session_id": session_id,
-                "version": project.version + 1,
                 "updated_at": occurred_at,
             }
         )
