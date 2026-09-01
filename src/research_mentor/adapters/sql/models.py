@@ -28,6 +28,7 @@ class ProjectRow(Base):
     domain: Mapped[str] = mapped_column(String(200))
     session_id: Mapped[str] = mapped_column(String(36), unique=True)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_demo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 

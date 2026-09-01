@@ -80,6 +80,7 @@ async def test_create_project_and_fetch_view(monkeypatch, tmp_path):
             "domain": "computer_science",
             "version": 1,
             "phase": "awaiting_idea",
+            "is_demo": False,
             "allowed_commands": [
                 "submit_idea",
                 "cancel_run",

@@ -9,7 +9,7 @@ import httpx
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from research_mentor.adapters.memory.model import MemoryModelAdapter
+from research_mentor.adapters.demo.model import DemoModelAdapter
 from research_mentor.adapters.model.openai_compatible import (
     OpenAICompatibleModelAdapter,
 )
@@ -24,6 +24,7 @@ from research_mentor.application.recovery import RunRecovery
 from research_mentor.application.run_worker import AgentRunWorker, RunService
 from research_mentor.application.documents import DocumentService
 from research_mentor.application.journal import ExportService, JournalRenderer
+from research_mentor.application.demo import DemoService
 from research_mentor.adapters.filestore.local import LocalFileStore
 from research_mentor.config import Settings
 from research_mentor.ports.model import StructuredModelPort
@@ -46,6 +47,7 @@ class ApplicationContainer:
     document_service: DocumentService
     export_service: ExportService
     journal_renderer: JournalRenderer
+    demo_service: DemoService
     _provider_close: Callable[[], Awaitable[Any]] | None = None
 
     async def close_provider(self) -> None:
@@ -57,7 +59,7 @@ def _build_model(
     settings: Settings,
 ) -> tuple[StructuredModelPort, Callable[[], Awaitable[Any]] | None]:
     if settings.model_provider == "demo":
-        return MemoryModelAdapter(), None
+        return DemoModelAdapter(), None
 
     api_key = (
         settings.model_api_key.get_secret_value()
@@ -115,7 +117,9 @@ async def build_container(settings: Settings) -> ApplicationContainer:
             chunk_max_chars=settings.document_chunk_max_chars,
             chunk_overlap_chars=settings.document_chunk_overlap_chars,
         )
-        return ApplicationContainer(
+        export_service = ExportService(uow_factory)
+        demo_service = DemoService(uow_factory, export_service)
+        container = ApplicationContainer(
             settings=settings,
             engine=engine,
             session_factory=session_factory,
@@ -126,10 +130,14 @@ async def build_container(settings: Settings) -> ApplicationContainer:
             worker=worker,
             recovery=recovery,
             document_service=document_service,
-            export_service=ExportService(uow_factory),
+            export_service=export_service,
             journal_renderer=JournalRenderer(),
+            demo_service=demo_service,
             _provider_close=provider_close,
         )
+        if settings.demo_mode:
+            await demo_service.ensure_seeded()
+        return container
     except BaseException:
         if provider_close is not None:
             await provider_close()

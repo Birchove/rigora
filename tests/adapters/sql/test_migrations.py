@@ -82,3 +82,16 @@ def test_v1_named_constraints_exist(tmp_path) -> None:
         "ck_research_session_version_positive"
     }
     assert {item["name"] for item in outbox_fks} >= {"fk_outbox_session_event"}
+
+
+def test_demo_marker_is_a_typed_project_column(tmp_path) -> None:
+    url = f"sqlite:///{tmp_path / 'demo-marker.db'}"
+    run_migrations(url, "head")
+    engine = create_engine(url)
+    try:
+        columns = {item["name"]: item for item in inspect(engine).get_columns("projects")}
+    finally:
+        engine.dispose()
+
+    assert columns["is_demo"]["nullable"] is False
+    assert str(columns["is_demo"]["type"]).upper() == "BOOLEAN"

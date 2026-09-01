@@ -103,6 +103,7 @@ class SqlProjectRepository:
                 domain=project.domain,
                 session_id=project.session_id,
                 version=project.version,
+                is_demo=project.is_demo,
                 created_at=project.created_at,
                 updated_at=project.updated_at,
             )
@@ -118,6 +119,7 @@ class SqlProjectRepository:
             domain=row.domain,
             session_id=row.session_id,
             version=row.version,
+            is_demo=row.is_demo,
             created_at=row.created_at,
             updated_at=row.updated_at,
         )
@@ -137,6 +139,7 @@ class SqlProjectRepository:
                 domain=row.domain,
                 session_id=row.session_id,
                 version=row.version,
+                is_demo=row.is_demo,
                 created_at=row.created_at,
                 updated_at=row.updated_at,
             )
@@ -157,6 +160,7 @@ class SqlProjectRepository:
                 domain=project.domain,
                 session_id=project.session_id,
                 version=project.version,
+                is_demo=project.is_demo,
                 updated_at=project.updated_at,
             )
         )
@@ -281,6 +285,37 @@ class SqlLiteratureRepository:
             ProjectLiteratureRow, ProjectLiteratureRow.record_id == LiteratureRecordRow.record_id
         ).where(ProjectLiteratureRow.project_id == project_id).order_by(LiteratureRecordRow.record_id))).all()
         return [LiteratureRecord.model_validate(row.payload) for row in rows]
+
+    async def add_for_project(
+        self,
+        project_id: str,
+        record: LiteratureRecord,
+        *,
+        selected: bool,
+    ) -> None:
+        if record.record_id is None or record.provider is None or record.provider_id is None:
+            raise ValueError("persisted literature requires record/provider identifiers")
+        if await self._db.get(LiteratureRecordRow, record.record_id) is None:
+            self._db.add(
+                LiteratureRecordRow(
+                    record_id=record.record_id,
+                    provider=record.provider,
+                    provider_id=record.provider_id,
+                    title=record.title,
+                    payload=record.model_dump(mode="json"),
+                    retrieved_at=record.retrieved_at or datetime.now(timezone.utc),
+                )
+            )
+        link = await self._db.get(ProjectLiteratureRow, (project_id, record.record_id))
+        if link is None:
+            self._db.add(
+                ProjectLiteratureRow(
+                    project_id=project_id,
+                    record_id=record.record_id,
+                    query_id=record.query_id,
+                    selected=selected,
+                )
+            )
 
 
 class SqlAgentRunRepository:

@@ -6,11 +6,11 @@
 
 - 记录日期：2026-09-01
 - 当前开发分支：`feature/full-product-v1`
-- Task 25 开发基线：`7f717ab`
+- Task 26 开发基线：`50c5a56`
 - 目标版本：v1.0
-- 当前版本定位：具备 project/command/view/document/export/SSE API、统一错误 contract、FastAPI composition root 和 durable worker lifecycle 的 backend；尚不是完整产品
-- 当前测试基线：Task 25 完成后 `431 passed`
-- v1 implementation plan：Task 1–25 已有独立 commit；Task 26–32 尚未达到对应验收标准
+- 当前版本定位：具备 project/command/view/document/export/SSE API、deterministic demo、统一错误 contract、FastAPI composition root 和 durable worker lifecycle 的 backend；尚不是完整产品
+- 当前测试基线：Task 26 完成后 `438 passed`
+- v1 implementation plan：Task 1–26 已有独立 commit；Task 27–32 尚未达到对应验收标准
 
 分支关系：
 
@@ -293,9 +293,7 @@ Task 24 已提供文档与研究日志 API：upload 的 MIME、extension、单�
 
 Task 25 已提供 `GET /api/v1/projects/{project_id}/events` public SSE：`Last-Event-ID` 与 `after` 同时出现时取较大非负 cursor，按 project 隔离重放 `sequence > cursor` 的持久事件并严格递增去重，随后每秒 polling；15 秒无公开事件仅发送非持久化 comment heartbeat。公开 event type 固定为 13 项 whitelist，现有 session/outbox event 经显式 projection 后才发送，payload 同时使用字段 allowlist 与递归敏感 key 过滤；未知/内部 event 不公开。stream 每次查询均关闭 UoW，识别 client disconnect/cancellation，支持 deterministic service 测试而不会永久挂起。
 
-尚未实现：
-
-- deterministic demo mode 和三阶段演示数据。
+Task 26 已完成 Milestone E：`demo_mode` 启动时通过 SQL UoW 幂等预置三个固定项目，真实阶段分别为 `PLANNING / WORKING / AWAITING_VALIDATION_SELECTION`，并包含 schema-valid idea、plan、实验结果、validation candidates、writing guidance、`demo://` evidence 和可导出的研究日志。`projects.is_demo` 由 `0005` migration 持久化，`ProjectView` 对 demo/real 使用同一 contract 并分别返回 `true/false`；`DemoModelAdapter` 与 `DemoRetrievalAdapter` 复用生产 ports 和 Pydantic schemas，固定 public event script 延迟为 `0/120/240/360ms`。重复或并发 seed 不会创建副本，real mode 不 seed。
 
 ### 5.6 Milestone F：React 前端
 
@@ -338,7 +336,7 @@ Task 25 已提供 `GET /api/v1/projects/{project_id}/events` public SSE：`Last-
 2. **Milestone B（Task 7–12）已完成**：不得重复实现；
 3. **Milestone C（Task 13–16）已完成**：不得重复实现；
 4. **Milestone D（Task 17–21）已完成**：不得重复实现；
-5. **完成 Milestone E（Task 25–26）**：从 Task 25 public event SSE 开始，随后建立 deterministic demo；
+5. **Milestone E（Task 22–26）已完成**：不得重复实现；
 6. **完成 Milestone F（Task 27–29）**：实现 React 工作台；
 7. **完成 Milestone G（Task 30–32）**：补齐 Eval、E2E、34 项验收和发布审计。
 

@@ -23,6 +23,7 @@ class ProjectView(BaseModel):
     domain: str
     version: int = Field(ge=1)
     phase: SessionPhase
+    is_demo: bool = False
     allowed_commands: list[str]
 
 
@@ -124,5 +125,6 @@ class ProjectViewService:
             domain=project.domain,
             version=project.version,
             phase=session.phase,
+            is_demo=project.is_demo,
             allowed_commands=list(allowed_commands(session)),
         )
