@@ -2119,7 +2119,7 @@ git commit -m "功能：建立 React 前端与类型化 API client"
 - Test: `frontend/src/features/project/ProjectWorkspace.test.tsx`
 - Test: `frontend/src/ui/mentorMicrocopy.test.ts`
 
-- [ ] **Step 1: 写 phase/command/a11y 和 microcopy tests**
+- [x] **Step 1: 写 phase/command/a11y 和 microcopy tests**
 
 ```typescript
 it.each([
@@ -2163,13 +2163,13 @@ describe("MENTOR_MICROCOPY", () => {
 });
 ```
 
-- [ ] **Step 2: 运行 RED**
+- [x] **Step 2: 运行 RED**
 
 Run: `npm test -- --run src/features/project/ProjectWorkspace.test.tsx src/ui/mentorMicrocopy.test.ts`
 
 Expected: FAIL，workspace components 和 `MENTOR_MICROCOPY` 不存在。
 
-- [ ] **Step 3: 实现 responsive research workspace**
+- [x] **Step 3: 实现 responsive research workspace**
 
 Desktop 三栏：project/nav 240px、main minmax(0,1fr)、evidence 360px；窄屏左栏变 drawer、右栏变 evidence sheet，中栏始终是主内容，不改成 tabs 替代。主视图按精确 `Phase` exhaustive switch 渲染 typed cards；按钮只从 server `allowed_commands` 产生。证据卡显示 source/support/provenance/安全外链；Check 卡明确区分模型五维分数与 Harness final score；run trace 只呈现公开 events。全局中文 UI，技术标识保留英文。
 
@@ -2202,13 +2202,13 @@ export const MENTOR_MICROCOPY = {
 
 组件只能在超长输入、遗漏确定性选择和等待状态中按固定 key 使用这些文案。科研评价、Agent action、评分、证据、拒绝理由和风险说明必须直接呈现 server view 中的实质内容，不得经过 microcopy 层改写。v1 不建立独立语气 Agent。
 
-- [ ] **Step 4: 运行 GREEN/build 与 keyboard check**
+- [x] **Step 4: 运行 GREEN/build 与 keyboard check**
 
 Run: `npm test -- --run && npm run build`
 
 Expected: PASS；所有 form 有 label，焦点可见，dialog 可 Esc 关闭，颜色不作为唯一状态提示；microcopy 只覆盖已声明的非实质状态，不处理 server 返回的科研内容。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add frontend/src

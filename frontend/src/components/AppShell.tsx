@@ -1,0 +1,66 @@
+import { useEffect, useState, type ReactNode } from "react";
+
+import type { ProjectView } from "../api/types";
+import { PhaseTimeline } from "./PhaseTimeline";
+import { ProjectSidebar } from "./ProjectSidebar";
+import { RunStatus } from "./RunStatus";
+
+interface AppShellProps {
+  project: ProjectView;
+  children: ReactNode;
+  evidence: ReactNode;
+  actionDock: ReactNode;
+}
+
+export function AppShell({ project, children, evidence, actionDock }: AppShellProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
+  const panelOpen = sidebarOpen || evidenceOpen;
+
+  useEffect(() => {
+    if (!panelOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const closePanels = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSidebarOpen(false);
+        setEvidenceOpen(false);
+      }
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closePanels);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closePanels);
+    };
+  }, [panelOpen]);
+  return (
+    <div className="workspace-shell">
+      <header className="workspace-header">
+        <button className="mobile-panel-toggle sidebar-toggle" type="button" aria-controls="project-drawer" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen((open) => !open)}>项目</button>
+        <a className="brand" href="/" aria-label="傲娇导师首页">
+          <span className="brand-mark" aria-hidden="true">研</span>
+          <span>
+            <strong>傲娇导师</strong>
+            <small>Research Mentor</small>
+          </span>
+        </a>
+        <PhaseTimeline phase={project.phase} />
+        <div className="workspace-status-cluster">
+          <RunStatus phase={project.phase} />
+          {project.is_demo ? <strong className="demo-badge">DEMO DATA</strong> : null}
+          <button className="mobile-panel-toggle evidence-toggle" type="button" aria-controls="evidence-sheet" aria-expanded={evidenceOpen} onClick={() => setEvidenceOpen((open) => !open)}>证据</button>
+        </div>
+      </header>
+
+      <div className="workspace-grid">
+        <div id="project-drawer" className="project-drawer" data-open={sidebarOpen}>
+          <ProjectSidebar project={project} />
+        </div>
+        <main className="research-main" id="research-main">{children}</main>
+        <div id="evidence-sheet" className="evidence-sheet" data-open={evidenceOpen}>{evidence}</div>
+      </div>
+      {panelOpen ? <button className="panel-scrim" type="button" aria-label="关闭侧栏" onClick={() => { setSidebarOpen(false); setEvidenceOpen(false); }} /> : null}
+      {actionDock}
+    </div>
+  );
+}

@@ -8,10 +8,10 @@
 - 团队统一开发分支：`main`
 - Task 26 开发基线：`50c5a56`
 - 目标版本：v1.0
-- 当前版本定位：具备 project/command/view/document/export/SSE API、deterministic demo、统一错误 contract、FastAPI composition root、durable worker lifecycle，以及 React/Vite/TypeScript frontend foundation；尚不是完整产品
+- 当前版本定位：具备 project/command/view/document/export/SSE API、deterministic demo、统一错误 contract、FastAPI composition root、durable worker lifecycle，以及 React/Vite/TypeScript 响应式科研工作台；尚未完成真实前后端操作闭环
 - 当前测试基线：Task 26 完成后 `438 passed`
-- frontend 测试基线：Task 27 完成后 3 个 test files、4 tests；production build 通过
-- v1 implementation plan：Task 1–27 已完成；Task 28–32 尚未达到对应验收标准
+- frontend 测试基线：Task 28 完成后 5 个 test files、27 tests；production build 通过
+- v1 implementation plan：Task 1–28 已完成；Task 29–32 尚未达到对应验收标准
 
 当前分支关系：
 
@@ -304,16 +304,15 @@ Task 26 已完成 Milestone E：`demo_mode` 启动时通过 SQL UoW 幂等预置
 
 Task 27 已完成：建立 React 19/Vite/TypeScript 工程、npm lockfile、Vitest、typed command union、project/command API client、稳定 `ApiError`、SSE cursor/去重 client、基础视觉 tokens 和最小科研工作台 shell。当前 frontend 验证为 3 个 test files、4 tests，production build 通过。
 
+Task 28 已完成：实现 desktop 三栏、14 个精确 phase 结构化卡片、五阶段 timeline、窄屏 project drawer/evidence sheet、证据 adopted/discarded filter、run trace、document/export panel、19999 字 composer 计数、仅由 server `allowed_commands` 产生的 action dock、持续 Demo 标识、visible focus/reduced-motion，以及 panel 背景滚动锁定和 Escape 关闭。固定“傲娇” microcopy 只有超长输入、遗漏选择和等待三项，不改写科研判断。验证基线更新为 5 个 test files、27 tests，production build 通过。
+
 Task 27 types 以当前真实 HTTP contract 为准。后端 `ProjectView` 目前没有 implementation plan 草案中列出的 `active_run` 和 `last_event_sequence`；Task 29 在实现 run lock、SSE refresh/reconnect 之前必须先扩展并测试该 view，前端不得自行推断。
 
 尚未实现：
 
-- 三栏项目工作台、阶段视图和证据面板；
 - Idea 输入、方案确认/修订/override；
 - Working QA、实验结果录入和 validation 选择；
 - 文件上传、SSE 状态、失败重试和完整用户操作；
-- desktop/narrow-screen 布局、accessibility 和视觉规范；
-- 仅用于超长输入、遗漏选择和等待状态等非实质场景的“傲娇” microcopy；科研评价、拒绝理由、证据和风险说明保持中性严谨。
 - 证据“检索到/实际采用”动态状态、数量上限与 adopted/discarded 筛选；
 - 结构化结果整块渲染、短自然语言可选 typewriter、刷新/SSE/stale version 后的 draft 恢复；
 - Markdown sanitization、安全外链、panel/composer 互斥和背景滚动锁定。
@@ -348,7 +347,7 @@ Task 27 types 以当前真实 HTTP contract 为准。后端 `ProjectView` 目前
 3. **Milestone C（Task 13–16）已完成**：不得重复实现；
 4. **Milestone D（Task 17–21）已完成**：不得重复实现；
 5. **Milestone E（Task 22–26）已完成**：不得重复实现；
-6. **Milestone F 的 Task 27 已完成；继续 Task 28–29**：实现完整 React 工作台与前后端操作闭环；
+6. **Milestone F 的 Task 27–28 已完成；继续 Task 29**：接通真实项目数据、命令、上传与 SSE，并闭合 production worker/Agent 链路；
 7. **完成 Milestone G（Task 30–32）**：补齐 Eval、E2E、34 项验收和发布审计。
 
 每个 Task 必须遵循计划中的 RED → GREEN → 全量回归 → commit 顺序。只有当前 Milestone gate 全绿，才进入下一 Milestone。
