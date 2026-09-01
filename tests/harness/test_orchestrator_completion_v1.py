@@ -600,6 +600,41 @@ def test_new_main_working_issue_ignores_preserved_old_main_result(
     assert continued.phase is SessionPhase.WORKING
 
 
+def test_new_working_issue_reason_overrides_stale_complete_revision_reason(
+    completion_bundle, plan_output
+):
+    orchestrator, model, repository = completion_bundle
+    stored = repository.get("s1")
+    stored.latest_complete_output = CompleteAgentOutput(
+        mode="plan_revision",
+        plan=plan_output.plan,
+        final_hint="旧修订",
+        revision_reason="旧 Complete 修订理由",
+    )
+    repository.commit(
+        stored,
+        repository.list_events("s1")[-1].model_copy(update={"event_id": "seed-stale-complete-reason"}),
+    )
+    model.enqueue(
+        "working_qa",
+        WorkingQAOutput(
+            action="report_plan_issue",
+            reason="当前新主实验无法检验核心主张",
+            reply="需要重新设计当前实验",
+        ),
+    )
+    orchestrator.run_working_qa("s1", "新实验发现了方案问题")
+
+    revised = orchestrator.decide_plan_revision("s1", "revise")
+
+    assert revised.plan_revision_records[-1].mentor_reason == (
+        "当前新主实验无法检验核心主张"
+    )
+    assert revised.pending_plan_revision_context.mentor_issue_reason == (
+        "当前新主实验无法检验核心主张"
+    )
+
+
 def test_plan_revision_revise_resets_round_without_erasing_facts(completion_bundle):
     orchestrator, _, repository = completion_bundle
     stored = repository.get("s1")

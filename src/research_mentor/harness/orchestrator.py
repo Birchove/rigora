@@ -1143,13 +1143,15 @@ class ResearchMentorOrchestrator:
             and session.current_task is not None
             and session.current_task.status == "in_progress"
         )
-        mentor_reason = (
-            session.latest_complete_output.revision_reason
-            if session.latest_complete_output is not None
-            and session.latest_complete_output.revision_reason is not None
-            else session.pending_plan_issue_reason
-            or "Working 报告当前方案存在关键问题"
-        )
+        if from_working_issue:
+            mentor_reason = session.pending_plan_issue_reason
+        else:
+            mentor_reason = (
+                session.latest_complete_output.revision_reason
+                if session.latest_complete_output is not None
+                and session.latest_complete_output.revision_reason is not None
+                else "Complete 报告当前方案需要修订"
+            )
         if decision in {"continue_with_warning", "end_project"}:
             if user_reason is None or not user_reason.strip():
                 raise InvariantViolationError(f"{decision} requires user_reason")
