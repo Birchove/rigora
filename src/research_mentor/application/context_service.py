@@ -45,9 +45,10 @@ class WorkingContextBuilder:
         )
         if budget < 1:
             raise ValueError("character_budget must be positive")
+        rank_query = self._rank_query(source, question)
         rank_result = await asyncio.to_thread(
             self._ranker.rank,
-            question,
+            rank_query,
             source.document_chunks,
             limit=10,
         )
@@ -81,18 +82,14 @@ class WorkingContextBuilder:
             if rank_result.items
             else None
         )
-        decline_as_unrelated = (
-            rank_result.status == "ok"
-            and top_relevance is not None
-            and top_relevance < self.settings.rag_relevance_threshold
-        )
+        decline_as_unrelated = False
         diagnostics = [
             item.model_copy(deep=True) for item in source.retrieval_diagnostics
         ]
         if rank_result.status == "unavailable":
             diagnostics.append(
                 RetrievalDiagnostics(
-                    query=question,
+                    query=rank_query,
                     provider="project_ranker",
                     candidate_count=len(source.document_chunks),
                     selected_count=0,
@@ -103,7 +100,7 @@ class WorkingContextBuilder:
         else:
             diagnostics.append(
                 RetrievalDiagnostics(
-                    query=question,
+                    query=rank_query,
                     provider="project_ranker",
                     candidate_count=len(source.document_chunks),
                     selected_count=len(rank_result.items),
@@ -129,6 +126,25 @@ class WorkingContextBuilder:
             top_relevance=top_relevance,
             decline_as_unrelated=decline_as_unrelated,
         )
+
+    @staticmethod
+    def _rank_query(source: WorkingContextSource, question: str) -> str:
+        research = source.research_context
+        task = source.current_task
+        parts = [
+            f"normalized_idea: {research.normalized_idea}",
+            f"research_question: {research.research_question}",
+        ]
+        if research.forward_context is not None:
+            parts.append(f"forward_stage: {research.forward_context.stage}")
+        parts.extend(
+            [
+                f"task_kind: {task.task_kind}",
+                f"current_experiment: {task.experiment_info.current_experiment}",
+                f"question: {question}",
+            ]
+        )
+        return "\n".join(parts)
 
     @staticmethod
     def _select_turns(

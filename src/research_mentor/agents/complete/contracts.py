@@ -1,11 +1,11 @@
 """Contracts for the Complete Agent."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from research_mentor.agents.common import SysInput
 from research_mentor.domain.completion import CompleteAgentOutput
 from research_mentor.domain.experiments import MainExperimentResult, ValidationResult
-from research_mentor.domain.research import InitialInput, ResearchPlan
+from research_mentor.domain.research import InitialInput, ResearchContext, ResearchPlan
 
 DEFAULT_VALIDATION_GUIDELINES = [
     "根据 ResearchPlan、KeyInsight、主实验结果和 completed_validations 判断当前证据链仍缺少哪些验证。",
@@ -40,6 +40,14 @@ class CompleteAgentInput(BaseModel):
     idea: InitialInput
     normalized_idea: str
     sys_input: CompleteAgentSysInput
-    plan: ResearchPlan
+    research_context: ResearchContext | None = None
+    plan: ResearchPlan | None = None
     main_experiment: MainExperimentResult
     completed_validations: list[ValidationResult] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_research_source(self):
+        if self.plan is None:
+            if self.research_context is None or self.research_context.forward_context is None:
+                raise ValueError("planless completion requires forward research context")
+        return self

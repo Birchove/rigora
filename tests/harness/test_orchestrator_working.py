@@ -294,7 +294,7 @@ def test_accepted_plan_rejects_replacement_and_start_event_has_no_active_plan(
     assert payload["compact_context"] is None
 
 
-def test_working_replaces_snapshot_for_non_success_and_success_completes_task(
+def test_working_replaces_snapshot_and_success_proposes_completion(
     bundle, initial_input, research_plan
 ):
     orchestrator, model, repository = enter_forward_context(bundle, initial_input)
@@ -331,7 +331,7 @@ def test_working_replaces_snapshot_for_non_success_and_success_completes_task(
     stored = repository.get("s1")
     payload = parse_latest_call(model, "working_qa", "working_qa_data")
     assert stored.phase is SessionPhase.AWAITING_RESULT_RECORD
-    assert stored.current_task is not None and stored.current_task.status == "completed"
+    assert stored.current_task is not None and stored.current_task.status == "in_progress"
     assert stored.current_task.experiment_info == success.updated_experiment_info
     assert "sys_input" not in payload
     assert payload["compact_context"] is None
@@ -409,7 +409,7 @@ def test_record_results_enforce_kind_and_main_prerequisite_with_exact_events(bun
 
     stored = repository.get("s1")
     stored.phase = SessionPhase.AWAITING_RESULT_RECORD
-    stored.current_task = validation_task().model_copy(update={"status": "completed"})
+    stored.current_task = validation_task()
     repository.commit(stored, repository.list_events("s1")[-1].model_copy(update={"event_id": "seed-validation"}))
     with pytest.raises(InvariantViolationError):
         orchestrator.record_main_result("s1", main_result())
@@ -437,7 +437,7 @@ def test_validation_result_requires_a_recorded_main_result(bundle, initial_input
 
 
 @pytest.mark.parametrize("task_kind", ["main", "validation"])
-def test_result_recording_requires_completed_current_task(
+def test_result_recording_confirms_in_progress_current_task(
     bundle, initial_input, research_plan, task_kind
 ):
     orchestrator, _, repository = enter_forward_context(bundle, initial_input)
@@ -451,16 +451,15 @@ def test_result_recording_requires_completed_current_task(
         stored,
         repository.list_events("s1")[-1].model_copy(update={"event_id": f"seed-{task_kind}-pending"}),
     )
-    before = persisted_state(repository)
     if task_kind == "main":
         command = lambda: orchestrator.record_main_result("s1", main_result())
     else:
         command = lambda: orchestrator.record_validation_result("s1", validation_result())
 
-    with pytest.raises(InvariantViolationError):
-        command()
+    returned = command()
 
-    assert persisted_state(repository) == before
+    assert returned.current_task.status == "completed"
+    assert returned.phase is SessionPhase.COMPLETING
 
 
 def test_all_task12_public_returns_are_defensive_copies(bundle, initial_input, research_plan):
@@ -481,7 +480,7 @@ def test_all_task12_public_returns_are_defensive_copies(bundle, initial_input, r
 
     stored = repository.get("s1")
     stored.phase = SessionPhase.AWAITING_RESULT_RECORD
-    stored.current_task = stored.current_task.model_copy(update={"status": "completed"})
+    stored.current_task = stored.current_task.model_copy(update={"status": "in_progress"})
     repository.commit(
         stored,
         repository.list_events("s1")[-1].model_copy(update={"event_id": "seed-main-result"}),
@@ -493,7 +492,7 @@ def test_all_task12_public_returns_are_defensive_copies(bundle, initial_input, r
 
     stored = repository.get("s1")
     stored.phase = SessionPhase.AWAITING_RESULT_RECORD
-    stored.current_task = validation_task().model_copy(update={"status": "completed"})
+    stored.current_task = validation_task()
     repository.commit(
         stored,
         repository.list_events("s1")[-1].model_copy(update={"event_id": "seed-validation-result"}),
@@ -603,11 +602,11 @@ def test_complete_captures_full_input_routes_and_is_atomic_on_malformed_output(b
     assert {
         key: value
         for key, value in repository.get("s1").model_dump(mode="json").items()
-        if key not in {"phase", "latest_complete_output"}
+        if key not in {"phase", "latest_complete_output", "validation_queue"}
     } == {
         key: value
         for key, value in session_before_false.model_dump(mode="json").items()
-        if key not in {"phase", "latest_complete_output"}
+        if key not in {"phase", "latest_complete_output", "validation_queue"}
     }
     assert payload["idea"] == session_before_false.initial_input.model_dump(mode="json")
     assert payload["normalized_idea"] == session_before_false.idea_review.normalized_idea

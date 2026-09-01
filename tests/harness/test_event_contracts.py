@@ -290,7 +290,7 @@ def test_validation_result_and_writing_completion_event_table_branches(
         task_id="validation-1",
         task_kind="validation",
         origin="validation_plan",
-        status="completed",
+        status="in_progress",
         parent_task_id="main-1",
         validation_task=validation_task,
     )

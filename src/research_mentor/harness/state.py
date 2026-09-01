@@ -24,23 +24,15 @@ from research_mentor.domain.research import (
     UserPlanDecision,
     UserPlanFeedback,
 )
+from research_mentor.domain.completion import WritingGuidance
+from research_mentor.harness.phase import SessionPhase
+from research_mentor.harness.validation import ValidationQueue
 
 
-class SessionPhase(StrEnum):
-    AWAITING_IDEA = "awaiting_idea"
-    AWAITING_IDEA_REFINEMENT = "awaiting_idea_refinement"
-    PLANNING = "planning"
-    CHECKING_KEY_INSIGHT = "checking_key_insight"
-    AWAITING_PLAN_DECISION = "awaiting_plan_decision"
-    AWAITING_WORKING_CONTEXT = "awaiting_working_context"
-    WORKING = "working"
-    AWAITING_RESULT_RECORD = "awaiting_result_record"
-    COMPLETING = "completing"
-    AWAITING_VALIDATION_SELECTION = "awaiting_validation_selection"
-    AWAITING_PLAN_REVISION_DECISION = "awaiting_plan_revision_decision"
-    COMPLETED = "completed"
-    REJECTED = "rejected"
-    CHECK_LOOP_EXHAUSTED = "check_loop_exhausted"
+class PlanRevisionRecord(BaseModel):
+    decision: str
+    mentor_reason: str
+    user_reason: str | None = None
 
 
 class ResearchSession(BaseModel):
@@ -66,6 +58,9 @@ class ResearchSession(BaseModel):
     main_experiment: MainExperimentResult | None = None
     completed_validations: list[ValidationResult] = Field(default_factory=list)
     latest_complete_output: CompleteAgentOutput | None = None
+    validation_queue: ValidationQueue | None = None
+    writing_guidance: WritingGuidance | None = None
+    plan_revision_records: list[PlanRevisionRecord] = Field(default_factory=list)
 
 
 class SessionEventType(StrEnum):
@@ -76,8 +71,11 @@ class SessionEventType(StrEnum):
     PLAN_DECIDED = "plan_decided"
     WORKING_STARTED = "working_started"
     WORKING_TURN_COMPLETED = "working_turn_completed"
+    WORKING_RESUMED = "working_resumed"
     RESULT_RECORDED = "result_recorded"
     COMPLETE_GUIDANCE_GENERATED = "complete_guidance_generated"
+    VALIDATIONS_SELECTED = "validations_selected"
+    PLAN_REVISION_DECIDED = "plan_revision_decided"
 
 
 class SessionEvent(BaseModel):

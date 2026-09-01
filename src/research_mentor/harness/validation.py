@@ -6,12 +6,12 @@ from pydantic import BaseModel, Field, ValidationError
 
 from research_mentor.domain.completion import ValidationCandidate, ValidationSelection
 from research_mentor.errors import ValidationSelectionError
-from research_mentor.harness.state import SessionPhase
+from research_mentor.harness.phase import SessionPhase
 
 
 class QueuedValidation(BaseModel):
     candidate: ValidationCandidate
-    status: Literal["active", "pending"] = "pending"
+    status: Literal["active", "pending", "completed"] = "pending"
 
 
 class SkippedValidation(BaseModel):
@@ -40,11 +40,11 @@ class ValidationQueue(BaseModel):
         excluded_candidate_ids: set[str] | None = None,
     ) -> Self:
         excluded = excluded_candidate_ids or set()
-        offered = [
+        offered = sorted([
             candidate.model_copy(deep=True)
             for candidate in candidates
             if candidate.candidate_id not in excluded
-        ]
+        ], key=lambda candidate: candidate.rank)
         candidate_ids = [candidate.candidate_id for candidate in offered]
         if len(candidate_ids) != len(set(candidate_ids)):
             raise ValidationSelectionError("validation candidate IDs must be unique")
@@ -130,4 +130,10 @@ class ValidationQueue(BaseModel):
                 "override_record": override_record,
             },
             deep=True,
+        )
+
+    def skipped_by_id(self, candidate_id: str) -> SkippedValidation | None:
+        return next(
+            (item for item in self.skipped if item.candidate.candidate_id == candidate_id),
+            None,
         )

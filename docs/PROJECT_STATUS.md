@@ -6,11 +6,11 @@
 
 - 记录日期：2026-09-01
 - 当前开发分支：`feature/full-product-v1`
-- 实现审计基线：`65755f0`（不含本状态文档后续产生的 commit）
+- Task 19 开发基线：`4111298`
 - 目标版本：v1.0
 - 当前版本定位：可安装、可测试的 deterministic multi-agent backend core；尚不是可运行的完整产品
-- 当前测试基线：Task 18 完成后 `350 passed`
-- v1 implementation plan：Task 1–18 已有独立 commit；Task 19–32 尚未达到对应验收标准
+- 当前测试基线：Task 19 完成后 `365 passed`
+- v1 implementation plan：Task 1–19 已有独立 commit；Task 20–32 尚未达到对应验收标准
 
 分支关系：
 
@@ -73,8 +73,8 @@ SQL / OpenAlex / AnyDoc / FlagEmbedding / model adapters
 | `idea_review` | 检索并审查输入；由 LLM 判断 `opinion / range / forward`；给出规划、进入 Working、澄清或拒绝建议 | 不生成完整研究方案，不决定最终 KeyInsight |
 | `plan_loop` | 首次生成 ResearchPlan；按 Check 反馈或用户反馈做最小必要修订 | 不自行确认方案，不修改 Harness 状态 |
 | `key_insight_check` | 评估 KeyInsight 的研究匹配度、新颖性、价值、可行性和证据支撑 | 只给原始评分与建议，不计算权威 final score，不重写方案 |
-| `working_qa` | 围绕当前实验任务回答、澄清、拒绝或确认该任务完成；维护实验事实快照 | 不决定补充实验是否充分，不负责论文写作 |
-| `complete` | 根据主实验与已完成验证提出结构化验证候选或写作指导 | 不把未执行实验视为完成，不生成完整论文正文 |
+| `working_qa` | 围绕当前实验任务回答、澄清、拒绝、提出完成确认或报告 main plan issue；维护实验事实快照 | 不完成 task，不以 validation 失败绕过结果记录，不决定补充实验是否充分 |
+| `complete` | 根据 ResearchContext、主实验与已完成验证提出结构化验证候选、plan revision 或写作指导 | 不要求 forward 路径伪造 ResearchPlan，不把未执行实验视为完成，不生成完整论文正文 |
 
 ### 3.3 权限边界
 
@@ -271,9 +271,16 @@ Task 13–16 已完成：async typed model port、OpenAI Responses/OpenAI-compat
 
 ### 5.4 Milestone D：完整 Orchestrator 与 Application commands
 
-Task 17–18 已闭合 Idea Review 四种 action、非 CS domain guard、forward `ResearchContext` 与 stage task 初始化，以及 `low/mid/high` 的 1/2/3 路 Plan/Check 候选隔离、单选和 exhausted override。Milestone D 尚未实现：
+Task 17–19 已闭合 Idea Review 四种 action、非 CS domain guard、forward `ResearchContext` 与 stage task 初始化，`low/mid/high` 的 1/2/3 路 Plan/Check 候选隔离、单选和 exhausted override，以及 Working → 用户结果确认 → Complete 的 writing / validation / plan revision 三路闭环。Task 19 同时完成：
 
-- Working → result → Complete 的三路闭环：writing、validation、plan revision；
+- Working RAG 确定性上下文化 query；low/empty/unavailable 只进入 diagnostics，不再触发硬拒；
+- `success` 只提出 completion proposal，`resume_working` 可无模型调用恢复，用户记录结果时才完成 task；
+- forward `plan=None` 可携带 `ResearchContext` 与主实验结果进入 Complete，不反推虚假 plan；
+- validation queue 按 rank 激活，保留 critical skip 双方理由，pending 优先且 queued/completed candidate 不重复；
+- plan revision 三种用户决策与 WritingGuidance 持久化，实验失败、负面和反对结果均按结构化字段如实保留。
+
+Milestone D 尚未实现：
+
 - application command bus；
 - command 幂等键、统一 phase guard、project version guard；
 - durable AgentRun worker；

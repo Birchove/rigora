@@ -42,6 +42,7 @@ from research_mentor.domain.research import (
     UserPlanDecision,
     UserPlanFeedback,
 )
+from research_mentor.domain.completion import ValidationSelection
 from research_mentor.errors import IllegalTransitionError, InvariantViolationError
 from research_mentor.harness.routing import (
     route_idea_review,
@@ -51,8 +52,9 @@ from research_mentor.harness.routing import (
     route_working_output,
 )
 from research_mentor.harness.scoring import finalize_key_insight_check
-from research_mentor.harness.state import ResearchSession, SessionEvent, SessionEventType, SessionPhase
+from research_mentor.harness.state import PlanRevisionRecord, ResearchSession, SessionEvent, SessionEventType, SessionPhase
 from research_mentor.harness.task_factory import TaskFactory
+from research_mentor.harness.validation import ValidationQueue
 from research_mentor.ports.clock import ClockPort
 from research_mentor.ports.repository import ResearchSessionRepository
 
@@ -748,16 +750,17 @@ class ResearchMentorOrchestrator:
         if current_experiment is None or not current_experiment.strip():
             raise InvariantViolationError("working task requires current_experiment")
         if session.active_plan is None:
-            if plan is None:
-                raise InvariantViolationError("forward working requires an explicit plan")
-            session.active_plan = plan.model_copy(deep=True)
-            session.research_context = ResearchContext(
-                normalized_idea=session.idea_review.normalized_idea,
-                research_question=plan.research_question,
-                plan=plan.model_copy(deep=True),
-            )
             payload = task_context.model_dump(mode="json")
-            payload["active_plan"] = plan.model_dump(mode="json")
+            if plan is not None:
+                session.active_plan = plan.model_copy(deep=True)
+                session.research_context = ResearchContext(
+                    normalized_idea=session.idea_review.normalized_idea,
+                    research_question=plan.research_question,
+                    plan=plan.model_copy(deep=True),
+                )
+                payload["active_plan"] = plan.model_dump(mode="json")
+            elif session.research_context is None or session.research_context.forward_context is None:
+                raise InvariantViolationError("planless working requires forward research context")
         else:
             if plan is not None:
                 raise InvariantViolationError("accepted working plan cannot be replaced")
@@ -815,11 +818,9 @@ class ResearchMentorOrchestrator:
                     "experiment_info": output.updated_experiment_info.model_copy(deep=True)
                 }
             )
+        if output.action == "report_plan_issue" and session.current_task.task_kind != "main":
+            raise InvariantViolationError("only a main task may report a plan issue")
         phase_after = route_working_output(output)
-        if output.action == "success":
-            session.current_task = session.current_task.model_copy(
-                update={"status": "completed"}
-            )
         session.phase = phase_after
         event = self._event(
             session_id,
@@ -831,6 +832,22 @@ class ResearchMentorOrchestrator:
         self._commit(session, event)
         return output.model_copy(deep=True)
 
+    def resume_working(self, session_id: str) -> ResearchSession:
+        session = self._load_for_phase(session_id, {SessionPhase.AWAITING_RESULT_RECORD})
+        if session.current_task is None or session.current_task.status != "in_progress":
+            raise InvariantViolationError("resume requires an in-progress completion proposal")
+        phase_before = session.phase
+        session.phase = SessionPhase.WORKING
+        event = self._event(
+            session_id,
+            SessionEventType.WORKING_RESUMED,
+            phase_before,
+            session.phase,
+            {"task_id": session.current_task.task_id},
+        )
+        self._commit(session, event)
+        return session.model_copy(deep=True)
+
     def record_main_result(
         self,
         session_id: str,
@@ -841,11 +858,12 @@ class ResearchMentorOrchestrator:
         )
         if session.current_task is None or session.current_task.task_kind != "main":
             raise InvariantViolationError("main result requires a current main task")
-        if session.current_task.status != "completed":
-            raise InvariantViolationError("result recording requires a completed task")
+        if session.current_task.status != "in_progress":
+            raise InvariantViolationError("result recording requires an in-progress proposal")
 
         phase_before = session.phase
         session.main_experiment = result.model_copy(deep=True)
+        session.current_task = session.current_task.model_copy(update={"status": "completed"})
         session.phase = SessionPhase.COMPLETING
         event = self._event(
             session_id,
@@ -867,13 +885,20 @@ class ResearchMentorOrchestrator:
         )
         if session.current_task is None or session.current_task.task_kind != "validation":
             raise InvariantViolationError("validation result requires a current validation task")
-        if session.current_task.status != "completed":
-            raise InvariantViolationError("result recording requires a completed task")
+        if session.current_task.status != "in_progress":
+            raise InvariantViolationError("result recording requires an in-progress proposal")
         if session.main_experiment is None:
             raise InvariantViolationError("validation result requires a main experiment")
+        if session.current_task.validation_task != result.task:
+            raise InvariantViolationError("validation result must match the current task")
 
         phase_before = session.phase
         session.completed_validations.append(result.model_copy(deep=True))
+        session.current_task = session.current_task.model_copy(update={"status": "completed"})
+        if session.validation_queue is not None:
+            for item in session.validation_queue.selected:
+                if item.status == "active" and item.candidate.task == result.task:
+                    item.status = "completed"
         session.phase = SessionPhase.COMPLETING
         event = self._event(
             session_id,
@@ -894,12 +919,33 @@ class ResearchMentorOrchestrator:
         if (
             session.initial_input is None
             or session.idea_review is None
-            or session.active_plan is None
+            or session.research_context is None
             or session.main_experiment is None
         ):
             raise InvariantViolationError(
-                "completion requires initial_input, idea_review, active_plan, and main_experiment"
+                "completion requires initial_input, idea_review, research_context, and main_experiment"
             )
+        if session.research_context.plan is not None and session.active_plan is None:
+            raise InvariantViolationError("planned completion requires active_plan")
+
+        if session.validation_queue is not None:
+            pending = next(
+                (item for item in session.validation_queue.selected if item.status == "pending"),
+                None,
+            )
+            if pending is not None:
+                self._activate_validation(session, pending)
+                event = self._event(
+                    session_id,
+                    SessionEventType.VALIDATIONS_SELECTED,
+                    SessionPhase.COMPLETING,
+                    session.phase,
+                    {"candidate_id": pending.candidate.candidate_id, "source": "existing_queue"},
+                )
+                self._commit(session, event)
+                if session.latest_complete_output is None:
+                    raise InvariantViolationError("validation queue requires prior complete output")
+                return session.latest_complete_output.model_copy(deep=True)
 
         phase_before = session.phase
         output = self._complete_runner.run_sync(
@@ -909,7 +955,8 @@ class ResearchMentorOrchestrator:
                 sys_input=CompleteAgentSysInput(
                     current_date=self._current_date(), completion_status=completion_status
                 ),
-                plan=session.active_plan.model_copy(deep=True),
+                research_context=session.research_context.model_copy(deep=True),
+                plan=session.active_plan.model_copy(deep=True) if session.active_plan else None,
                 main_experiment=session.main_experiment.model_copy(deep=True),
                 completed_validations=[
                     result.model_copy(deep=True)
@@ -919,6 +966,28 @@ class ResearchMentorOrchestrator:
         )
         phase_after = route_complete(output).next_phase
         session.latest_complete_output = output.model_copy(deep=True)
+        if output.mode == "validation":
+            handled_ids = set()
+            previous_queue = session.validation_queue
+            if session.validation_queue is not None:
+                handled_ids = {
+                    item.candidate.candidate_id
+                    for item in [*session.validation_queue.selected, *session.validation_queue.skipped]
+                }
+            next_queue = ValidationQueue.from_candidates(
+                output.validation_candidates,
+                excluded_candidate_ids=handled_ids,
+            )
+            if previous_queue is not None:
+                next_queue.selected = [
+                    item.model_copy(deep=True) for item in previous_queue.selected
+                ]
+                next_queue.skipped = [
+                    item.model_copy(deep=True) for item in previous_queue.skipped
+                ]
+            session.validation_queue = next_queue
+        elif output.mode == "writing":
+            session.writing_guidance = output.writing_guidance.model_copy(deep=True)
         session.phase = phase_after
         payload = output.model_dump(mode="json")
         payload["completion_status"] = completion_status
@@ -931,3 +1000,92 @@ class ResearchMentorOrchestrator:
         )
         self._commit(session, event)
         return output.model_copy(deep=True)
+
+    def select_validations(
+        self, session_id: str, selection: ValidationSelection
+    ) -> ResearchSession:
+        session = self._load_for_phase(
+            session_id, {SessionPhase.AWAITING_VALIDATION_SELECTION}
+        )
+        if session.validation_queue is None or session.current_task is None:
+            raise InvariantViolationError("validation selection requires a queue and main task")
+        phase_before = session.phase
+        queue = session.validation_queue.apply(selection)
+        session.validation_queue = queue
+        active = next((item for item in queue.selected if item.status == "active"), None)
+        if active is not None:
+            self._activate_validation(session, active)
+        else:
+            session.phase = SessionPhase.COMPLETING
+        event = self._event(
+            session_id,
+            SessionEventType.VALIDATIONS_SELECTED,
+            phase_before,
+            session.phase,
+            selection.model_dump(mode="json"),
+        )
+        self._commit(session, event)
+        return session.model_copy(deep=True)
+
+    @staticmethod
+    def _activate_validation(session: ResearchSession, queued) -> None:
+        parent_task_id = (
+            session.current_task.parent_task_id
+            if session.current_task is not None and session.current_task.parent_task_id
+            else session.current_task.task_id
+        )
+        queued.status = "active"
+        session.current_task = TaskFactory.create_validation(
+            parent_task_id=parent_task_id,
+            task=queued.candidate.task,
+        ).model_copy(update={"status": "in_progress"})
+        session.phase = SessionPhase.WORKING
+
+    def decide_plan_revision(
+        self,
+        session_id: str,
+        decision: str,
+        *,
+        user_reason: str | None = None,
+    ) -> ResearchSession:
+        session = self._load_for_phase(
+            session_id, {SessionPhase.AWAITING_PLAN_REVISION_DECISION}
+        )
+        if decision not in {"revise", "continue_with_warning", "end_project"}:
+            raise InvariantViolationError(f"unknown plan revision decision: {decision}")
+        mentor_reason = (
+            session.latest_complete_output.revision_reason
+            if session.latest_complete_output is not None
+            and session.latest_complete_output.revision_reason is not None
+            else "Working 报告当前方案存在关键问题"
+        )
+        if decision in {"continue_with_warning", "end_project"}:
+            if user_reason is None or not user_reason.strip():
+                raise InvariantViolationError(f"{decision} requires user_reason")
+        phase_before = session.phase
+        record = PlanRevisionRecord(
+            decision=decision,
+            mentor_reason=mentor_reason,
+            user_reason=user_reason,
+        )
+        session.plan_revision_records.append(record)
+        if decision == "revise":
+            session.check_round = 0
+            session.latest_check = None
+            session.plan_decision = None
+            if user_reason is not None and user_reason.strip() and session.active_plan is not None:
+                session.pending_plan_feedback = UserPlanFeedback(user_reason=user_reason)
+            session.phase = SessionPhase.PLANNING
+        elif decision == "continue_with_warning":
+            session.phase = SessionPhase.COMPLETING
+        else:
+            session.phase = SessionPhase.COMPLETED
+        event = self._event(
+            session_id,
+            SessionEventType.PLAN_REVISION_DECIDED,
+            phase_before,
+            session.phase,
+            record.model_dump(mode="json"),
+        )
+        self._commit(session, event)
+        return session.model_copy(deep=True)

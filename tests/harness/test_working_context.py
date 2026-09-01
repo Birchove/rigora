@@ -15,6 +15,16 @@ from research_mentor.domain.documents import DocumentChunk
 from research_mentor.domain.evidence import EvidenceRef
 from research_mentor.domain.experiments import ExperimentInfo, ExperimentTaskContext
 from research_mentor.domain.research import KeyInsight, Milestone, ResearchContext, ResearchPlan
+from research_mentor.ports.retrieval import RankResult
+
+
+class RecordingRanker:
+    def __init__(self) -> None:
+        self.queries: list[str] = []
+
+    def rank(self, query, chunks, *, limit):
+        self.queries.append(query)
+        return RankResult(status="ok", items=[])
 
 
 def research_context() -> ResearchContext:
@@ -129,7 +139,7 @@ async def test_rank_unavailable_does_not_decline_question() -> None:
 
 
 @pytest.mark.asyncio
-async def test_successful_low_rank_uses_configured_threshold() -> None:
+async def test_successful_low_rank_is_diagnostic_only() -> None:
     settings = Settings(rag_relevance_threshold=0.3)
     builder = WorkingContextBuilder(settings, LexicalRanker())
 
@@ -139,7 +149,23 @@ async def test_successful_low_rank_uses_configured_threshold() -> None:
 
     assert context.rank_status == "ok"
     assert context.top_relevance == 0.0
-    assert context.decline_as_unrelated is True
+    assert context.decline_as_unrelated is False
+
+
+@pytest.mark.asyncio
+async def test_short_follow_up_uses_deterministic_research_and_task_rank_query() -> None:
+    ranker = RecordingRanker()
+    builder = WorkingContextBuilder(Settings(), ranker)
+
+    await builder.build(long_source(), "那第二个方案呢", character_budget=12000)
+
+    assert ranker.queries == [
+        "normalized_idea: 比较缓存策略对尾延迟的影响\n"
+        "research_question: 缓存策略是否降低尾延迟？\n"
+        "task_kind: main\n"
+        "current_experiment: 缓存基准实验\n"
+        "question: 那第二个方案呢"
+    ]
 
 
 @pytest.mark.asyncio

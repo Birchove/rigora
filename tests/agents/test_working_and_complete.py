@@ -160,6 +160,16 @@ def test_working_output_preserves_complete_negative_snapshot() -> None:
     assert output.updated_experiment_info.actual_result == "正确率低于基线"
 
 
+def test_working_plan_issue_is_main_only_in_runtime_guidelines() -> None:
+    sys_input = WorkingQASysInput(current_date=date(2026, 9, 1))
+    joined = "\n".join(sys_input.qa_guidelines)
+
+    assert "report_plan_issue" in joined
+    assert "main" in joined
+    assert "validation" in joined
+    assert "record_validation_result" in joined
+
+
 @pytest.mark.parametrize("status", ["pending", "completed", "blocked", "cancelled"])
 def test_working_input_rejects_non_active_task_status(
     initial_input: InitialInput,

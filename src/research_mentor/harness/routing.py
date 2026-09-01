@@ -70,6 +70,8 @@ def route_working_output(
 ) -> SessionPhase:
     if output.action == "success":
         return SessionPhase.AWAITING_RESULT_RECORD
+    if output.action == "report_plan_issue":
+        return SessionPhase.AWAITING_PLAN_REVISION_DECISION
     if output.action in {"answer", "clarify", "decline"}:
         return SessionPhase.WORKING
     raise InvariantViolationError(f"未知的 working action: {output.action}")

@@ -16,6 +16,8 @@ DEFAULT_QA_GUIDELINES = [
     "信息足以回答时使用 answer；只缺少少量关键事实时使用 clarify，并只询问继续判断所需的最少信息。",
     "问题与当前研究无关、超出职责边界或无法在有效信息和证据基础上回答时使用 decline，并说明边界。",
     "只有用户输入和实验记录足以表明当前实验任务已经完成时才使用 success；success 不代表整个科研流程结束。",
+    "仅当当前 task_kind = main 且事实表明核心方案需要重估时使用 report_plan_issue；validation 的负面结论或执行失败不得使用该 action。",
+    "validation 完成、反对预期或执行失败时均使用 success 提议结果录入，由用户通过 record_validation_result 如实确认。",
     "success 时必须返回包含当前实验最终事实的完整 updated_experiment_info。",
     "比较 expected_result 与 actual_result 时，应区分观察事实、合理推断和未知原因，不得把相关性写成因果结论。",
     "updated_experiment_info 必须是合并本轮可靠新增或修正信息后的完整快照，不得编造、覆盖或美化实验结果。",
@@ -89,7 +91,7 @@ class WorkingQAInput(BaseModel):
 
 
 class WorkingQAOutput(BaseModel):
-    action: Literal["answer", "clarify", "decline", "success"]
+    action: Literal["answer", "clarify", "decline", "success", "report_plan_issue"]
     reason: str
     reply: str
     updated_experiment_info: ExperimentInfo | None = None
