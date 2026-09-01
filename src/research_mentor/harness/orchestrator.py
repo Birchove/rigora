@@ -503,15 +503,20 @@ class ResearchMentorOrchestrator:
             candidate.disposition = "exhausted"
         else:
             session.phase = SessionPhase.PLANNING
+        participating_candidates = [
+            item
+            for item in session.plan_candidates
+            if item.disposition != "archived"
+        ]
         if all(
             item.disposition in {"ready", "exhausted", "override"}
-            for item in session.plan_candidates
+            for item in participating_candidates
         ):
             session.phase = (
                 SessionPhase.AWAITING_PLAN_DECISION
                 if any(
                     item.disposition in {"ready", "override"}
-                    for item in session.plan_candidates
+                    for item in participating_candidates
                 )
                 else SessionPhase.CHECK_LOOP_EXHAUSTED
             )

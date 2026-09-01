@@ -267,3 +267,11 @@ def test_selected_candidate_result_revision_runs_without_user_reason(
     )
     assert payload["previous_insight_check"] is None
     assert payload["user_feedback"] is None
+
+    model.enqueue("key_insight_check", assessment)
+    checked = orchestrator.run_check("s1", candidate_id=selected_id)
+    checked_candidate = next(
+        item for item in checked.plan_candidates if item.candidate_id == selected_id
+    )
+    assert checked_candidate.disposition == "ready"
+    assert checked.phase is SessionPhase.AWAITING_PLAN_DECISION
