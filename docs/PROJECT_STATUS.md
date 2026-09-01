@@ -6,11 +6,11 @@
 
 - 记录日期：2026-09-01
 - 当前开发分支：`feature/full-product-v1`
-- Task 23 开发基线：`4914454`
+- Task 24 开发基线：`9ab40dc`
 - 目标版本：v1.0
-- 当前版本定位：具备 project/command/view API、统一错误 contract、FastAPI composition root 和 durable worker lifecycle 的 backend；尚不是完整产品
-- 当前测试基线：Task 23 完成后 `420 passed`
-- v1 implementation plan：Task 1–23 已有独立 commit；Task 24–32 尚未达到对应验收标准
+- 当前版本定位：具备 project/command/view/document/export API、统一错误 contract、FastAPI composition root 和 durable worker lifecycle 的 backend；尚不是完整产品
+- 当前测试基线：Task 24 完成后 `426 passed`
+- v1 implementation plan：Task 1–24 已有独立 commit；Task 25–32 尚未达到对应验收标准
 
 分支关系：
 
@@ -289,10 +289,10 @@ Task 22 已建立 FastAPI composition root：同一注入 `Settings` 决定 demo
 
 Task 23 已提供 project/command/view HTTP contract：项目创建在单一 UoW 中初始化 project、session、首个 event/outbox，列表按 `updated_at desc + project_id` 稳定排序，配置声明的 CS domain/alias 统一规范为 `computer_science`。command endpoint 直接复用 Task 20 discriminated union，校验 path/body project identity；Agent command 返回 `202 + command_id/run_id`，确定性 command commit 后从 repository 重读 `ProjectView` 返回 200。OpenAPI 暴露完整 discriminator、两类成功响应与统一 error envelope，validation/not-found/conflict/provider/internal errors 不泄露 traceback。
 
+Task 24 已提供文档与研究日志 API：upload 的 MIME、extension、单文件与项目总 quota 均来自 typed Settings，文件以 project/document ID 隔离并在 stream 写入时计算 SHA-256；超限或持久化失败会清理 incomplete blob。每次上传建立独立、可恢复的 `DocumentParseJob`，显式 process 路径完成 uploaded → parsing → ready/failed，失败保留源文件且 retry 创建新 attempt。delete 只检查 forward source IDs 与实验结果 evidence files 等结构化引用。`ResearchJournal` 是 JSON 权威模型，Markdown 只从该模型确定性渲染 idea、证据、Plan/Check 争论、tasks/results、validation 和 WritingGuidance，不解析聊天正文。
+
 尚未实现：
 
-- 文档上传、状态、retry/delete API；
-- 研究日志 JSON/Markdown export API；
 - public event SSE；
 - `Last-Event-ID` 断线恢复；
 - deterministic demo mode 和三阶段演示数据。
@@ -324,7 +324,7 @@ Task 23 已提供 project/command/view HTTP contract：项目创建在单一 UoW
 ### 5.8 安全与产品约束缺口
 
 - project 创建已限制为配置声明的 CS domain/alias；Idea Review 提交仍由现有 Harness 支持域 gate 防守；
-- 文件路径、MIME、大小和项目隔离尚未实现；
+- 文件路径、MIME、大小、项目隔离、失败 retry 与结构化引用删除保护已实现；
 - API key、连接字符串和用户文档的日志脱敏尚未实现；
 - provider、文档解析和外部检索的失败恢复尚未实现；
 - 多进程 AgentRun lease/CAS、retry、cooperative cancel 与 expired-lease recovery 已由 Task 21 覆盖，并已由 Task 22 接入 FastAPI lifecycle；
@@ -338,7 +338,7 @@ Task 23 已提供 project/command/view HTTP contract：项目创建在单一 UoW
 2. **Milestone B（Task 7–12）已完成**：不得重复实现；
 3. **Milestone C（Task 13–16）已完成**：不得重复实现；
 4. **Milestone D（Task 17–21）已完成**：不得重复实现；
-5. **完成 Milestone E（Task 24–26）**：从 Task 24 文件与研究日志 API 开始，随后建立 SSE 和 deterministic demo；
+5. **完成 Milestone E（Task 25–26）**：从 Task 25 public event SSE 开始，随后建立 deterministic demo；
 6. **完成 Milestone F（Task 27–29）**：实现 React 工作台；
 7. **完成 Milestone G（Task 30–32）**：补齐 Eval、E2E、34 项验收和发布审计。
 

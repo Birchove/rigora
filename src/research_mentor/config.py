@@ -19,6 +19,18 @@ class Settings(BaseSettings):
     model_api_key: SecretStr | None = None
     database_url: str = "sqlite+aiosqlite:///./research_mentor.db"
     upload_root: Path = Path("./data/uploads")
+    upload_allowed_media_types: tuple[str, ...] = (
+        "text/plain",
+        "text/markdown",
+        "text/x-markdown",
+        "application/markdown",
+        "application/pdf",
+    )
+    upload_allowed_extensions: tuple[str, ...] = (".txt", ".md", ".markdown", ".pdf")
+    upload_max_file_bytes: int = Field(default=10 * 1024 * 1024, ge=1)
+    upload_max_project_bytes: int = Field(default=100 * 1024 * 1024, ge=1)
+    document_chunk_max_chars: int = Field(default=4000, ge=100)
+    document_chunk_overlap_chars: int = Field(default=200, ge=0)
     public_base_url: HttpUrl = HttpUrl("http://localhost:8000")
     demo_mode: bool = True
     max_check_rounds: int = Field(default=5, ge=1)

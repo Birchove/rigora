@@ -1,5 +1,7 @@
 """Async SQL repositories sharing one unit-of-work session."""
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -16,6 +18,11 @@ from research_mentor.adapters.sql.mappers import (
 from research_mentor.adapters.sql.models import (
     AgentOutputRow,
     AgentRunRow,
+    DocumentChunkRow,
+    DocumentParseJobRow,
+    DocumentRow,
+    LiteratureRecordRow,
+    ProjectLiteratureRow,
     OutboxEventRow,
     ProcessedCommandRow,
     ProjectRow,
@@ -24,6 +31,8 @@ from research_mentor.adapters.sql.models import (
 )
 from research_mentor.errors import ConcurrencyConflict, SessionNotFoundError
 from research_mentor.domain.jobs import AgentRun
+from research_mentor.domain.documents import DocumentChunk, DocumentParseJob, UploadedDocument
+from research_mentor.domain.evidence import LiteratureRecord
 from research_mentor.domain.projects import ResearchProject
 from research_mentor.harness.state import ResearchSession, SessionEvent
 from research_mentor.ports.events import OutboxEvent
@@ -154,6 +163,124 @@ class SqlProjectRepository:
         result = await self._db.execute(statement)
         if result.rowcount != 1:
             raise ConcurrencyConflict(project.project_id, expected_version)
+
+
+class SqlDocumentRepository:
+    def __init__(self, db: AsyncSession) -> None:
+        self._db = db
+
+    @staticmethod
+    def _document(row: DocumentRow) -> UploadedDocument:
+        return UploadedDocument(
+            document_id=row.document_id,
+            project_id=row.project_id,
+            original_name=row.original_name,
+            media_type=row.media_type,
+            size_bytes=row.size_bytes,
+            sha256=row.sha256,
+            status=row.status,
+            created_at=_as_utc(row.created_at),
+            error_message=row.error_message,
+        )
+
+    async def add(self, document: UploadedDocument, *, storage_path: str) -> None:
+        self._db.add(DocumentRow(**document.model_dump(mode="python"), storage_path=storage_path))
+
+    async def get(self, document_id: str, *, project_id: str) -> UploadedDocument | None:
+        row = await self._db.scalar(select(DocumentRow).where(
+            DocumentRow.document_id == document_id,
+            DocumentRow.project_id == project_id,
+        ))
+        return self._document(row) if row is not None else None
+
+    async def storage_path(self, document_id: str, *, project_id: str) -> str | None:
+        return await self._db.scalar(select(DocumentRow.storage_path).where(
+            DocumentRow.document_id == document_id,
+            DocumentRow.project_id == project_id,
+        ))
+
+    async def list(self, project_id: str) -> list[UploadedDocument]:
+        rows = (await self._db.scalars(select(DocumentRow).where(
+            DocumentRow.project_id == project_id
+        ).order_by(DocumentRow.created_at, DocumentRow.document_id))).all()
+        return [self._document(row) for row in rows]
+
+    async def total_size(self, project_id: str) -> int:
+        return int(await self._db.scalar(select(func.coalesce(func.sum(DocumentRow.size_bytes), 0)).where(
+            DocumentRow.project_id == project_id
+        )) or 0)
+
+    async def set_status(
+        self, document_id: str, *, project_id: str, status: str, error_message: str | None = None
+    ) -> None:
+        result = await self._db.execute(update(DocumentRow).where(
+            DocumentRow.document_id == document_id,
+            DocumentRow.project_id == project_id,
+        ).values(status=status, error_message=error_message))
+        if result.rowcount != 1:
+            raise SessionNotFoundError(f"Document not found: {document_id}")
+
+    async def replace_chunks(self, document_id: str, chunks: list[DocumentChunk]) -> None:
+        from sqlalchemy import delete
+        await self._db.execute(delete(DocumentChunkRow).where(DocumentChunkRow.document_id == document_id))
+        self._db.add_all([DocumentChunkRow(**chunk.model_dump(mode="python")) for chunk in chunks])
+
+    async def delete(self, document_id: str, *, project_id: str) -> bool:
+        from sqlalchemy import delete
+        result = await self._db.execute(delete(DocumentRow).where(
+            DocumentRow.document_id == document_id,
+            DocumentRow.project_id == project_id,
+        ))
+        return result.rowcount == 1
+
+
+class SqlDocumentParseJobRepository:
+    def __init__(self, db: AsyncSession) -> None:
+        self._db = db
+
+    @staticmethod
+    def _job(row: DocumentParseJobRow) -> DocumentParseJob:
+        return DocumentParseJob(
+            job_id=row.job_id, document_id=row.document_id, project_id=row.project_id,
+            status=row.status, attempt=row.attempt, created_at=_as_utc(row.created_at),
+            started_at=_as_utc(row.started_at), finished_at=_as_utc(row.finished_at),
+            error_message=row.error_message,
+        )
+
+    async def add(self, job: DocumentParseJob) -> None:
+        self._db.add(DocumentParseJobRow(**job.model_dump(mode="python")))
+
+    async def next_attempt(self, document_id: str) -> int:
+        value = await self._db.scalar(select(func.max(DocumentParseJobRow.attempt)).where(
+            DocumentParseJobRow.document_id == document_id
+        ))
+        return int(value or 0) + 1
+
+    async def get(self, job_id: str) -> DocumentParseJob | None:
+        row = await self._db.get(DocumentParseJobRow, job_id)
+        return self._job(row) if row is not None else None
+
+    async def latest_for_document(self, document_id: str) -> DocumentParseJob | None:
+        row = await self._db.scalar(select(DocumentParseJobRow).where(
+            DocumentParseJobRow.document_id == document_id
+        ).order_by(DocumentParseJobRow.attempt.desc()).limit(1))
+        return self._job(row) if row is not None else None
+
+    async def save(self, job: DocumentParseJob) -> None:
+        await self._db.execute(update(DocumentParseJobRow).where(
+            DocumentParseJobRow.job_id == job.job_id
+        ).values(**job.model_dump(mode="python", exclude={"job_id"})))
+
+
+class SqlLiteratureRepository:
+    def __init__(self, db: AsyncSession) -> None:
+        self._db = db
+
+    async def list_for_project(self, project_id: str) -> list[LiteratureRecord]:
+        rows = (await self._db.scalars(select(LiteratureRecordRow).join(
+            ProjectLiteratureRow, ProjectLiteratureRow.record_id == LiteratureRecordRow.record_id
+        ).where(ProjectLiteratureRow.project_id == project_id).order_by(LiteratureRecordRow.record_id))).all()
+        return [LiteratureRecord.model_validate(row.payload) for row in rows]
 
 
 class SqlAgentRunRepository:

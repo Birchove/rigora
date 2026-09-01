@@ -22,6 +22,9 @@ from research_mentor.application.command_bus import CommandBus
 from research_mentor.application.handlers import CancelRunHandler, RestartResearchHandler
 from research_mentor.application.recovery import RunRecovery
 from research_mentor.application.run_worker import AgentRunWorker, RunService
+from research_mentor.application.documents import DocumentService
+from research_mentor.application.journal import ExportService, JournalRenderer
+from research_mentor.adapters.filestore.local import LocalFileStore
 from research_mentor.config import Settings
 from research_mentor.ports.model import StructuredModelPort
 
@@ -40,6 +43,9 @@ class ApplicationContainer:
     run_service: RunService
     worker: AgentRunWorker
     recovery: RunRecovery
+    document_service: DocumentService
+    export_service: ExportService
+    journal_renderer: JournalRenderer
     _provider_close: Callable[[], Awaitable[Any]] | None = None
 
     async def close_provider(self) -> None:
@@ -99,6 +105,16 @@ async def build_container(settings: Settings) -> ApplicationContainer:
             retry_limit=settings.run_retry_limit,
         )
         recovery = RunRecovery(uow_factory)
+        document_service = DocumentService(
+            uow_factory,
+            LocalFileStore(settings.upload_root),
+            allowed_media_types=settings.upload_allowed_media_types,
+            allowed_extensions=settings.upload_allowed_extensions,
+            max_file_bytes=settings.upload_max_file_bytes,
+            max_project_bytes=settings.upload_max_project_bytes,
+            chunk_max_chars=settings.document_chunk_max_chars,
+            chunk_overlap_chars=settings.document_chunk_overlap_chars,
+        )
         return ApplicationContainer(
             settings=settings,
             engine=engine,
@@ -109,6 +125,9 @@ async def build_container(settings: Settings) -> ApplicationContainer:
             run_service=run_service,
             worker=worker,
             recovery=recovery,
+            document_service=document_service,
+            export_service=ExportService(uow_factory),
+            journal_renderer=JournalRenderer(),
             _provider_close=provider_close,
         )
     except BaseException:

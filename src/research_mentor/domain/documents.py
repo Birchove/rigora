@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, JsonValue
 
 
 DocumentStatus = Literal["uploaded", "parsing", "ready", "failed"]
+DocumentParseJobStatus = Literal["queued", "running", "succeeded", "failed"]
 
 
 class UploadedDocument(BaseModel):
@@ -32,3 +33,15 @@ class DocumentChunk(BaseModel):
     ordinal: int = Field(ge=0)
     heading_path: list[str] = Field(default_factory=list)
     markdown: str
+
+
+class DocumentParseJob(BaseModel):
+    job_id: str
+    document_id: str
+    project_id: str
+    status: DocumentParseJobStatus
+    attempt: int = Field(ge=1)
+    created_at: datetime
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    error_message: str | None = None

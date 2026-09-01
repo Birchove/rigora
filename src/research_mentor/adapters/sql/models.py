@@ -178,6 +178,27 @@ class DocumentChunkRow(Base):
     markdown: Mapped[str] = mapped_column(Text, nullable=False)
 
 
+class DocumentParseJobRow(Base):
+    __tablename__ = "document_parse_jobs"
+    __table_args__ = (
+        UniqueConstraint("document_id", "attempt", name="uq_document_parse_attempt"),
+    )
+
+    job_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    document_id: Mapped[str] = mapped_column(
+        ForeignKey("documents.document_id", ondelete="CASCADE"), nullable=False
+    )
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.project_id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(50), nullable=False)
+    attempt: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error_message: Mapped[str | None] = mapped_column(Text)
+
+
 class LiteratureRecordRow(Base):
     __tablename__ = "literature_records"
 

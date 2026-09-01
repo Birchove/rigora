@@ -238,6 +238,11 @@ async def test_openapi_exposes_command_discriminator_success_and_errors(
             "/api/v1/projects",
             "/api/v1/projects/{project_id}",
             "/api/v1/projects/{project_id}/commands",
+            "/api/v1/projects/{project_id}/documents",
+            "/api/v1/projects/{project_id}/documents/{document_id}",
+            "/api/v1/projects/{project_id}/documents/{document_id}/retry",
+            "/api/v1/projects/{project_id}/journal.json",
+            "/api/v1/projects/{project_id}/journal.md",
             "/api/v1/health",
         } == set(paths)
         operation = paths["/api/v1/projects/{project_id}/commands"]["post"]

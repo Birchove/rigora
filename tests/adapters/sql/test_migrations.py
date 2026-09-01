@@ -15,6 +15,7 @@ EXPECTED_TABLES = {
     "processed_commands",
     "conversation_turns",
     "documents",
+    "document_parse_jobs",
     "document_chunks",
     "literature_records",
     "project_literature",

@@ -8,6 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from research_mentor.adapters.sql.repositories import (
     SqlAgentOutputRepository,
     SqlAgentRunRepository,
+    SqlDocumentParseJobRepository,
+    SqlDocumentRepository,
+    SqlLiteratureRepository,
     SqlOutboxRepository,
     SqlProcessedCommandRepository,
     SqlProjectRepository,
@@ -30,6 +33,9 @@ class SqlUnitOfWork:
         self.outbox = SqlOutboxRepository(self._db)
         self.agent_outputs = SqlAgentOutputRepository(self._db)
         self.runs = SqlAgentRunRepository(self._db)
+        self.documents = SqlDocumentRepository(self._db)
+        self.document_parse_jobs = SqlDocumentParseJobRepository(self._db)
+        self.literature = SqlLiteratureRepository(self._db)
         return self
 
     async def __aexit__(

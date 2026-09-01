@@ -8,6 +8,7 @@ from research_mentor.application.views import (
     ProjectNotFoundError,
     UnsupportedDomainError,
 )
+from research_mentor.application.documents import DocumentError
 from research_mentor.errors import (
     ConcurrencyConflict,
     IllegalTransitionError,
@@ -58,6 +59,10 @@ def install_error_handlers(app: FastAPI) -> None:
         request: Request, exc: ApiContractError
     ) -> JSONResponse:
         return _response(exc.status_code, exc.code, exc.message)
+
+    @app.exception_handler(DocumentError)
+    async def document_error(request: Request, exc: DocumentError) -> JSONResponse:
+        return _response(exc.status_code, exc.code, str(exc))
 
     @app.exception_handler(UnsupportedDomainError)
     async def unsupported_domain(

@@ -10,6 +10,8 @@ from research_mentor.domain.completion import (
 )
 from research_mentor.domain.documents import (
     DocumentChunk,
+    DocumentParseJob,
+    DocumentParseJobStatus,
     DocumentStatus,
     ParsedDocument,
     UploadedDocument,
@@ -24,6 +26,8 @@ __all__ = [
     "ConversationTurn",
     "CompleteAgentOutput",
     "DocumentChunk",
+    "DocumentParseJob",
+    "DocumentParseJobStatus",
     "DocumentStatus",
     "ExcludedValidation",
     "ParsedDocument",
