@@ -361,13 +361,19 @@ class ResearchMentorOrchestrator:
         session: ResearchSession,
         candidate_id: str | None,
     ) -> ResearchSession:
+        revision_context = session.pending_plan_revision_context
         if candidate_id is None:
-            active = [
-                item for item in session.plan_candidates if item.disposition == "active"
+            default_disposition = (
+                "selected" if revision_context is not None else "active"
+            )
+            candidates = [
+                item
+                for item in session.plan_candidates
+                if item.disposition == default_disposition
             ]
-            if len(active) != 1:
+            if len(candidates) != 1:
                 raise InvariantViolationError("candidate_id is required for revision")
-            candidate = active[0]
+            candidate = candidates[0]
         else:
             candidate = next(
                 (
@@ -383,7 +389,11 @@ class ResearchMentorOrchestrator:
             candidate.check_history[-1].output if candidate.check_history else None
         )
         user_feedback = session.pending_plan_feedback
-        if previous_check is None and user_feedback is None:
+        if (
+            revision_context is None
+            and previous_check is None
+            and user_feedback is None
+        ):
             raise InvariantViolationError("candidate revision requires feedback")
         output = self._plan_loop_runner.run_sync(
             PlanLoopInput(
@@ -395,19 +405,21 @@ class ResearchMentorOrchestrator:
                 previous_plan=candidate.plan.model_copy(deep=True),
                 previous_insight_check=(
                     previous_check.model_copy(deep=True)
-                    if user_feedback is None and previous_check is not None
+                    if revision_context is None
+                    and user_feedback is None
+                    and previous_check is not None
                     else None
                 ),
                 user_feedback=(
                     user_feedback.model_copy(deep=True)
-                    if user_feedback is not None
+                    if revision_context is None and user_feedback is not None
                     else None
                 ),
                 candidate_index=candidate.candidate_index,
                 candidate_focus=candidate.focus_hint,
                 revision_context=(
-                    session.pending_plan_revision_context.model_copy(deep=True)
-                    if session.pending_plan_revision_context is not None
+                    revision_context.model_copy(deep=True)
+                    if revision_context is not None
                     else None
                 ),
             )
@@ -415,6 +427,10 @@ class ResearchMentorOrchestrator:
         candidate.plan = output.plan.model_copy(deep=True)
         candidate.response_to_user = output.response_to_user
         candidate.change_summary = list(output.change_summary)
+        if revision_context is not None:
+            candidate.disposition = "active"
+            candidate.check_round = 0
+            candidate.check_history = []
         session.pending_plan_feedback = None
         session.pending_plan_revision_context = None
         session.active_plan = candidate.plan.model_copy(deep=True)

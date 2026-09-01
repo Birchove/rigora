@@ -9,7 +9,7 @@
 - Task 19 开发基线：`4111298`
 - 目标版本：v1.0
 - 当前版本定位：可安装、可测试的 deterministic multi-agent backend core；尚不是可运行的完整产品
-- 当前测试基线：Task 19 规格修复后 `369 passed`
+- 当前测试基线：Task 19 规格修复后 `370 passed`
 - v1 implementation plan：Task 1–19 已有独立 commit；Task 20–32 尚未达到对应验收标准
 
 分支关系：
@@ -277,7 +277,7 @@ Task 17–19 已闭合 Idea Review 四种 action、非 CS domain guard、forward
 - `success` 只提出 completion proposal，`resume_working` 可无模型调用恢复，用户记录结果时才完成 task；
 - forward `plan=None` 可携带 `ResearchContext` 与主实验结果进入 Complete，不反推虚假 plan；
 - validation queue 按 rank 激活，保留 critical skip 双方理由；每项结果先经 Complete 复核，plan revision 可中断 pending queue，否则先合并非重复新候选再继续旧 pending，且 queued/completed candidate 不重复；
-- plan revision 三种用户决策与 WritingGuidance 持久化；revise 的下一次 PlanLoop 仅凭 typed revision context 即可进入修订模式，user reason 可选，并接收不可改写的主实验、validation、当前实验与双方理由；实验失败、负面和反对结果均按结构化字段如实保留。
+- plan revision 三种用户决策与 WritingGuidance 持久化；revise 的下一次 PlanLoop 仅凭 typed revision context 即可进入修订模式，user reason 可选，并接收不可改写的主实验、validation、当前实验与双方理由；多候选路径默认修订已 selected candidate，清除旧 Check 输入后重新进入 Check；实验失败、负面和反对结果均按结构化字段如实保留。
 
 Milestone D 尚未实现：
 
