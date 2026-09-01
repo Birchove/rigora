@@ -7,8 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from research_mentor.adapters.sql.repositories import (
     SqlAgentOutputRepository,
+    SqlAgentRunRepository,
     SqlOutboxRepository,
     SqlProcessedCommandRepository,
+    SqlProjectRepository,
     SqlSessionEventRepository,
     SqlSessionRepository,
 )
@@ -21,11 +23,13 @@ class SqlUnitOfWork:
 
     async def __aenter__(self) -> Self:
         self._db = self._session_factory()
+        self.projects = SqlProjectRepository(self._db)
         self.sessions = SqlSessionRepository(self._db)
         self.processed_commands = SqlProcessedCommandRepository(self._db)
         self.events = SqlSessionEventRepository(self._db)
         self.outbox = SqlOutboxRepository(self._db)
         self.agent_outputs = SqlAgentOutputRepository(self._db)
+        self.runs = SqlAgentRunRepository(self._db)
         return self
 
     async def __aexit__(

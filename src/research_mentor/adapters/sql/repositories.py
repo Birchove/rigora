@@ -15,12 +15,16 @@ from research_mentor.adapters.sql.mappers import (
 )
 from research_mentor.adapters.sql.models import (
     AgentOutputRow,
+    AgentRunRow,
     OutboxEventRow,
     ProcessedCommandRow,
+    ProjectRow,
     ResearchSessionRow,
     SessionEventRow,
 )
 from research_mentor.errors import ConcurrencyConflict, SessionNotFoundError
+from research_mentor.domain.jobs import AgentRun
+from research_mentor.domain.projects import ResearchProject
 from research_mentor.harness.state import ResearchSession, SessionEvent
 from research_mentor.ports.events import OutboxEvent
 from research_mentor.ports.repository import AgentOutputRecord, ProcessedCommand
@@ -29,6 +33,18 @@ from research_mentor.ports.repository import AgentOutputRecord, ProcessedCommand
 class SqlSessionRepository:
     def __init__(self, db: AsyncSession) -> None:
         self._db = db
+
+    async def add(self, session: ResearchSession, *, project_id: str) -> None:
+        self._db.add(
+            ResearchSessionRow(
+                session_id=session.session_id,
+                project_id=project_id,
+                version=1,
+                phase=session.phase.value,
+                updated_at=datetime.now(timezone.utc),
+                payload=session_payload(session),
+            )
+        )
 
     async def get(self, session_id: str) -> ResearchSession | None:
         row = await self._db.get(ResearchSessionRow, session_id)
@@ -58,6 +74,107 @@ class SqlSessionRepository:
         result = await self._db.execute(statement)
         if result.rowcount != 1:
             raise ConcurrencyConflict(session.session_id, expected_version)
+
+
+class SqlProjectRepository:
+    def __init__(self, db: AsyncSession) -> None:
+        self._db = db
+
+    async def add(self, project: ResearchProject) -> None:
+        self._db.add(
+            ProjectRow(
+                project_id=project.project_id,
+                title=project.title,
+                domain=project.domain,
+                session_id=project.session_id,
+                version=project.version,
+                created_at=project.created_at,
+                updated_at=project.updated_at,
+            )
+        )
+
+    async def get(self, project_id: str) -> ResearchProject | None:
+        row = await self._db.get(ProjectRow, project_id)
+        if row is None:
+            return None
+        return ResearchProject(
+            project_id=row.project_id,
+            title=row.title,
+            domain=row.domain,
+            session_id=row.session_id,
+            version=row.version,
+            created_at=row.created_at,
+            updated_at=row.updated_at,
+        )
+
+    async def save(
+        self, project: ResearchProject, *, expected_version: int
+    ) -> None:
+        statement = (
+            update(ProjectRow)
+            .where(
+                ProjectRow.project_id == project.project_id,
+                ProjectRow.version == expected_version,
+            )
+            .values(
+                title=project.title,
+                domain=project.domain,
+                session_id=project.session_id,
+                version=project.version,
+                updated_at=project.updated_at,
+            )
+        )
+        result = await self._db.execute(statement)
+        if result.rowcount != 1:
+            raise ConcurrencyConflict(project.project_id, expected_version)
+
+
+class SqlAgentRunRepository:
+    def __init__(self, db: AsyncSession) -> None:
+        self._db = db
+
+    @staticmethod
+    def _from_row(row: AgentRunRow) -> AgentRun:
+        return AgentRun(
+            run_id=row.run_id,
+            project_id=row.project_id,
+            command_id=row.command_id,
+            agent_name=row.agent_name,
+            status=row.status,
+            attempt=row.attempt,
+            started_at=row.started_at,
+            finished_at=row.finished_at,
+            public_message=row.public_message,
+            error_code=row.error_code,
+        )
+
+    async def get(self, run_id: str) -> AgentRun | None:
+        row = await self._db.get(AgentRunRow, run_id)
+        return self._from_row(row) if row is not None else None
+
+    async def find_active_for_project(self, project_id: str) -> AgentRun | None:
+        row = await self._db.scalar(
+            select(AgentRunRow)
+            .where(
+                AgentRunRow.project_id == project_id,
+                AgentRunRow.status.in_(("queued", "running")),
+            )
+            .order_by(AgentRunRow.run_id)
+            .limit(1)
+        )
+        return self._from_row(row) if row is not None else None
+
+    async def add(self, run: AgentRun) -> None:
+        self._db.add(AgentRunRow(**run.model_dump(mode="python")))
+
+    async def save(self, run: AgentRun) -> None:
+        result = await self._db.execute(
+            update(AgentRunRow)
+            .where(AgentRunRow.run_id == run.run_id)
+            .values(**run.model_dump(mode="python", exclude={"run_id"}))
+        )
+        if result.rowcount != 1:
+            raise SessionNotFoundError(f"Run not found: {run.run_id}")
 
 
 class SqlSessionEventRepository:

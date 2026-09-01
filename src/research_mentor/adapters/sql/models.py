@@ -40,7 +40,7 @@ class ResearchSessionRow(Base):
 
     session_id: Mapped[str] = mapped_column(String(36), primary_key=True)
     project_id: Mapped[str] = mapped_column(
-        ForeignKey("projects.project_id", ondelete="CASCADE"), unique=True
+        ForeignKey("projects.project_id", ondelete="CASCADE")
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False)
     phase: Mapped[str] = mapped_column(String(100), nullable=False)

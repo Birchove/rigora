@@ -6,11 +6,11 @@
 
 - 记录日期：2026-09-01
 - 当前开发分支：`feature/full-product-v1`
-- Task 19 开发基线：`4111298`
+- Task 20 开发基线：`94a2c4d`
 - 目标版本：v1.0
 - 当前版本定位：可安装、可测试的 deterministic multi-agent backend core；尚不是可运行的完整产品
-- 当前测试基线：Task 19 规格修复后 `375 passed`
-- v1 implementation plan：Task 1–19 已有独立 commit；Task 20–32 尚未达到对应验收标准
+- 当前测试基线：Task 20 完成后 `398 passed`
+- v1 implementation plan：Task 1–20 已有独立 commit；Task 21–32 尚未达到对应验收标准
 
 分支关系：
 
@@ -263,7 +263,7 @@ common_mentor.md
 
 ### 5.2 Milestone B：持久化、文档与检索 providers
 
-Task 7–12 已完成并各有独立 commit：repository/UoW/event ports、SQLAlchemy/Alembic、事务与乐观并发、安全文档处理、OpenAlex、项目 chunk 检索和可选 FlagEmbedding ranker 均已落地。后续只按其 contract 使用或修复回归，不重复实现。
+Task 7–12 已完成并各有独立 commit：repository/UoW/event ports、SQLAlchemy/Alembic、事务与乐观并发、安全文档处理、OpenAlex、项目 chunk 检索和可选 FlagEmbedding ranker 均已落地。Task 20 补齐了 command bus 实际使用的 SQL project/run repository 与 session add 接线，并通过增量 migration 允许同一 project 保留多个 research cycle。后续只按其 contract 使用或修复回归，不重复实现。
 
 ### 5.3 Milestone C：真实 structured model 与 RAG
 
@@ -279,12 +279,9 @@ Task 17–19 已闭合 Idea Review 四种 action、非 CS domain guard、forward
 - validation queue 按 rank 激活，保留 critical skip 双方理由；每项结果先经 Complete 复核，plan revision 可中断 pending queue，否则先合并非重复新候选再继续旧 pending；queued/completed/skipped/pending、本批候选及 forward 导入的 completed validations 均按 ValidationTask 内容 identity 去重，不能通过更换 candidate ID 重复；
 - plan revision 三种用户决策与 WritingGuidance 持久化；revise 的下一次 PlanLoop 仅凭 typed revision context 即可进入修订模式，user reason 可选，并接收不可改写的主实验、validation、当前实验与双方理由；多候选路径默认修订已 selected candidate，清除旧 Check 输入后重新进入 Check，archived candidates 不参与本轮 Check 聚合，修订候选通过后进入用户 decision gate；Working issue 的 `continue_with_warning` 始终回 `WORKING`，且导师理由取当前 `pending_plan_issue_reason`，不能被残留 Complete reason 覆盖；Complete result revision 才使用 Complete reason 并回 `COMPLETING`；实验失败、负面和反对结果均按结构化字段如实保留。
 
-Milestone D 尚未实现：
+Task 20 已建立完整 discriminated command union、application command bus、processed-command 幂等返回、project version/phase/active-run guard 和 server-authoritative `allowed_commands`。所有 mutation 强制 `command_id/expected_version`；Agent command 返回 typed run receipt，确定性 command 返回 typed updated view。`restart_research(confirm_restart=True)` 会在单一 UoW 中保留旧 session、创建并切换到同 project 的新 session、追加 event/outbox、排队新的 Idea Review run，运行中则在创建任何新 run 前拒绝抢占。
 
-- application command bus；
-- command 幂等键、统一 phase guard、project version guard；
-- durable AgentRun worker；
-- retry、cancel、超时和服务重启恢复。
+Milestone D 尚未实现 Task 21：durable AgentRun worker，以及 retry、cooperative cancel、timeout、lease 和服务重启恢复。
 
 ### 5.5 Milestone E：FastAPI、SSE 与 Demo
 
@@ -328,7 +325,7 @@ FastAPI 等依赖已加入，但没有 API 代码。尚未实现：
 - 文件路径、MIME、大小和项目隔离尚未实现；
 - API key、连接字符串和用户文档的日志脱敏尚未实现；
 - provider、文档解析和外部检索的失败恢复尚未实现；
-- 多进程并发、重复 command 和 stale version 尚未实现；
+- 多进程 AgentRun lease/CAS 尚未实现；重复 command 与 stale project version 已由 Task 20 command bus 覆盖；
 - Prompt 已有基本数据/指令隔离，但尚无端到端 adversarial 测试。
 
 ## 6. 推荐继续开发顺序
@@ -338,7 +335,7 @@ FastAPI 等依赖已加入，但没有 API 代码。尚未实现：
 1. **Milestone A（Task 2–6）已完成**：不得重复实现；
 2. **Milestone B（Task 7–12）已完成**：不得重复实现；
 3. **Milestone C（Task 13–16）已完成**：不得重复实现；
-4. **完成 Milestone D（Task 17–21）**：将 domain、provider 和 durable run 组合成完整 application journey；
+4. **完成 Milestone D（Task 21）**：实现 durable run worker、retry、cancel、timeout 与恢复；
 5. **完成 Milestone E（Task 22–26）**：建立 API、SSE 和 deterministic demo；
 6. **完成 Milestone F（Task 27–29）**：实现 React 工作台；
 7. **完成 Milestone G（Task 30–32）**：补齐 Eval、E2E、34 项验收和发布审计。
