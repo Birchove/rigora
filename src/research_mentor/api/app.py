@@ -5,6 +5,9 @@ from contextlib import asynccontextmanager
 from fastapi import APIRouter, Depends, FastAPI
 
 from research_mentor.api.dependencies import get_settings
+from research_mentor.api.commands import router as commands_router
+from research_mentor.api.errors import install_error_handlers
+from research_mentor.api.projects import router as projects_router
 from research_mentor.bootstrap import build_container
 from research_mentor.config import Settings
 
@@ -52,4 +55,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     application.state.settings = settings if settings is not None else Settings()
     application.include_router(api_router, prefix="/api/v1")
+    application.include_router(projects_router, prefix="/api/v1")
+    application.include_router(commands_router, prefix="/api/v1")
+    install_error_handlers(application)
     return application

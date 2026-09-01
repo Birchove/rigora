@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     run_lease_renewal_seconds: float = Field(default=10.0, gt=0.0)
     run_timeout_seconds: float = Field(default=120.0, gt=0.0)
     run_retry_limit: int = Field(default=3, ge=1)
+    supported_domains: tuple[str, ...] = ("computer_science",)
+    supported_domain_aliases: tuple[str, ...] = (
+        "computer science",
+        "cs",
+        "计算机科学",
+        "计算机",
+    )
 
 
 @dataclass(frozen=True, slots=True)

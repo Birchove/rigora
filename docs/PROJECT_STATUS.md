@@ -6,11 +6,11 @@
 
 - 记录日期：2026-09-01
 - 当前开发分支：`feature/full-product-v1`
-- Task 22 开发基线：`d6d5fe3`
+- Task 23 开发基线：`4914454`
 - 目标版本：v1.0
-- 当前版本定位：具备 FastAPI composition root、durable worker lifecycle 和 health endpoint 的 backend；尚不是完整产品
-- 当前测试基线：Task 22 完成后 `413 passed`
-- v1 implementation plan：Task 1–22 已有独立 commit；Task 23–32 尚未达到对应验收标准
+- 当前版本定位：具备 project/command/view API、统一错误 contract、FastAPI composition root 和 durable worker lifecycle 的 backend；尚不是完整产品
+- 当前测试基线：Task 23 完成后 `420 passed`
+- v1 implementation plan：Task 1–23 已有独立 commit；Task 24–32 尚未达到对应验收标准
 
 分支关系：
 
@@ -287,9 +287,10 @@ Task 21 已实现 durable AgentRun worker：数据库 CAS claim、可续租 leas
 
 Task 22 已建立 FastAPI composition root：同一注入 `Settings` 决定 demo/OpenAI/OpenAI-compatible model adapter 与 SQL engine，集中组装 UoW、CommandBus、RunService、durable worker 和 recovery。应用 lifecycle 按 recovery → worker start 启动、worker stop → provider/engine cleanup 关闭，startup 失败也释放已创建资源；`/api/v1/health` 已提供稳定状态 contract。
 
+Task 23 已提供 project/command/view HTTP contract：项目创建在单一 UoW 中初始化 project、session、首个 event/outbox，列表按 `updated_at desc + project_id` 稳定排序，配置声明的 CS domain/alias 统一规范为 `computer_science`。command endpoint 直接复用 Task 20 discriminated union，校验 path/body project identity；Agent command 返回 `202 + command_id/run_id`，确定性 command commit 后从 repository 重读 `ProjectView` 返回 200。OpenAPI 暴露完整 discriminator、两类成功响应与统一 error envelope，validation/not-found/conflict/provider/internal errors 不泄露 traceback。
+
 尚未实现：
 
-- project、command、view 和统一 error envelope API；
 - 文档上传、状态、retry/delete API；
 - 研究日志 JSON/Markdown export API；
 - public event SSE；
@@ -322,11 +323,11 @@ Task 22 已建立 FastAPI composition root：同一注入 `Settings` 决定 demo
 
 ### 5.8 安全与产品约束缺口
 
-- application 层尚未限制只接受配置声明的 CS domain/alias；
+- project 创建已限制为配置声明的 CS domain/alias；Idea Review 提交仍由现有 Harness 支持域 gate 防守；
 - 文件路径、MIME、大小和项目隔离尚未实现；
 - API key、连接字符串和用户文档的日志脱敏尚未实现；
 - provider、文档解析和外部检索的失败恢复尚未实现；
-- 多进程 AgentRun lease/CAS、retry、cooperative cancel 与 expired-lease recovery 已由 Task 21 覆盖；Task 22 仍需在 FastAPI lifecycle 接线 worker/recovery；
+- 多进程 AgentRun lease/CAS、retry、cooperative cancel 与 expired-lease recovery 已由 Task 21 覆盖，并已由 Task 22 接入 FastAPI lifecycle；
 - Prompt 已有基本数据/指令隔离，但尚无端到端 adversarial 测试。
 
 ## 6. 推荐继续开发顺序
@@ -337,7 +338,7 @@ Task 22 已建立 FastAPI composition root：同一注入 `Settings` 决定 demo
 2. **Milestone B（Task 7–12）已完成**：不得重复实现；
 3. **Milestone C（Task 13–16）已完成**：不得重复实现；
 4. **Milestone D（Task 17–21）已完成**：不得重复实现；
-5. **完成 Milestone E（Task 23–26）**：从 Task 23 project/command/view API 开始，随后建立文件、SSE 和 deterministic demo；
+5. **完成 Milestone E（Task 24–26）**：从 Task 24 文件与研究日志 API 开始，随后建立 SSE 和 deterministic demo；
 6. **完成 Milestone F（Task 27–29）**：实现 React 工作台；
 7. **完成 Milestone G（Task 30–32）**：补齐 Eval、E2E、34 项验收和发布审计。
 

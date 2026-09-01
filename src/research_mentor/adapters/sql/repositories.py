@@ -113,6 +113,27 @@ class SqlProjectRepository:
             updated_at=row.updated_at,
         )
 
+    async def list(self) -> list[ResearchProject]:
+        rows = (
+            await self._db.scalars(
+                select(ProjectRow).order_by(
+                    ProjectRow.updated_at.desc(), ProjectRow.project_id
+                )
+            )
+        ).all()
+        return [
+            ResearchProject(
+                project_id=row.project_id,
+                title=row.title,
+                domain=row.domain,
+                session_id=row.session_id,
+                version=row.version,
+                created_at=row.created_at,
+                updated_at=row.updated_at,
+            )
+            for row in rows
+        ]
+
     async def save(
         self, project: ResearchProject, *, expected_version: int
     ) -> None:
