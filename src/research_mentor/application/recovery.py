@@ -18,4 +18,3 @@ class RunRecovery:
     async def requeue_expired(self) -> tuple[str, ...]:
         async with self._uow_factory() as uow:
             return await uow.runs.requeue_expired(now=self._now())
-
