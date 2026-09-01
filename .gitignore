@@ -16,6 +16,8 @@ htmlcov/
 # Build artifacts
 build/
 dist/
+node_modules/
+*.tsbuildinfo
 
 # Editors and operating systems
 .idea/

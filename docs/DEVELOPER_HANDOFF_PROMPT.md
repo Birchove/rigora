@@ -7,13 +7,13 @@
 
 - 仓库：`D:\A_main\arrogant_teacher\research_mentor_core`
 - 团队统一分支：`main`
-- 当前实现基线：`661c0c6`（`功能：加入可复现完整流程 Demo`）
-- `main` 与 `origin/main` 已同步；`feature/full-product-v1` 当前也指向同一基线，仅作为历史开发分支保留。
-- implementation plan 共 32 个 Task；Task 1–26 已完成并有 commit，Task 27–32 未完成。
+- backend Task 1–26 实现基线：`661c0c6`（`功能：加入可复现完整流程 Demo`）；Task 27 frontend foundation 随当前 `main` 提交。
+- `main` 是唯一团队开发分支；`feature/full-product-v1` 仅作为落后于 `main` 的历史开发分支保留。
+- implementation plan 共 32 个 Task；Task 1–27 已完成，Task 28–32 未完成。
 - 当前 Python 全量测试基线：`438 passed`。
 - 当前 Alembic head：`20260901_0005`。
-- 当前仓库没有 frontend 工程；Task 27 曾尝试启动，但因执行额度中断，没有产生代码或 commit。
-- 2026-09-02 已审阅并同步外部最新版 `design_document/AI+ 创新大赛.md`；仓库副本保留全部内容，仅规范了行尾空白。Task 27–29 计划已补入新版前端约束，但 Task 27 尚未开始实现。
+- 当前已有 `frontend/` React 19/Vite/TypeScript 工程；Task 27 frontend baseline 为 3 个 test files、4 tests，production build 通过。
+- 2026-09-02 已审阅并同步外部最新版 `design_document/AI+ 创新大赛.md`；仓库副本保留全部内容，仅规范了行尾空白。Task 27–29 计划已补入新版前端约束。
 
 开始工作前执行：
 
@@ -92,6 +92,12 @@ Working 检索必须遵守已经确认的规则：
 - 三个 deterministic demo projects；
 - SQL migrations 到 `0005`。
 
+### Milestone F（部分）：Task 27
+
+已建立 React 19/Vite/TypeScript、npm lockfile、Vitest、typed command union、`/api/v1` project/command client、稳定 `ApiError`、SSE public event cursor/去重 client，以及符合已确认视觉 tokens 的最小科研工作台 shell。`.gitignore` 已排除 `node_modules`、build 和 TypeScript 增量产物。
+
+当前 backend `ProjectView` 只返回 project/title/domain/version/phase/is_demo/allowed_commands，尚未返回计划草案中设想的 `active_run` 与 `last_event_sequence`。Task 27 frontend types 忠实匹配当前 API；Task 29 接 run lock/SSE 恢复前必须先扩展后端 view contract 和测试，不能让前端猜测。
+
 ## 4. 必须如实理解的模型/API状态
 
 当前没有真实模型 API 的成功调用记录，也没有提供或保存任何 API Key。
@@ -124,13 +130,7 @@ RESEARCH_MENTOR_MODEL_API_KEY=<未设置>
 
 ## 5. 当前未完成任务
 
-剩余 6 个 Task：
-
-### Task 27：React/Vite/TypeScript 与 typed API client
-
-- 创建 `frontend/` 工程、package lock、Vitest/build；
-- 实现 `/api/v1` typed client、command discriminated unions 和 SSE cursor client；
-- 只建立最小 App shell，不提前实现完整工作台。
+剩余 5 个 Task：
 
 ### Task 28：项目工作台和阶段组件
 
@@ -215,11 +215,10 @@ git show --check --stat --oneline HEAD
 
 1. 从 `main` 拉取最新代码；
 2. 运行 Python baseline，确认 `438 passed`；
-3. 执行 Task 27；
-4. Task 28；
-5. 在 Task 29 完成 UI 操作的同时补齐 production command/worker/Agent wiring，并增加真实的 application journey tests；
-6. 完成 Task 30–32；
-7. 最终 release audit 必须把 demo/mock、real adapter contract、real provider smoke 三种证据分开汇报。
+3. 执行 Task 28；
+4. 在 Task 29 完成 UI 操作的同时补齐 `ProjectView.active_run/last_event_sequence` 与 production command/worker/Agent wiring，并增加真实的 application journey tests；
+5. 完成 Task 30–32；
+6. 最终 release audit 必须把 demo/mock、real adapter contract、real provider smoke 三种证据分开汇报。
 
 ## 9. 完成定义
 
@@ -234,4 +233,4 @@ git show --check --stat --oneline HEAD
 - 有凭据时完成真实 provider smoke test；无凭据时明确记录未验证；
 - 工作区干净，不包含 secret 或本地产物。
 
-从 Task 27 开始，不要重复实现 Task 1–26，也不要把 adapter/mock/demo 测试误报为真实外部 API 已联调。
+从 Task 28 开始，不要重复实现 Task 1–27，也不要把 adapter/mock/demo 测试误报为真实外部 API 已联调。

@@ -2023,7 +2023,7 @@ git commit -m "功能：加入可复现完整流程 Demo"
 - Create: `frontend/src/styles/global.css`
 - Test: `frontend/src/api/client.test.ts`
 
-- [ ] **Step 1: 初始化依赖并写 `/api/v1` command body RED test**
+- [x] **Step 1: 初始化依赖并写 `/api/v1` command body RED test**
 
 Run:
 
@@ -2045,13 +2045,13 @@ it("sends command_id and current expected_version in the body", async () => {
 });
 ```
 
-- [ ] **Step 2: 运行 RED**
+- [x] **Step 2: 运行 RED**
 
 Run: `npm test -- --run src/api/client.test.ts`
 
 Expected: FAIL，client 不存在。
 
-- [ ] **Step 3: 实现最小 shell、types 和 client**
+- [x] **Step 3: 实现最小 shell、types 和 client**
 
 ```typescript
 export type Phase =
@@ -2079,13 +2079,13 @@ API client 固定 base `/api/v1`，command 接受 Task 20 的 discriminated unio
 
 同步实现 frontend 基础安全与恢复 primitives：外部链接统一使用 `noopener/noreferrer` 安全打开；Markdown 必须先清理再渲染；本地 draft storage 按 `project_id + phase` 隔离。前端不保存 API Key，不在浏览器重算评分、路由或 Harness 规则。Idea 输入显示 `0/19999` 计数并在超限时于发请求前阻止提交；后端 `InitialInput` 的 19999 字上限仍是最终权威。
 
-- [ ] **Step 4: 运行 GREEN/build**
+- [x] **Step 4: 运行 GREEN/build**
 
 Run: `npm test -- --run && npm run build`
 
 Expected: PASS，`frontend/dist` 生成。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add frontend

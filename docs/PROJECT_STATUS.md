@@ -8,9 +8,10 @@
 - 团队统一开发分支：`main`
 - Task 26 开发基线：`50c5a56`
 - 目标版本：v1.0
-- 当前版本定位：具备 project/command/view/document/export/SSE API、deterministic demo、统一错误 contract、FastAPI composition root 和 durable worker lifecycle 的 backend；尚不是完整产品
+- 当前版本定位：具备 project/command/view/document/export/SSE API、deterministic demo、统一错误 contract、FastAPI composition root、durable worker lifecycle，以及 React/Vite/TypeScript frontend foundation；尚不是完整产品
 - 当前测试基线：Task 26 完成后 `438 passed`
-- v1 implementation plan：Task 1–26 已有独立 commit；Task 27–32 尚未达到对应验收标准
+- frontend 测试基线：Task 27 完成后 3 个 test files、4 tests；production build 通过
+- v1 implementation plan：Task 1–27 已完成；Task 28–32 尚未达到对应验收标准
 
 当前分支关系：
 
@@ -36,7 +37,7 @@ main / origin/main（Task 1–26 实现基线为 661c0c6，另含最新交接文
 
 同日用户确认《Working RAG 与用户控制增量设计》：v1 取消低分硬拒，Working query 必须带研究/阶段/任务上下文；success 只提出结果确认；forward 正式允许 `plan=None`；等待状态的新 idea 使用显式 restart。Task 19 先修正已完成 Task 16 中与新裁决冲突的低分短路，再继续 completion loop。
 
-2026-09-02 已将外部最新版 `design_document/AI+ 创新大赛.md` 的全部内容同步到 `docs/design/AI+ 创新大赛.md`（仓库副本仅规范行尾空白），并完成前端差异审阅。Task 27–29 计划已显式补充：证据检索/采用状态与筛选、受限证据列表、自然语言与结构化内容分流式呈现、project/phase draft 恢复、Markdown 清理与安全外链、panel/composer 互斥及背景滚动锁定。该同步不代表 Task 27 已完成。
+2026-09-02 已将外部最新版 `design_document/AI+ 创新大赛.md` 的全部内容同步到 `docs/design/AI+ 创新大赛.md`（仓库副本仅规范行尾空白），并完成前端差异审阅。Task 27–29 计划已显式补充：证据检索/采用状态与筛选、受限证据列表、自然语言与结构化内容分流式呈现、project/phase draft 恢复、Markdown 清理与安全外链、panel/composer 互斥及背景滚动锁定。该设计同步本身不计作 Task；Task 27 的完成证据见 5.6。
 
 ## 3. 产品设计摘要
 
@@ -301,9 +302,12 @@ Task 26 已完成 Milestone E：`demo_mode` 启动时通过 SQL UoW 幂等预置
 
 ### 5.6 Milestone F：React 前端
 
-当前仓库没有前端工程。尚未实现：
+Task 27 已完成：建立 React 19/Vite/TypeScript 工程、npm lockfile、Vitest、typed command union、project/command API client、稳定 `ApiError`、SSE cursor/去重 client、基础视觉 tokens 和最小科研工作台 shell。当前 frontend 验证为 3 个 test files、4 tests，production build 通过。
 
-- React/Vite/TypeScript 工程和 typed API client；
+Task 27 types 以当前真实 HTTP contract 为准。后端 `ProjectView` 目前没有 implementation plan 草案中列出的 `active_run` 和 `last_event_sequence`；Task 29 在实现 run lock、SSE refresh/reconnect 之前必须先扩展并测试该 view，前端不得自行推断。
+
+尚未实现：
+
 - 三栏项目工作台、阶段视图和证据面板；
 - Idea 输入、方案确认/修订/override；
 - Working QA、实验结果录入和 validation 选择；
@@ -344,7 +348,7 @@ Task 26 已完成 Milestone E：`demo_mode` 启动时通过 SQL UoW 幂等预置
 3. **Milestone C（Task 13–16）已完成**：不得重复实现；
 4. **Milestone D（Task 17–21）已完成**：不得重复实现；
 5. **Milestone E（Task 22–26）已完成**：不得重复实现；
-6. **完成 Milestone F（Task 27–29）**：实现 React 工作台；
+6. **Milestone F 的 Task 27 已完成；继续 Task 28–29**：实现完整 React 工作台与前后端操作闭环；
 7. **完成 Milestone G（Task 30–32）**：补齐 Eval、E2E、34 项验收和发布审计。
 
 每个 Task 必须遵循计划中的 RED → GREEN → 全量回归 → commit 顺序。只有当前 Milestone gate 全绿，才进入下一 Milestone。

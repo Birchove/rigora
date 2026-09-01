@@ -1,0 +1,14 @@
+:root {
+  --paper: #f7f3e8;
+  --panel: #fffdf7;
+  --ink: #1f2a2a;
+  --slate: #52605d;
+  --mentor-orange: #c65a2e;
+  --rule: #d8d1c1;
+  --evidence-tint: #e9efea;
+  --font-reading: "Noto Serif SC", "Source Han Serif SC", STSong, serif;
+  --font-ui: "IBM Plex Sans", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --font-data: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
+  --focus-ring: 0 0 0 3px rgb(198 90 46 / 28%);
+  --content-width: 72rem;
+}
