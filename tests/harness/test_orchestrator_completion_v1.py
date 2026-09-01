@@ -282,6 +282,33 @@ def test_existing_pending_validation_precedes_new_complete_candidates(completion
     assert stored.phase is SessionPhase.WORKING
     assert stored.current_task.validation_task == candidate("v2", 2).task
     assert len([call for call in model.calls if call.agent_name == "complete"]) == complete_calls + 1
+    assert [item.candidate_id for item in stored.validation_queue.offered] == ["v3"]
+
+    stored.phase = SessionPhase.AWAITING_RESULT_RECORD
+    repository.commit(
+        stored,
+        repository.list_events("s1")[-1].model_copy(update={"event_id": "seed-v2-result"}),
+    )
+    orchestrator.record_validation_result(
+        "s1",
+        ValidationResult(
+            task=candidate("v2", 2).task, actual_result="第二项完成",
+            conclusion="可继续选择新候选", is_success=True,
+            execution_status="completed", impact="supports",
+        ),
+    )
+    model.enqueue(
+        "complete",
+        CompleteAgentOutput(
+            mode="validation", plan=None, final_hint="选择新增验证",
+            validation_candidates=[candidate("v3", 3)],
+        ),
+    )
+    orchestrator.run_complete("s1", completion_status=False)
+    selected = orchestrator.select_validations(
+        "s1", ValidationSelection(selected_candidate_ids=["v3"])
+    )
+    assert selected.current_task.validation_task == candidate("v3", 3).task
 
 
 def test_invalidating_validation_complete_interrupts_pending_queue(completion_bundle):
@@ -503,6 +530,41 @@ def test_revise_plan_loop_payload_contains_typed_immutable_facts(
         "mentor_issue_reason": "验证显示核心主张不成立",
         "user_feedback": "保留负面事实并缩小主张",
     }
+
+
+def test_revise_without_user_reason_uses_revision_context_mode(
+    completion_bundle, plan_output
+):
+    orchestrator, model, repository = completion_bundle
+    stored = repository.get("s1")
+    stored.phase = SessionPhase.AWAITING_PLAN_REVISION_DECISION
+    stored.active_plan = plan_output.plan
+    stored.research_context = ResearchContext(
+        normalized_idea="评估压缩恢复稳定性",
+        research_question=plan_output.plan.research_question,
+        plan=plan_output.plan,
+    )
+    stored.main_experiment = main_result()
+    stored.latest_complete_output = CompleteAgentOutput(
+        mode="plan_revision", plan=plan_output.plan, final_hint="修订方案",
+        revision_reason="主实验结果要求降低主张强度",
+    )
+    repository.commit(
+        stored,
+        repository.list_events("s1")[-1].model_copy(update={"event_id": "seed-no-user-reason"}),
+    )
+    orchestrator.decide_plan_revision("s1", "revise")
+    model.enqueue("plan_loop", plan_output)
+
+    orchestrator.run_plan_loop("s1")
+
+    payload = parse_latest_call(model, "plan_loop", "plan_loop_data")
+    assert payload["previous_plan"] == plan_output.plan.model_dump(mode="json")
+    assert payload["user_feedback"] is None
+    assert payload["revision_context"]["mentor_issue_reason"] == (
+        "主实验结果要求降低主张强度"
+    )
+    assert payload["revision_context"]["user_feedback"] is None
 
 
 def test_plan_revision_end_project_keeps_negative_result(completion_bundle):

@@ -67,6 +67,12 @@ class PlanLoopInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_mode(self) -> Self:
+        if self.revision_context is not None:
+            if self.previous_insight_check is not None:
+                raise ValueError("result revision rejects previous_insight_check")
+            if self.user_feedback is not None and self.previous_plan is None:
+                raise ValueError("user feedback revision requires previous_plan")
+            return self
         presence = (
             self.previous_plan is not None,
             self.previous_insight_check is not None,

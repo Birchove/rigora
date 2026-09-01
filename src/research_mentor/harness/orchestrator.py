@@ -215,7 +215,14 @@ class ResearchMentorOrchestrator:
         active_plan = session.active_plan
         latest_check = session.latest_check
         feedback = session.pending_plan_feedback
-        if active_plan is None and latest_check is None and feedback is None:
+        revision_context = session.pending_plan_revision_context
+        if revision_context is not None:
+            mode = "result_revision"
+            is_initial = active_plan is None
+            previous_plan = active_plan
+            previous_check = None
+            user_feedback = feedback
+        elif active_plan is None and latest_check is None and feedback is None:
             mode = "initial"
             is_initial = True
             previous_plan = None
@@ -979,20 +986,28 @@ class ResearchMentorOrchestrator:
         )
         phase_after = route_complete(output).next_phase
         session.latest_complete_output = output.model_copy(deep=True)
-        if output.mode != "plan_revision" and pending is not None:
-            self._activate_validation(session, pending)
-            phase_after = session.phase
-        elif output.mode == "validation":
+        if output.mode == "validation":
             handled_ids = set()
             previous_queue = session.validation_queue
-            if session.validation_queue is not None:
+            existing_candidates = []
+            if previous_queue is not None:
                 handled_ids = {
                     item.candidate.candidate_id
-                    for item in [*session.validation_queue.selected, *session.validation_queue.skipped]
+                    for item in [*previous_queue.selected, *previous_queue.skipped]
                 }
+                existing_candidates = [
+                    item.model_copy(deep=True)
+                    for item in previous_queue.offered
+                    if item.candidate_id not in handled_ids
+                ]
+            merged_candidates = list(existing_candidates)
+            merged_ids = {item.candidate_id for item in merged_candidates}
+            for item in output.validation_candidates:
+                if item.candidate_id not in handled_ids and item.candidate_id not in merged_ids:
+                    merged_candidates.append(item.model_copy(deep=True))
+                    merged_ids.add(item.candidate_id)
             next_queue = ValidationQueue.from_candidates(
-                output.validation_candidates,
-                excluded_candidate_ids=handled_ids,
+                merged_candidates,
             )
             if previous_queue is not None:
                 next_queue.selected = [
@@ -1002,6 +1017,15 @@ class ResearchMentorOrchestrator:
                     item.model_copy(deep=True) for item in previous_queue.skipped
                 ]
             session.validation_queue = next_queue
+            if pending is not None:
+                pending = next(
+                    item
+                    for item in next_queue.selected
+                    if item.candidate.candidate_id == pending.candidate.candidate_id
+                )
+        if output.mode != "plan_revision" and pending is not None:
+            self._activate_validation(session, pending)
+            phase_after = session.phase
         elif output.mode == "writing":
             session.writing_guidance = output.writing_guidance.model_copy(deep=True)
         session.phase = phase_after
