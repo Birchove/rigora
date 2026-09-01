@@ -436,6 +436,46 @@ def test_same_validation_task_with_different_ids_is_deduplicated_in_one_batch(
     ] == ["v1"]
 
 
+def test_imported_completed_validation_is_not_reoffered_without_queue_history(
+    completion_bundle
+):
+    orchestrator, model, repository = completion_bundle
+    propose_success(orchestrator, model)
+    orchestrator.record_main_result("s1", main_result())
+    completed_candidate = candidate("imported-v1", 1)
+    completed = ValidationResult(
+        task=completed_candidate.task,
+        actual_result="导入验证已完成",
+        conclusion="结果已存在",
+        is_success=True,
+        execution_status="completed",
+        impact="supports",
+    )
+    stored = repository.get("s1")
+    stored.validation_queue = None
+    stored.completed_validations = [completed]
+    repository.commit(
+        stored,
+        repository.list_events("s1")[-1].model_copy(update={"event_id": "seed-imported-validation"}),
+    )
+    model.enqueue(
+        "complete",
+        CompleteAgentOutput(
+            mode="validation", plan=None, final_hint="过滤已完成验证",
+            validation_candidates=[
+                candidate_alias("renamed-v1", 2, completed_candidate),
+                candidate("v3", 3),
+            ],
+        ),
+    )
+
+    orchestrator.run_complete("s1", completion_status=False)
+
+    assert [
+        item.candidate_id for item in repository.get("s1").validation_queue.offered
+    ] == ["v3"]
+
+
 @pytest.mark.parametrize(
     ("execution_status", "impact", "failure_reason"),
     [("completed", "supports", None), ("completed", "contradicts", None), ("failed", "neutral", "进程退出")],
@@ -529,6 +569,35 @@ def test_working_plan_issue_continue_without_main_result_returns_working(
     assert continued.phase is SessionPhase.WORKING
     assert continued.main_experiment is None
     assert repository.list_events("s1")[-1].phase_after is SessionPhase.WORKING
+
+
+def test_new_main_working_issue_ignores_preserved_old_main_result(
+    completion_bundle
+):
+    orchestrator, model, repository = completion_bundle
+    stored = repository.get("s1")
+    stored.main_experiment = main_result()
+    repository.commit(
+        stored,
+        repository.list_events("s1")[-1].model_copy(update={"event_id": "seed-old-main-result"}),
+    )
+    model.enqueue(
+        "working_qa",
+        WorkingQAOutput(
+            action="report_plan_issue",
+            reason="新主实验暴露方案问题",
+            reply="先修正当前实验",
+        ),
+    )
+    orchestrator.run_working_qa("s1", "新实验方案有问题")
+
+    continued = orchestrator.decide_plan_revision(
+        "s1", "continue_with_warning", user_reason="继续调整新实验"
+    )
+
+    assert continued.main_experiment == main_result()
+    assert continued.current_task.status == "in_progress"
+    assert continued.phase is SessionPhase.WORKING
 
 
 def test_plan_revision_revise_resets_round_without_erasing_facts(completion_bundle):

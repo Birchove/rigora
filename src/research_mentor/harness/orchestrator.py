@@ -1012,7 +1012,10 @@ class ResearchMentorOrchestrator:
         session.latest_complete_output = output.model_copy(deep=True)
         if output.mode == "validation":
             handled_ids = set()
-            handled_task_identities = set()
+            handled_task_identities = {
+                validation_task_identity(item.task)
+                for item in session.completed_validations
+            }
             previous_queue = session.validation_queue
             existing_candidates = []
             if previous_queue is not None:
@@ -1024,10 +1027,10 @@ class ResearchMentorOrchestrator:
                     item.candidate.candidate_id
                     for item in handled
                 }
-                handled_task_identities = {
+                handled_task_identities.update({
                     validation_task_identity(item.candidate.task)
                     for item in handled
-                }
+                })
                 for item in previous_queue.offered:
                     identity = validation_task_identity(item.task)
                     if (
@@ -1135,6 +1138,11 @@ class ResearchMentorOrchestrator:
         )
         if decision not in {"revise", "continue_with_warning", "end_project"}:
             raise InvariantViolationError(f"unknown plan revision decision: {decision}")
+        from_working_issue = (
+            session.pending_plan_issue_reason is not None
+            and session.current_task is not None
+            and session.current_task.status == "in_progress"
+        )
         mentor_reason = (
             session.latest_complete_output.revision_reason
             if session.latest_complete_output is not None
@@ -1181,9 +1189,9 @@ class ResearchMentorOrchestrator:
             session.phase = SessionPhase.PLANNING
         elif decision == "continue_with_warning":
             session.phase = (
-                SessionPhase.COMPLETING
-                if session.main_experiment is not None
-                else SessionPhase.WORKING
+                SessionPhase.WORKING
+                if from_working_issue
+                else SessionPhase.COMPLETING
             )
         else:
             session.phase = SessionPhase.COMPLETED
