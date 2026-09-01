@@ -10,6 +10,7 @@ from research_mentor.api.errors import install_error_handlers
 from research_mentor.api.projects import router as projects_router
 from research_mentor.api.documents import router as documents_router
 from research_mentor.api.exports import router as exports_router
+from research_mentor.api.events import router as events_router
 from research_mentor.bootstrap import build_container
 from research_mentor.config import Settings
 
@@ -61,5 +62,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(commands_router, prefix="/api/v1")
     application.include_router(documents_router, prefix="/api/v1")
     application.include_router(exports_router, prefix="/api/v1")
+    application.include_router(events_router, prefix="/api/v1")
     install_error_handlers(application)
     return application

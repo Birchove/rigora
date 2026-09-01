@@ -11,7 +11,7 @@ from research_mentor.domain.evidence import LiteratureRecord
 from research_mentor.domain.jobs import AgentName, AgentRun
 from research_mentor.domain.projects import ResearchProject
 from research_mentor.harness.state import ResearchSession, SessionEvent
-from research_mentor.ports.events import OutboxEvent
+from research_mentor.ports.events import OutboxEvent, PersistedPublicEvent
 
 
 class ExpectedVersion(BaseModel):
@@ -134,6 +134,10 @@ class SessionEventRepository(Protocol):
     async def append(self, event: SessionEvent) -> None: ...
 
     async def list_for_session(self, session_id: str) -> list[SessionEvent]: ...
+
+    async def list_for_project_after(
+        self, project_id: str, *, after: int
+    ) -> list[PersistedPublicEvent]: ...
 
 
 class OutboxRepository(Protocol):

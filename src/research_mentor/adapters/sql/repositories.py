@@ -35,7 +35,7 @@ from research_mentor.domain.documents import DocumentChunk, DocumentParseJob, Up
 from research_mentor.domain.evidence import LiteratureRecord
 from research_mentor.domain.projects import ResearchProject
 from research_mentor.harness.state import ResearchSession, SessionEvent
-from research_mentor.ports.events import OutboxEvent
+from research_mentor.ports.events import OutboxEvent, PersistedPublicEvent
 from research_mentor.ports.repository import AgentOutputRecord, ProcessedCommand
 
 
@@ -571,6 +571,37 @@ class SqlSessionEventRepository:
                 sequence=(latest_sequence or 0) + 1,
             )
         )
+
+    async def list_for_project_after(
+        self, project_id: str, *, after: int
+    ) -> list[PersistedPublicEvent]:
+        rows = (
+            await self._db.execute(
+                select(SessionEventRow, OutboxEventRow.topic)
+                .outerjoin(
+                    OutboxEventRow,
+                    OutboxEventRow.session_event_id == SessionEventRow.event_id,
+                )
+                .where(
+                    SessionEventRow.project_id == project_id,
+                    SessionEventRow.sequence > after,
+                )
+                .order_by(SessionEventRow.sequence)
+            )
+        ).all()
+        return [
+            PersistedPublicEvent(
+                project_id=row.project_id,
+                sequence=row.sequence,
+                event_type=row.event_type,
+                topic=topic,
+                phase_before=row.phase_before,
+                phase_after=row.phase_after,
+                payload=row.payload,
+                occurred_at=_as_utc(row.occurred_at),
+            )
+            for row, topic in rows
+        ]
 
 
 class SqlOutboxRepository:

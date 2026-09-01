@@ -6,11 +6,11 @@
 
 - 记录日期：2026-09-01
 - 当前开发分支：`feature/full-product-v1`
-- Task 24 开发基线：`9ab40dc`
+- Task 25 开发基线：`7f717ab`
 - 目标版本：v1.0
-- 当前版本定位：具备 project/command/view/document/export API、统一错误 contract、FastAPI composition root 和 durable worker lifecycle 的 backend；尚不是完整产品
-- 当前测试基线：Task 24 完成后 `426 passed`
-- v1 implementation plan：Task 1–24 已有独立 commit；Task 25–32 尚未达到对应验收标准
+- 当前版本定位：具备 project/command/view/document/export/SSE API、统一错误 contract、FastAPI composition root 和 durable worker lifecycle 的 backend；尚不是完整产品
+- 当前测试基线：Task 25 完成后 `431 passed`
+- v1 implementation plan：Task 1–25 已有独立 commit；Task 26–32 尚未达到对应验收标准
 
 分支关系：
 
@@ -291,10 +291,10 @@ Task 23 已提供 project/command/view HTTP contract：项目创建在单一 UoW
 
 Task 24 已提供文档与研究日志 API：upload 的 MIME、extension、单文件与项目总 quota 均来自 typed Settings，文件以 project/document ID 隔离并在 stream 写入时计算 SHA-256；超限或持久化失败会清理 incomplete blob。每次上传建立独立、可恢复的 `DocumentParseJob`，显式 process 路径完成 uploaded → parsing → ready/failed，失败保留源文件且 retry 创建新 attempt。delete 只检查 forward source IDs 与实验结果 evidence files 等结构化引用。`ResearchJournal` 是 JSON 权威模型，Markdown 只从该模型确定性渲染 idea、证据、Plan/Check 争论、tasks/results、validation 和 WritingGuidance，不解析聊天正文。
 
+Task 25 已提供 `GET /api/v1/projects/{project_id}/events` public SSE：`Last-Event-ID` 与 `after` 同时出现时取较大非负 cursor，按 project 隔离重放 `sequence > cursor` 的持久事件并严格递增去重，随后每秒 polling；15 秒无公开事件仅发送非持久化 comment heartbeat。公开 event type 固定为 13 项 whitelist，现有 session/outbox event 经显式 projection 后才发送，payload 同时使用字段 allowlist 与递归敏感 key 过滤；未知/内部 event 不公开。stream 每次查询均关闭 UoW，识别 client disconnect/cancellation，支持 deterministic service 测试而不会永久挂起。
+
 尚未实现：
 
-- public event SSE；
-- `Last-Event-ID` 断线恢复；
 - deterministic demo mode 和三阶段演示数据。
 
 ### 5.6 Milestone F：React 前端
