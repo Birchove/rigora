@@ -85,6 +85,34 @@ export function createClient(
         },
       );
     },
+
+    listDocuments(projectId: string) {
+      return json<JsonValue[]>(`/projects/${encodeURIComponent(projectId)}/documents`);
+    },
+
+    async uploadDocument(projectId: string, file: File) {
+      const response = await fetcher(
+        `/api/v1/projects/${encodeURIComponent(projectId)}/documents`,
+        { method: "POST", body: (() => {
+          const body = new FormData();
+          body.append("file", file);
+          return body;
+        })() },
+      );
+      if (response.ok) {
+        return (await response.json()) as JsonValue;
+      }
+      const fallback: ApiErrorEnvelope = {
+        error: {
+          code: "unexpected_response",
+          message: "服务器返回了无法识别的错误。",
+          retryable: response.status >= 500,
+          details: {},
+        },
+      };
+      const envelope = (await response.json().catch(() => fallback)) as ApiErrorEnvelope;
+      throw new ApiError(response.status, envelope.error ?? fallback.error);
+    },
   };
 }
 

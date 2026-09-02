@@ -6,7 +6,7 @@ from research_mentor.agents.complete.contracts import CompleteAgentOutput
 from research_mentor.agents.idea_review.contracts import IdeaReviewOutput, SearchPlan
 from research_mentor.agents.plan_loop.contracts import PlanLoopOutput
 from research_mentor.agents.working_qa.contracts import WorkingQAOutput
-from research_mentor.domain.checks import KeyInsightCheckOutput
+from research_mentor.domain.checks import KeyInsightAssessment, KeyInsightCheckOutput
 from research_mentor.domain.completion import ValidationCandidate
 from research_mentor.domain.experiments import ExperimentInfo, ValidationTask
 from research_mentor.domain.research import KeyInsight, KnowledgeItem, Milestone, ResearchPlan
@@ -45,6 +45,28 @@ def _validation_candidate() -> ValidationCandidate:
     )
 
 
+def _assessment() -> dict:
+    return {
+        "diagnostics": {
+            "core_claim": "分层状态压缩降低状态漂移",
+            "expected_contribution": "提升恢复正确率",
+            "validation_path": "基线、消融和重复运行",
+        },
+        "scores": {
+            name: {"score": 8, "reason": "演示 fixture 的固定评分"}
+            for name in (
+                "research_fit",
+                "novelty",
+                "research_value",
+                "testability_feasibility",
+                "evidence_support",
+            )
+        },
+        "reason": "关键主张与验证路径一致。",
+        "summary_advice": "进入主实验。",
+    }
+
+
 class DemoModelAdapter:
     """Return fixed fixtures selected by the requested production output schema."""
 
@@ -66,24 +88,11 @@ class DemoModelAdapter:
             )
         elif output_name == PlanLoopOutput.__name__:
             payload = PlanLoopOutput(plan=_plan(), response_to_user="已生成可复现的演示方案。")
+        elif output_name == KeyInsightAssessment.__name__:
+            payload = _assessment()
         elif output_name == KeyInsightCheckOutput.__name__:
             payload = {
-                "assessment": {
-                    "diagnostics": {
-                        "core_claim": "分层状态压缩降低状态漂移",
-                        "expected_contribution": "提升恢复正确率",
-                        "validation_path": "基线、消融和重复运行",
-                    },
-                    "scores": {
-                        name: {"score": 8, "reason": "演示 fixture 的固定评分"}
-                        for name in (
-                            "research_fit", "novelty", "research_value",
-                            "testability_feasibility", "evidence_support",
-                        )
-                    },
-                    "reason": "关键主张与验证路径一致。",
-                    "summary_advice": "进入主实验。",
-                },
+                "assessment": _assessment(),
                 "final_score": 8,
                 "check_decision": True,
                 "decision_reason": "达到固定演示阈值。",

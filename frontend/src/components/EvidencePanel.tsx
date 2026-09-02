@@ -4,7 +4,15 @@ import { DocumentPanel } from "./DocumentPanel";
 
 type EvidenceFilter = "all" | "adopted" | "discarded";
 
-export function EvidencePanel() {
+export function EvidencePanel({
+  transferStatus = null,
+  parseStatus = null,
+  onUpload,
+}: {
+  transferStatus?: string | null;
+  parseStatus?: string | null;
+  onUpload?: (file: File) => Promise<void>;
+}) {
   const [filter, setFilter] = useState<EvidenceFilter>("all");
   return (
     <aside className="evidence-panel" aria-label="证据">
@@ -21,7 +29,11 @@ export function EvidencePanel() {
         <span aria-hidden="true">∅</span>
         <p>当前阶段尚无可展示证据。检索结果到达后会在这里区分“搜到”与“实际采用”。</p>
       </div>
-      <DocumentPanel />
+      <DocumentPanel
+        transferStatus={transferStatus}
+        parseStatus={parseStatus}
+        onUpload={onUpload}
+      />
     </aside>
   );
 }

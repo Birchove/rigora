@@ -67,6 +67,12 @@ class SqlSessionRepository:
             return None
         return session_from_payload(row.payload)
 
+    async def row_version(self, session_id: str) -> int:
+        row = await self._db.get(ResearchSessionRow, session_id)
+        if row is None:
+            raise SessionNotFoundError(f"Session not found: {session_id}")
+        return row.version
+
     async def save(
         self,
         session: ResearchSession,
@@ -637,6 +643,14 @@ class SqlSessionEventRepository:
             )
             for row, topic in rows
         ]
+
+    async def latest_sequence(self, project_id: str) -> int:
+        latest = await self._db.scalar(
+            select(func.max(SessionEventRow.sequence)).where(
+                SessionEventRow.project_id == project_id
+            )
+        )
+        return int(latest or 0)
 
 
 class SqlOutboxRepository:

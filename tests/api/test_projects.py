@@ -87,6 +87,9 @@ async def test_create_project_and_fetch_view(monkeypatch, tmp_path):
                 "restart_research",
                 "archive_project",
             ],
+            "last_event_sequence": 1,
+            "active_run": None,
+            "validation_candidates": [],
         }
 
         fetched = await client.get(

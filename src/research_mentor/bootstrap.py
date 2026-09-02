@@ -19,7 +19,7 @@ from research_mentor.adapters.model.openai_responses import (
 from research_mentor.adapters.sql.session import create_engine, create_session_factory
 from research_mentor.adapters.sql.uow import SqlUnitOfWork
 from research_mentor.application.command_bus import CommandBus
-from research_mentor.application.handlers import CancelRunHandler, RestartResearchHandler
+from research_mentor.application.production import build_command_handlers, build_run_handlers
 from research_mentor.application.recovery import RunRecovery
 from research_mentor.application.run_worker import AgentRunWorker, RunService
 from research_mentor.application.documents import DocumentService
@@ -91,15 +91,12 @@ async def build_container(settings: Settings) -> ApplicationContainer:
         uow_factory = lambda: SqlUnitOfWork(session_factory)
         command_bus = CommandBus(
             uow_factory,
-            handlers={
-                "cancel_run": CancelRunHandler(),
-                "restart_research": RestartResearchHandler(),
-            },
+            handlers=build_command_handlers(model=model, settings=settings),
         )
         run_service = RunService(uow_factory)
         worker = AgentRunWorker(
             uow_factory,
-            handlers={},
+            handlers=build_run_handlers(uow_factory, model=model, settings=settings),
             worker_id=f"api-{uuid4()}",
             lease_seconds=settings.run_lease_seconds,
             lease_renewal_seconds=settings.run_lease_renewal_seconds,

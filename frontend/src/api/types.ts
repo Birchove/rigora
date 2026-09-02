@@ -24,6 +24,30 @@ export type Phase =
 
 export type CommandType = Command["type"];
 
+export type ActiveRunStatus =
+  | "queued"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "timed_out"
+  | "cancelled";
+
+export interface ActiveRun {
+  run_id: string;
+  agent_name: string;
+  status: ActiveRunStatus;
+  public_message?: string | null;
+}
+
+export interface ValidationCandidate {
+  candidate_id: string;
+  rank: number;
+  priority: "critical" | "high" | "medium" | "low";
+  rationale: string;
+  addresses_claims: string[];
+  task: ValidationTask;
+}
+
 export interface ProjectView {
   project_id: string;
   title: string;
@@ -32,6 +56,9 @@ export interface ProjectView {
   phase: Phase;
   is_demo: boolean;
   allowed_commands: CommandType[];
+  last_event_sequence?: number;
+  active_run?: ActiveRun | null;
+  validation_candidates?: ValidationCandidate[];
 }
 
 export interface InitialInput {
