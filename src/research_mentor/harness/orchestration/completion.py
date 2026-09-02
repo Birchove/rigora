@@ -7,6 +7,7 @@ from research_mentor.agents.complete.contracts import (
 )
 from research_mentor.agents.plan_loop.contracts import PlanRevisionContext
 from research_mentor.domain.completion import ValidationSelection
+from research_mentor.domain.research import UserPlanFeedback
 from research_mentor.errors import InvariantViolationError
 from research_mentor.harness.orchestration.base import OrchestratorBase
 from research_mentor.harness.routing import route_complete

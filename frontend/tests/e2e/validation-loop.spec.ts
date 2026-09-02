@@ -46,5 +46,8 @@ test("plan revision decision is a separate complete path", async ({ page }) => {
   );
   await page.goto("/?project=e2e-project");
   await expect(page.getByRole("heading", { name: "方案修订" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "确认修订方向" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "按建议修订" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "带风险继续" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "结束项目" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "确认修订方向" })).toHaveCount(0);
 });

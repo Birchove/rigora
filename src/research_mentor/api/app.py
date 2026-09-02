@@ -38,11 +38,17 @@ async def lifespan(app: FastAPI):
         await container.recovery.requeue_expired()
         worker_start_attempted = True
         await container.worker.start()
+        document_worker = getattr(container, "document_worker", None)
+        if document_worker is not None:
+            await document_worker.start()
         yield
     finally:
         if container is not None:
             try:
                 if worker_start_attempted:
+                    document_worker = getattr(container, "document_worker", None)
+                    if document_worker is not None:
+                        await document_worker.stop()
                     await container.worker.stop()
                 close_provider = getattr(container, "close_provider", None)
                 if close_provider is not None:

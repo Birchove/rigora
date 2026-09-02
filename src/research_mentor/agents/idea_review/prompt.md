@@ -40,6 +40,10 @@
   ForwardResearchContext。信息不足时只能使用 request_refinement，
   在 next_action 中明确需要补充的字段，不得猜测实验结果。
 
+  experiment_in_progress 只需明确研究问题和当前实验（名称、设置、做到哪一步）。
+  不要求 actual_result、main_result 或最终结论；缺少这些正是进入 Working
+  辅导的原因，不得因此 request_refinement，也不得编造实验结果。
+
 不要因为 Idea 新颖就自动通过，也不要因为已有相关研究就自动拒绝。
 “已有研究”与“问题已经被充分解决”是不同判断。
 

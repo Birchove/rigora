@@ -615,17 +615,22 @@ def test_new_working_issue_reason_overrides_stale_complete_revision_reason(
     )
 
 
-def test_plan_revision_revise_resets_round_without_erasing_facts(completion_bundle):
+def test_plan_revision_revise_resets_round_without_erasing_facts(
+    completion_bundle, research_plan
+):
     orchestrator, _, repository = completion_bundle
     stored = repository.get("s1")
     stored.phase = SessionPhase.AWAITING_PLAN_REVISION_DECISION
     stored.main_experiment = main_result()
     stored.check_round = 4
+    stored.active_plan = research_plan
     repository.commit(stored, repository.list_events("s1")[-1].model_copy(update={"event_id": "seed-revise"}))
     revised = orchestrator.decide_plan_revision("s1", "revise", user_reason="调整假设")
     assert revised.phase is SessionPhase.PLANNING
     assert revised.check_round == 0
     assert revised.main_experiment == main_result()
+    assert revised.pending_plan_feedback is not None
+    assert revised.pending_plan_feedback.user_reason == "调整假设"
 
 
 def test_revise_plan_loop_payload_contains_typed_immutable_facts(

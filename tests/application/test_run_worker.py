@@ -140,6 +140,39 @@ async def test_cancel_command_requests_cooperative_cancel_before_worker_unlocks(
 
 
 @pytest.mark.anyio
+async def test_in_flight_cancel_aborts_handler_and_unlocks(run_context):
+    await seed(run_context, status="queued")
+    started = asyncio.Event()
+    finished = False
+
+    async def handler(run, snapshot, repair_errors):
+        nonlocal finished
+        del run, snapshot, repair_errors
+        started.set()
+        await asyncio.sleep(30)
+        finished = True
+        return {"ok": True}
+
+    worker = AgentRunWorker(
+        lambda: SqlUnitOfWork(run_context),
+        handlers={"working_qa": handler},
+        worker_id="w1",
+        now=lambda: NOW,
+        cancel_poll_seconds=0.05,
+    )
+    service = RunService(lambda: SqlUnitOfWork(run_context), now=lambda: NOW)
+    task = asyncio.create_task(worker.drain_once())
+    await started.wait()
+    assert await service.request_cancel("r1") is True
+    await asyncio.wait_for(task, timeout=2)
+    assert finished is False
+    assert await service.has_active_run("p1") is False
+    async with SqlUnitOfWork(run_context) as uow:
+        stored = await uow.runs.get("r1")
+    assert stored.status == "cancelled"
+
+
+@pytest.mark.anyio
 async def test_two_workers_compete_and_cas_completes_once(run_context):
     await seed(run_context)
     started = asyncio.Event()

@@ -14,7 +14,7 @@ from research_mentor.domain.research import ForwardResearchContext, InitialInput
 from research_mentor.hyperparameters import SEARCH_PLAN_MAX_QUERIES
 
 DEFAULT_IDEA_REVIEW_GUIDELINES = [
-    "idea_review_agent 负责判断用户输入属于opinion、range 或 forward。对于 forward 类型，应进一步判断已有实验信息是否足以进入 Working 阶段：\n    - 信息充分：action = proceed_to_working\n    - 信息不足：action = request_refinement\n    Harness 不自行进行语义分类，只负责校验idea_type 与 action 的组合并执行状态路由。",
+    "idea_review_agent 负责判断用户输入属于opinion、range 或 forward。对于 forward 类型，应进一步判断已有实验信息是否足以进入 Working 阶段：\n    - 信息充分：action = proceed_to_working\n    - 信息不足：action = request_refinement\n    experiment_in_progress 不要求 actual_result 或最终结论；缺少这些时应 proceed_to_working，不得因此 request_refinement，也不得编造实验结果。\n    Harness 不自行进行语义分类，只负责校验idea_type 与 action 的组合并执行状态路由。",
     "在不替用户决定核心研究主张的前提下形成规范化理解；range 类型只能整理为清晰的研究范围，不能由 Agent 擅自收敛成可通过的 Idea。",
     "分别评估研究问题的明确性、可验证性、研究价值、范围以及时间和资源可行性。",
     "range 表示用户仅提供了研究领域、宽泛主题或问题范围，尚未形成足够明确、可验证的研究 Idea。",

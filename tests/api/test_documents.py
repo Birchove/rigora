@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from research_mentor.adapters.filestore.local import LocalFileStore
 from research_mentor.adapters.sql.base import Base
 from research_mentor.adapters.sql.uow import SqlUnitOfWork
-from research_mentor.application.documents import DocumentService
+from research_mentor.application.documents import DocumentParseWorker, DocumentService
 from research_mentor.application.journal import ExportService, JournalRenderer
 from research_mentor.config import Settings
 from research_mentor.domain.projects import ResearchProject
@@ -36,6 +36,7 @@ class _Container:
     journal_renderer: JournalRenderer
     recovery: object = _Noop()
     worker: object = _Noop()
+    document_worker: object = _Noop()
     command_bus: object = None
 
 
@@ -95,6 +96,22 @@ async def test_upload_list_get_and_project_isolation(monkeypatch, tmp_path):
         assert len(body["sha256"]) == 64
         assert (await client.get("/api/v1/projects/p1/documents")).json() == [body]
         assert (await client.get(f"/api/v1/projects/p2/documents/{body['document_id']}")).status_code == 404
+
+
+@pytest.mark.anyio
+async def test_parse_worker_drains_queued_markdown_to_ready(monkeypatch, tmp_path):
+    async with _client(monkeypatch, tmp_path) as (client, container):
+        body = (await client.post(
+            "/api/v1/projects/p1/documents",
+            files={"file": ("notes.md", "# Experiment\n\nlayer-wise KV.".encode(), "text/markdown")},
+        )).json()
+        assert body["status"] == "uploaded"
+        worker = DocumentParseWorker(container.uow_factory, container.document_service)
+        job_id = await worker.drain_once()
+        assert job_id is not None
+        document = await container.document_service.get("p1", body["document_id"])
+        assert document.status == "ready"
+        assert await worker.drain_once() is None
 
 
 @pytest.mark.anyio

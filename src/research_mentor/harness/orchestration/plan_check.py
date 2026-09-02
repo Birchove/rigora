@@ -1,5 +1,9 @@
 """Plan generation, key-insight check, and plan-decision orchestration."""
 
+import asyncio
+import logging
+
+from research_mentor.adapters.model.errors import ModelTemporarilyUnavailable
 from research_mentor.agents.key_insight_check.contracts import KeyInsightCheckInput, KeyInsightCheckSysInput
 from research_mentor.agents.plan_loop.contracts import (
     PlanLoopInput,
@@ -24,6 +28,10 @@ from research_mentor.harness.scoring import finalize_key_insight_check
 from research_mentor.harness.state import ResearchSession, SessionEventType, SessionPhase
 from research_mentor.harness.task_factory import TaskFactory
 from research_mentor.hyperparameters import PLAN_CANDIDATE_COUNTS, PLAN_CANDIDATE_FOCUS_HINTS
+from research_mentor.runtime_async import run_coro_sync
+
+
+logger = logging.getLogger("research_mentor.runs")
 
 
 class PlanCheckOrchestrator(OrchestratorBase):
@@ -108,39 +116,30 @@ class PlanCheckOrchestrator(OrchestratorBase):
             return self._revise_candidate_plan(session, candidate_id)
         count_by_mode = PLAN_CANDIDATE_COUNTS
         focus_hints = PLAN_CANDIDATE_FOCUS_HINTS
-        candidates: list[PlanCandidatePath] = []
-        outputs: list[PlanLoopOutput] = []
-        for index in range(count_by_mode[mode]):
-            plan_model = self._config.plan_model_for_path(index)
-            check_model = self._config.check_model_for_path(index)
-            output = self._plan_loop_runner.run_sync(
-                PlanLoopInput(
-                    idea=session.initial_input.model_copy(deep=True),
-                    sys_input=PlanLoopSysInput(current_date=self._current_date()),
-                    review_result=session.idea_review.model_copy(deep=True),
-                    check_round=0,
-                    max_check_rounds=self._config.max_check_rounds,
-                    candidate_index=index + 1,
-                    candidate_focus=focus_hints[index],
-                    revision_context=(
-                        session.pending_plan_revision_context.model_copy(deep=True)
-                        if session.pending_plan_revision_context is not None
-                        else None
-                    ),
-                ),
-                model_profile=plan_model,
+        specs = [
+            (
+                index,
+                self._config.plan_model_for_path(index),
+                self._config.check_model_for_path(index),
+                focus_hints[index],
             )
+            for index in range(count_by_mode[mode])
+        ]
+        outputs = run_coro_sync(self._generate_initial_candidates(session, specs))
+        candidates: list[PlanCandidatePath] = []
+        for (index, plan_model, check_model, focus_hint), output in zip(
+            specs, outputs, strict=True
+        ):
             if output.change_summary:
                 raise InvariantViolationError(
                     "initial candidate plan must not contain change_summary"
                 )
-            outputs.append(output)
             candidates.append(
                 PlanCandidatePath(
                     candidate_id=f"candidate-{index + 1}",
                     candidate_index=index + 1,
                     model_profile=f"plan-{mode}-{index + 1}",
-                    focus_hint=focus_hints[index],
+                    focus_hint=focus_hint,
                     plan_model_profile=plan_model,
                     check_model_profile=check_model,
                     plan=output.plan.model_copy(deep=True),
@@ -166,6 +165,71 @@ class PlanCheckOrchestrator(OrchestratorBase):
         )
         self._commit(session, event)
         return session.model_copy(deep=True)
+
+    async def _generate_initial_candidates(
+        self,
+        session: ResearchSession,
+        specs: list[tuple[int, str, str, str]],
+    ) -> list[PlanLoopOutput]:
+        async def generate_one(
+            candidate_index: int, candidate_focus: str, plan_model: str
+        ) -> PlanLoopOutput:
+            if session.initial_input is None or session.idea_review is None:
+                raise InvariantViolationError(
+                    "planning requires initial_input and idea_review"
+                )
+            request = PlanLoopInput(
+                idea=session.initial_input.model_copy(deep=True),
+                sys_input=PlanLoopSysInput(current_date=self._current_date()),
+                review_result=session.idea_review.model_copy(deep=True),
+                check_round=0,
+                max_check_rounds=self._config.max_check_rounds,
+                candidate_index=candidate_index,
+                candidate_focus=candidate_focus,
+                revision_context=(
+                    session.pending_plan_revision_context.model_copy(deep=True)
+                    if session.pending_plan_revision_context is not None
+                    else None
+                ),
+            )
+            last_error: ModelTemporarilyUnavailable | None = None
+            models: list[str] = []
+            pair_count = max(len(self._config.plan_check_pairs), 1)
+            for index in range(pair_count):
+                name = (
+                    self._config.plan_model_for_path(index)
+                    if self._config.plan_check_pairs
+                    else plan_model
+                )
+                if name not in models:
+                    models.append(name)
+            if plan_model in models:
+                models.remove(plan_model)
+            models.insert(0, plan_model)
+            for model in models:
+                try:
+                    return await self._plan_loop_runner.run(
+                        request, model_profile=model
+                    )
+                except ModelTemporarilyUnavailable as exc:
+                    last_error = exc
+                    logger.warning(
+                        "plan candidate %s model=%s failed, trying next vendor: %s",
+                        candidate_index,
+                        model,
+                        exc,
+                    )
+            assert last_error is not None
+            raise last_error
+
+        return list(
+            await asyncio.gather(
+                *[
+                    generate_one(index + 1, focus_hint, plan_model)
+                    for index, plan_model, _check_model, focus_hint in specs
+                ]
+            )
+        )
 
     def _revise_candidate_plan(
         self,

@@ -74,6 +74,7 @@ class AgentRunWorker:
         run_timeout: float = RUN_TIMEOUT_SECONDS,
         retry_limit: int = RUN_RETRY_LIMIT,
         poll_interval: float = WORKER_POLL_INTERVAL_SECONDS,
+        cancel_poll_seconds: float = 0.5,
         now: Callable[[], datetime] | None = None,
         new_id: Callable[[], str] | None = None,
     ) -> None:
@@ -82,6 +83,7 @@ class AgentRunWorker:
             or lease_renewal_seconds <= 0
             or run_timeout <= 0
             or poll_interval <= 0
+            or cancel_poll_seconds <= 0
         ):
             raise ValueError("worker durations must be positive")
         if retry_limit < 1:
@@ -94,6 +96,7 @@ class AgentRunWorker:
         self._run_timeout = run_timeout
         self._retry_limit = retry_limit
         self._poll_interval = poll_interval
+        self._cancel_poll_seconds = cancel_poll_seconds
         self._now = now or (lambda: datetime.now(timezone.utc))
         self._new_id = new_id or (lambda: str(uuid4()))
         self._polling_task: asyncio.Task[None] | None = None
@@ -201,14 +204,21 @@ class AgentRunWorker:
         )
 
         renewal = asyncio.create_task(self._renew_during_call(run.run_id))
+        call_task = asyncio.create_task(self._call_with_schema_repair(handler, run))
+        watch_task = asyncio.create_task(self._abort_on_cancel(run.run_id, call_task))
         outcome = "succeeded"
         public_message = "运行已完成。"
         error_code: str | None = None
         try:
             async with asyncio.timeout(self._run_timeout):
-                await self._call_with_schema_repair(handler, run)
+                await call_task
         except _RunCancelled:
             outcome = "cancelled"
+        except asyncio.CancelledError:
+            if await self._cancel_requested(run.run_id):
+                outcome = "cancelled"
+            else:
+                raise
         except TimeoutError:
             outcome = "timed_out"
             public_message = "模型调用超时，请重试。"
@@ -250,11 +260,19 @@ class AgentRunWorker:
                 run.run_id,
             )
         finally:
+            if not call_task.done():
+                call_task.cancel()
+                try:
+                    await call_task
+                except (asyncio.CancelledError, _RunCancelled, Exception):
+                    pass
+            watch_task.cancel()
             renewal.cancel()
-            try:
-                await renewal
-            except asyncio.CancelledError:
-                pass
+            for background in (watch_task, renewal):
+                try:
+                    await background
+                except asyncio.CancelledError:
+                    pass
 
         logger.info(
             "run %s project=%s agent=%s run=%s%s",
@@ -297,6 +315,17 @@ class AgentRunWorker:
             if await self._cancel_requested(run.run_id):
                 raise _RunCancelled
         raise AssertionError("unreachable")
+
+    async def _abort_on_cancel(
+        self, run_id: str, call_task: asyncio.Task[Any]
+    ) -> None:
+        while not call_task.done():
+            await asyncio.sleep(self._cancel_poll_seconds)
+            if call_task.done():
+                return
+            if await self._cancel_requested(run_id):
+                call_task.cancel()
+                return
 
     async def _renew_during_call(self, run_id: str) -> None:
         while True:

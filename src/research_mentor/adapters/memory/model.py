@@ -1,5 +1,6 @@
 """Scripted async structured-model adapters for tests and demo mode."""
 
+import asyncio
 from collections import defaultdict, deque
 from collections.abc import Iterable
 
@@ -43,15 +44,17 @@ class MemoryModelAdapter:
     def __init__(self) -> None:
         self._queues: dict[AgentName, deque[ScriptedOutput]] = defaultdict(deque)
         self.requests: list[ModelRequest[BaseModel]] = []
+        self._lock = asyncio.Lock()
 
     def enqueue(self, agent_name: AgentName, result: ScriptedOutput) -> None:
         self._queues[agent_name].append(result)
 
     async def generate(self, request: ModelRequest[OutputT]) -> OutputT:
-        self.requests.append(request.model_copy(deep=True))
-        queue = self._queues[request.agent_name]
-        if not queue:
-            raise PortExecutionError(
-                f"No queued result for agent: {request.agent_name}"
-            )
-        return _validate_output(request, queue.popleft())
+        async with self._lock:
+            self.requests.append(request.model_copy(deep=True))
+            queue = self._queues[request.agent_name]
+            if not queue:
+                raise PortExecutionError(
+                    f"No queued result for agent: {request.agent_name}"
+                )
+            return _validate_output(request, queue.popleft())

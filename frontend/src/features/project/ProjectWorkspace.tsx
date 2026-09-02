@@ -44,6 +44,7 @@ const panelOwnedCommands = new Set<CommandType>([
   "record_main_result",
   "record_validation_result",
   "select_validations",
+  "decide_plan_revision",
 ]);
 
 const activeRunStatuses = new Set(["queued", "running"]);

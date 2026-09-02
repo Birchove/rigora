@@ -296,6 +296,15 @@ class SqlDocumentParseJobRepository:
         ).order_by(DocumentParseJobRow.attempt.desc()).limit(1))
         return self._job(row) if row is not None else None
 
+    async def next_queued(self) -> DocumentParseJob | None:
+        row = await self._db.scalar(
+            select(DocumentParseJobRow)
+            .where(DocumentParseJobRow.status == "queued")
+            .order_by(DocumentParseJobRow.created_at.asc())
+            .limit(1)
+        )
+        return self._job(row) if row is not None else None
+
     async def save(self, job: DocumentParseJob) -> None:
         await self._db.execute(update(DocumentParseJobRow).where(
             DocumentParseJobRow.job_id == job.job_id

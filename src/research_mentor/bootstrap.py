@@ -27,7 +27,7 @@ from research_mentor.application.command_bus import CommandBus
 from research_mentor.application.production import build_command_handlers, build_run_handlers
 from research_mentor.application.recovery import RunRecovery
 from research_mentor.application.run_worker import AgentRunWorker, RunService
-from research_mentor.application.documents import DocumentService
+from research_mentor.application.documents import DocumentParseWorker, DocumentService
 from research_mentor.application.journal import ExportService, JournalRenderer
 from research_mentor.application.demo import DemoService
 from research_mentor.adapters.filestore.local import LocalFileStore
@@ -64,6 +64,7 @@ class ApplicationContainer:
     worker: AgentRunWorker
     recovery: RunRecovery
     document_service: DocumentService
+    document_worker: DocumentParseWorker
     export_service: ExportService
     journal_renderer: JournalRenderer
     demo_service: DemoService
@@ -218,6 +219,7 @@ async def build_container(settings: Settings) -> ApplicationContainer:
             chunk_max_chars=settings.document_chunk_max_chars,
             chunk_overlap_chars=settings.document_chunk_overlap_chars,
         )
+        document_worker = DocumentParseWorker(uow_factory, document_service)
         export_service = ExportService(uow_factory)
         demo_service = DemoService(uow_factory, export_service)
         container = ApplicationContainer(
@@ -231,6 +233,7 @@ async def build_container(settings: Settings) -> ApplicationContainer:
             worker=worker,
             recovery=recovery,
             document_service=document_service,
+            document_worker=document_worker,
             export_service=export_service,
             journal_renderer=JournalRenderer(),
             demo_service=demo_service,

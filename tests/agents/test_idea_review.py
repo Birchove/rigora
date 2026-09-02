@@ -60,6 +60,9 @@ def test_prompt_requires_incomplete_forward_input_to_request_refinement() -> Non
     assert "missing_fields" in instructions
     assert "request_refinement" in instructions
     assert "proceed_to_working" in instructions
+    assert "experiment_in_progress" in instructions
+    assert "actual_result" in instructions
+    assert "不得因此 request_refinement" in instructions
 
 
 def test_proceed_to_working_requires_complete_forward_context() -> None:

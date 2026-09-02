@@ -70,10 +70,32 @@ function LiveWorkspace({
         setTransferStatus("uploading");
         try {
           const uploaded = (await client.uploadDocument(project.project_id, file)) as {
+            document_id?: string;
             status?: string;
           };
           setTransferStatus("complete");
           setParseStatus(uploaded.status ?? "uploaded");
+          const documentId = uploaded.document_id;
+          if (typeof documentId !== "string") {
+            return;
+          }
+          const deadline = Date.now() + 120_000;
+          while (Date.now() < deadline) {
+            const documents = (await client.listDocuments(project.project_id)) as Array<{
+              document_id?: string;
+              status?: string;
+            }>;
+            const current = documents.find((item) => item.document_id === documentId);
+            if (current?.status !== undefined) {
+              setParseStatus(current.status);
+              if (current.status === "ready" || current.status === "failed") {
+                break;
+              }
+            }
+            await new Promise((resolve) => {
+              window.setTimeout(resolve, 400);
+            });
+          }
         } catch {
           setTransferStatus("failed");
         }

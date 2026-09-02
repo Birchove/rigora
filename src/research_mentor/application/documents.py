@@ -1,5 +1,8 @@
 """Document upload lifecycle and durable parse jobs."""
 
+from __future__ import annotations
+
+import asyncio
 from collections.abc import AsyncIterator, Callable
 from datetime import datetime, timezone
 from pathlib import Path, PurePath
@@ -205,3 +208,53 @@ class DocumentService:
             await uow.documents.set_status(document.document_id, project_id=document.project_id,
                                            status="ready", error_message=None)
         return succeeded
+
+
+class DocumentParseWorker:
+    def __init__(
+        self,
+        uow_factory,
+        document_service: DocumentService,
+        *,
+        poll_interval: float = 0.25,
+    ) -> None:
+        if poll_interval <= 0:
+            raise ValueError("poll_interval must be positive")
+        self._uow_factory = uow_factory
+        self._document_service = document_service
+        self._poll_interval = poll_interval
+        self._polling_task: asyncio.Task[None] | None = None
+
+    @property
+    def is_running(self) -> bool:
+        return self._polling_task is not None and not self._polling_task.done()
+
+    async def start(self) -> None:
+        if self.is_running:
+            return
+        self._polling_task = asyncio.create_task(self._poll())
+
+    async def stop(self) -> None:
+        task = self._polling_task
+        self._polling_task = None
+        if task is None:
+            return
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    async def drain_once(self) -> str | None:
+        async with self._uow_factory() as uow:
+            job = await uow.document_parse_jobs.next_queued()
+        if job is None:
+            return None
+        await self._document_service.process(job.job_id)
+        return job.job_id
+
+    async def _poll(self) -> None:
+        while True:
+            job_id = await self.drain_once()
+            if job_id is None:
+                await asyncio.sleep(self._poll_interval)

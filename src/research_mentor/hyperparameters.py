@@ -77,8 +77,10 @@ UPLOAD_ALLOWED_EXTENSIONS: Final[tuple[str, ...]] = (
 )
 
 # --- Runtime ---
-MODEL_REQUEST_TIMEOUT_SECONDS: Final = 180.0
-RUN_TIMEOUT_SECONDS: Final = 420.0
+# mid/high 会并行调用多家 plan_loop；单次仍可能接近 3 分钟。
+# run timeout 需覆盖一次慢调用 + 候选内一次重试。
+MODEL_REQUEST_TIMEOUT_SECONDS: Final = 240.0
+RUN_TIMEOUT_SECONDS: Final = 720.0
 RUN_RETRY_LIMIT: Final = 3
 SCHEMA_REPAIR_RETRY_LIMIT: Final = 2
 RUN_LEASE_SECONDS: Final = 30.0

@@ -83,6 +83,21 @@ describe("ProjectWorkspace", () => {
     expect(screen.queryByRole("button", { name: "实验已全部完成，进入下一步" })).toBeNull();
   });
 
+  it("keeps plan revision decisions on the panel, not the dock", () => {
+    render(
+      <ProjectWorkspace
+        project={project("awaiting_plan_revision_decision", ["decide_plan_revision"])}
+        api={{
+          dispatchCommand: async () =>
+            project("awaiting_plan_revision_decision", ["decide_plan_revision"]),
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "按建议修订" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "确认修订方向" })).toBeNull();
+  });
+
   it("keeps demo data visibly marked in the workspace header", () => {
     render(
       <ProjectWorkspace
