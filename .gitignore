@@ -12,11 +12,28 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+test-results/
+playwright-report/
+blob-report/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/playwright/.cache/
+
+# Local data and SQLite
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
 
 # Build artifacts
 build/
 dist/
+frontend/dist/
 node_modules/
+frontend/node_modules/
 *.tsbuildinfo
 
 # Editors and operating systems
@@ -24,6 +41,8 @@ node_modules/
 .vscode/
 .DS_Store
 Thumbs.db
+.cursor/
+
 
 # Local secrets
 .env

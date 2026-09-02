@@ -1,10 +1,23 @@
-# 傲娇导师（Research Mentor Core）
+# 傲娇导师（Research Mentor）
 
-一个面向科研想法审查、方案迭代和实验过程辅导的 multi-agent 核心。
+面向 computer science 科研场景的判断与推进工作台：审查研究想法、生成并修订方案、辅导实验过程、记录结果、选择补充验证，并整理写作方向。
 
-当前版本为 **v0.1**：采用 Agent-oriented modular monolith，以结构化 Pydantic contracts 连接五个 Agent，并由 deterministic Harness 独占状态流转和最终裁决。它是可安装、可测试的 Python backend core，尚不是包含 UI 和真实模型接入的完整产品。
+当前版本为 **v1**：full-stack Agent-oriented modular monolith。五个 Agent 只做一次结构化推理；Harness 独占状态流转、评分和用户确认 gate。前端通过 typed command、`ProjectView` 与 SSE 操作项目，不复制后端路由表。
+
+产品截图（桌面三栏与窄屏 drawer/sheet）保存在 `frontend/tests/e2e/visual.spec.ts-snapshots/`。设计叙事图见 `docs/design/AI+ 创新大赛/图片和附件/`。
 
 ## 核心架构
+
+```text
+React / TypeScript frontend
+        │ POST commands / GET views / SSE events
+        ▼
+FastAPI API + durable run worker
+        ▼
+Deterministic Harness ──► five Agent runners
+        │
+        └── SQL / OpenAlex / Anydoc / FlagEmbedding / model adapters
+```
 
 ```text
 用户输入
@@ -19,23 +32,29 @@ Plan Loop ◄──revision── Key Insight Check
 Working QA ──记录实验结果──► Complete
 ```
 
-Agent 只完成一次结构化推理调用，不直接调用其他 Agent，也不能修改 session phase、循环次数或任务状态。
+| Agent               | 职责                                                            |
+| ------------------- | ------------------------------------------------------------- |
+| `idea_review`       | 检索并审查用户想法，识别 `idea_type`，给出 plan、forward、clarify 或 reject 建议。 |
+| `plan_loop`         | 生成研究方案，或根据用户反馈和检查意见修订 `ResearchPlan`。                         |
+| `key_insight_check` | 评估“点睛之笔”的研究匹配度、新颖性、研究价值、可行性与证据支撑。                             |
+| `working_qa`        | 围绕正在进行的实验提供问答与状态整理。                                           |
+| `complete`          | 基于已经记录的实验结果给出下一项验证或写作方向。                                      |
 
-| Agent | 职责 |
-|---|---|
-| `idea_review` | 检索并审查用户想法，识别 `idea_type`，给出 plan、forward、clarify 或 reject 建议。 |
-| `plan_loop` | 生成研究方案，或根据用户反馈和检查意见修订 `ResearchPlan`。 |
-| `key_insight_check` | 评估“点睛之笔”的研究匹配度、新颖性、研究价值、可行性与证据支撑。 |
-| `working_qa` | 围绕正在进行的实验提供问答与状态整理。 |
-| `complete` | 基于已经记录的实验结果给出下一项验证或写作方向。 |
+Agent 不直接调用其他 Agent，也不能修改 session phase、循环次数或任务状态。
 
-Harness 独占以下权限：
+Harness 独占：routing 和状态转移；Check loop 次数；确定性评分与通过判定；用户确认 gate；task lifecycle、持久化与公开事件。
 
-- routing 和状态转移；
-- Check loop 次数管理；
-- 确定性评分与通过判定；
-- 用户确认 gate；
-- task lifecycle、session 保存和状态事件记录。
+## 方案候选模式
+
+`low/mid/high` 是 Harness 对现有 `plan_loop` / `key_insight_check` runner 的隔离编排，不新增 Agent 类型：
+
+| 模式 | 候选路径 |
+| --- | --- |
+| `low` | 1 条（默认） |
+| `mid` | 2 条 |
+| `high` | 3 条 |
+
+`RunPlanCommand.mode` 默认 low。`mid/high` 必须按 candidate ID 单选；`low` 可省略并指向唯一候选。必要条件 gate 因规则未定义而不实现。
 
 ## Check Agent 评分
 
@@ -50,64 +69,160 @@ final_score =
   + 0.15 × evidence_support
 ```
 
-加权结果先保留一位小数，`final_score >= 6.0` 即通过。不设置单项分数否决条件。
+加权结果先保留一位小数，`final_score >= 6.0` 即通过。不设置单项分数否决条件。Working 检索分只作 diagnostics；低分或空结果不得在模型前硬拒。
+
+## 产品边界与 v1 scope
+
+产品**不替写代码/论文正文、不解决无关细碎问题**。也不替用户执行实验或编造结果。
+
+v1 明确范围：
+
+- 只辅导 computer science；非 CS 返回 `unsupported-domain`，不进入 Agent pipeline；
+- 不自动生成完整论文正文；
+- 不为上下文压缩或“傲娇”语气新增独立 Agent；
+- 无多租户账号、计费和组织权限；
+- 非分布式微服务。
+
+Demo 项目：`demo-project-planning`、`demo-project-working`、`demo-project-validation`。没有真实 provider 凭据时，只证明 deterministic demo / mock contract，不证明真实模型质量。
+
+## 环境要求
+
+- Python `3.12` 与 [uv](https://docs.astral.sh/uv/)
+- Node.js 20+（前端）
+- 可选：PowerShell 7，用于 `scripts/dev.ps1` / `scripts/check.ps1`
+
+复制 `.env.example` 为 `.env`。API key 只从环境读取，不得写入数据库、event、SSE 或前端 bundle。
+
+## Demo 快速开始
+
+默认 `RESEARCH_MENTOR_MODEL_PROVIDER=demo` 且 `RESEARCH_MENTOR_DEMO_MODE=true`，不需要 API key。API 进程的 lifespan 会启动 durable worker，并在空库时 seed 三个 demo 项目。
+
+```powershell
+uv sync --all-groups
+uv run alembic upgrade head
+uv run uvicorn research_mentor.api.app:create_app --factory --host 127.0.0.1 --port 8000
+```
+
+另一个终端：
+
+```powershell
+Set-Location frontend
+npm install
+npm run dev
+```
+
+或一次启动 API worker 与 Vite：
+
+```powershell
+pwsh -File scripts/dev.ps1
+```
+
+浏览器打开 `http://127.0.0.1:5173`。Vite 将 `/api` 代理到 `http://127.0.0.1:8000`。健康检查：`GET http://127.0.0.1:8000/api/v1/health`。
+
+## 真实模型配置
+
+`.env` 中按 provider 填写，模板见 `.env.example`。
+
+OpenAI Responses API：
+
+```powershell
+$env:RESEARCH_MENTOR_MODEL_PROVIDER = "openai"
+$env:RESEARCH_MENTOR_MODEL_NAME = "gpt-5-mini"
+$env:RESEARCH_MENTOR_MODEL_API_KEY = "<your-key>"
+$env:RESEARCH_MENTOR_DEMO_MODE = "false"
+```
+
+OpenAI-compatible JSON Schema API：
+
+```powershell
+$env:RESEARCH_MENTOR_MODEL_PROVIDER = "openai_compatible"
+$env:RESEARCH_MENTOR_MODEL_BASE_URL = "https://example.openai.azure.com/v1"
+$env:RESEARCH_MENTOR_MODEL_API_KEY = "<your-key>"
+$env:RESEARCH_MENTOR_DEMO_MODE = "false"
+```
+
+`openai_compatible` 必须提供 `RESEARCH_MENTOR_MODEL_BASE_URL`。有凭据的真实 provider smoke 只在发布环境执行并记录 request id，结果不得提交进仓库。
+
+## 文献、解析与可选排序
+
+- **OpenAlex**：真实文献检索走 `/works`。礼貌池需要联系邮箱，构造 `OpenAlexRetriever(..., mailto="you@example.com")` 时传入；未设置 mailto 仍可请求，但可能受到更严格限流。
+- **Anydoc**：`firecrawl-anydoc` 已在默认依赖中。纯文本 / Markdown 走 `PlainTextParser`；PDF 等在线程池中转为规范 Markdown。
+- **FlagEmbedding**：可选本地 rerank。默认安装不下载大模型；需要时执行 `uv sync --extra local-ranking`。未安装时 ranker 返回显式不可用，不伪造分数。
+
+## 数据库
+
+开发默认 **SQLite**：`sqlite+aiosqlite:///./research_mentor.db`（Alembic 同步 URL 为 `sqlite:///./research_mentor.db`）。生产可改 **PostgreSQL** 异步 URL，例如 `postgresql+asyncpg://user:pass@host:5432/research_mentor`。变更后重新执行 `uv run alembic upgrade head`。
+
+## 文件限制
+
+上传根目录默认 `./data/uploads`。允许 `.txt` / `.md` / `.markdown` / `.pdf`（对应 `text/plain`、Markdown MIME、`application/pdf`）。单文件默认 10 MB，单项目合计默认 100 MB。存储路径只使用内部 project/document ID，原始文件名只进 metadata。解析失败保留原文件，允许 retry；已被证据引用的文档不可删除。
+
+## API 与 SSE contract
+
+前缀 `/api/v1`。错误统一为 `{ "error": { "code", "message", "retryable", "details" } }`。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `GET` | `/health` | 进程与 provider 探活 |
+| `POST` | `/projects` | 创建项目 |
+| `GET` | `/projects` | 列出项目 |
+| `GET` | `/projects/{project_id}` | 聚合 `ProjectView`（含 `allowed_commands`、`active_run`） |
+| `POST` | `/projects/{project_id}/commands` | discriminated command；Agent 命令 `202 + run_id`，确定性命令 `200 + view` |
+| `POST/GET/DELETE` | `/projects/{project_id}/documents` | 上传、列表、详情、retry、未引用删除 |
+| `GET` | `/projects/{project_id}/events` | SSE，`text/event-stream` |
+| `GET` | `/projects/{project_id}/journal.json` | 权威研究日志 |
+| `GET` | `/projects/{project_id}/journal.md` | 由 JSON 派生的 Markdown |
+
+Command 必须带 `command_id` 与 `expected_version`。SSE 用递增 sequence；重连取 `Last-Event-ID` 与 query `after` 的较大值，心跳不写入 domain event。前端不得猜测 routing，只渲染服务端 `allowed_commands`。
+
+## 测试矩阵
+
+```powershell
+uv lock --check
+uv run alembic upgrade head
+uv run pytest -q -p no:cacheprovider
+Set-Location frontend
+npm test -- --run
+npm run build
+npm run e2e -- --project=chromium
+```
+
+或：
+
+```powershell
+pwsh -File scripts/check.ps1
+```
+
+| 层 | 命令 | 覆盖 |
+| --- | --- | --- |
+| Python | `uv run pytest -q -p no:cacheprovider` | domain / Agent / Harness / API / 34 项验收矩阵 |
+| Eval | `uv run pytest -q -p no:cacheprovider tests/evals` | 五 Agent 与 RAG 阈值；`provider_mode=demo` |
+| Frontend | `npm test -- --run` 与 `npm run build` | 组件与 production bundle |
+| E2E | `npm run e2e -- --project=chromium` | demo 全路径、forward、validation、recovery、a11y、security、visual |
 
 ## 项目目录
 
 ```text
 .
-├── src/research_mentor/
-│   ├── agents/       # 五个 Agent 的 contracts、Prompt、builder 和 runner
-│   ├── domain/       # 跨 Agent 共享的领域模型
-│   ├── harness/      # 状态机、routing、scoring 与 orchestrator
-│   ├── ports/        # model、retrieval、repository、clock 边界
-│   └── adapters/     # v0.1 的 in-memory adapters
-├── tests/            # domain、Agent、Harness 与 adapter 测试
-├── evals/            # Check scoring 回归样例
-├── docs/design/      # Prompt、命名架构与产品设计文档
+├── src/research_mentor/   # agents、domain、harness、application、api、adapters
+├── frontend/              # React 19 / Vite / Playwright
+├── tests/                 # 合同、集成与验收测试
+├── evals/                 # versioned EvalSuite JSON
+├── migrations/            # Alembic
+├── scripts/               # dev.ps1、check.ps1
+├── docs/design/           # 产品设计、Prompt、命名架构
 ├── pyproject.toml
 └── uv.lock
 ```
 
-## 环境与测试
-
-要求 Python `3.12` 和 [uv](https://docs.astral.sh/uv/)。
-
-```powershell
-uv sync --dev
-uv run pytest -q -p no:cacheprovider
-```
-
-只运行 Check Agent scoring Eval：
-
-```powershell
-uv run pytest -q -p no:cacheprovider tests/evals/test_key_insight_check_eval.py
-```
-
-## 显式停点
-
-- `AWAITING_WORKING_CONTEXT`：Harness 无法从现有输出自动构造完整的 `ExperimentTaskContext`。
-- `AWAITING_RESULT_RECORD`：必须由用户记录实验结果；不能从 `ExperimentInfo` 猜测结果。
-- `AWAITING_VALIDATION_SELECTION`：必须等待用户选择验证任务，不会解析 `final_hint` 自动创建任务。
-
-## v0.1 边界
-
-当前不包含：
-
-- 真实 LLM provider；
-- 真实 RAG/retrieval 实现；
-- SQL/database adapter；
-- 文件上传、解析和多模态输入；
-- Web、桌面或移动端 UI。
-
-`memory` adapters 仅用于 deterministic tests，不表示外部 provider 已经接入。
-
 ## 设计文档
 
-- [`docs/design/2026-08-30-full-product-design.md`](docs/design/2026-08-30-full-product-design.md)：v1.0 完整后端、provider、状态机、API、前端和验收规格。
-- [`docs/superpowers/plans/2026-08-30-full-product-implementation.md`](docs/superpowers/plans/2026-08-30-full-product-implementation.md)：经确认规格对应的 32 项 TDD 实施计划。
-- [`docs/design/prompt仓库.md`](docs/design/prompt仓库.md)：公共 Mentor Prompt 与五个 Agent Prompt。
-- [`docs/design/命名架构具体版.md`](docs/design/命名架构具体版.md)：Input/Output Schema、状态和 Harness 设计。
-- [`docs/design/AI+ 创新大赛.md`](docs/design/AI+%20创新大赛.md)：产品背景与早期流程设计。
+- [docs/design/2026-08-30-full-product-design.md](docs/design/2026-08-30-full-product-design.md)：v1.0 完整规格
+- [docs/superpowers/specs/2026-09-01-working-rag-and-control-design.md](docs/superpowers/specs/2026-09-01-working-rag-and-control-design.md)：Working RAG 与用户控制增量
+- [docs/design/prompt仓库.md](docs/design/prompt仓库.md)：公共 Mentor Prompt 与五个 Agent Prompt
+- [docs/design/命名架构具体版.md](docs/design/命名架构具体版.md)：Input/Output Schema 与 Harness
+- [docs/design/AI+ 创新大赛.md](docs/design/AI+%20创新大赛.md)：产品背景与前端要求
+- [docs/superpowers/plans/2026-08-30-full-product-implementation.md](docs/superpowers/plans/2026-08-30-full-product-implementation.md)：32 项实施计划
+- [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)：实现交接状态
 
-若历史流程图与当前代码或结构化 Schema 存在冲突，以当前 contracts、Harness 实现和测试为准。
+若历史流程图与当前代码或结构化 Schema 存在冲突，以完整产品设计、Working RAG 规格、当前 contracts 和测试为准。
