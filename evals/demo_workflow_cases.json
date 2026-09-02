@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "prompt_version": "idea_review/1d438c0c8872",
+  "domain": "computer_science",
+  "suite": "demo_workflow",
+  "cases": [
+    {
+      "id": "search_plan",
+      "agent": "search_plan",
+      "expected_success": true,
+      "description": "SearchPlan fixture"
+    },
+    {
+      "id": "idea_review",
+      "agent": "idea_review",
+      "expected_success": true,
+      "description": "IdeaReview fixture"
+    },
+    {
+      "id": "plan_loop",
+      "agent": "plan_loop",
+      "expected_success": true,
+      "description": "PlanLoop fixture"
+    },
+    {
+      "id": "key_insight",
+      "agent": "key_insight",
+      "expected_success": true,
+      "description": "KeyInsight fixture"
+    },
+    {
+      "id": "working_qa",
+      "agent": "working_qa",
+      "expected_success": true,
+      "description": "WorkingQA fixture"
+    },
+    {
+      "id": "complete_validation",
+      "agent": "complete",
+      "expected_success": true,
+      "description": "Complete validation fixture"
+    },
+    {
+      "id": "complete_writing",
+      "agent": "complete_writing",
+      "expected_success": true,
+      "description": "Complete writing fixture"
+    }
+  ]
+}

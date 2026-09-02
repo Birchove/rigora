@@ -21,7 +21,10 @@ CASES_PATH = (
 
 
 def load_cases() -> list[dict[str, object]]:
-    return json.loads(CASES_PATH.read_text(encoding="utf-8"))
+    payload = json.loads(CASES_PATH.read_text(encoding="utf-8"))
+    if isinstance(payload, dict) and "cases" in payload:
+        return payload["cases"]
+    return payload
 
 
 @pytest.mark.parametrize("case", load_cases(), ids=lambda case: case["id"])

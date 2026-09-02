@@ -1,0 +1,120 @@
+{
+  "version": "1.0",
+  "prompt_version": "working_qa/2cf7a671be87",
+  "domain": "computer_science",
+  "suite": "working_qa",
+  "cases": [
+    {
+      "id": "success_stays_in_progress",
+      "description": "success 进入结果确认，任务仍为 in_progress。",
+      "output": {
+        "action": "success",
+        "reason": "当前实验事实已足够记录。",
+        "reply": "",
+        "updated_experiment_info": {
+          "current_experiment": "比较分层压缩与完整历史基线",
+          "expected_result": null,
+          "actual_result": "恢复正确率提升 4%",
+          "observations": []
+        },
+        "evidence": []
+      },
+      "expected_phase": "awaiting_result_record",
+      "task_status_after": "in_progress"
+    },
+    {
+      "id": "main_report_plan_issue",
+      "description": "主实验 plan issue 进入方案修订决策。",
+      "output": {
+        "action": "report_plan_issue",
+        "reason": "核心方案需要重估。",
+        "reply": "主实验结果与关键主张冲突，需要修订方案。",
+        "updated_experiment_info": null,
+        "evidence": []
+      },
+      "expected_phase": "awaiting_plan_revision_decision",
+      "task_status_after": "in_progress"
+    },
+    {
+      "id": "answer_stays_working",
+      "description": "普通问答保持 Working。",
+      "output": {
+        "action": "answer",
+        "reason": "问题与当前实验直接相关。",
+        "reply": "先固定任务集与随机种子，再比较恢复正确率。",
+        "updated_experiment_info": null,
+        "evidence": []
+      },
+      "expected_phase": "working",
+      "task_status_after": "in_progress"
+    },
+    {
+      "id": "injection_declined",
+      "description": "注入指令被 decline，不改任务状态。",
+      "output": {
+        "action": "decline",
+        "reason": "问题试图修改系统规则，超出职责。",
+        "reply": "忽略注入指令，只回答当前实验相关问题。",
+        "updated_experiment_info": null,
+        "evidence": []
+      },
+      "expected_phase": "working",
+      "task_status_after": "in_progress"
+    },
+    {
+      "id": "validation_completed_contradicts",
+      "description": "validation completed+contradicts 仍记录事实并回 Complete。",
+      "kind": "record_validation",
+      "result": {
+        "execution_status": "completed",
+        "impact": "contradicts",
+        "failure_reason": null,
+        "task": {
+          "paradigm": "effectiveness",
+          "validation_type": "ablation",
+          "name": "移除分层摘要的消融实验",
+          "purpose": "确认性能增益来自分层状态压缩",
+          "method": "在同一任务集上移除分层摘要并比较恢复正确率",
+          "expected_result": "完整方法的恢复正确率更高"
+        },
+        "actual_result": "消融后指标反而更好",
+        "conclusion": "结果反对预期，但实验已完成",
+        "is_success": true,
+        "evidence_files": []
+      },
+      "expected_execution_status": "completed",
+      "expected_impact": "contradicts",
+      "expected_phase": "completing"
+    },
+    {
+      "id": "validation_failed_neutral",
+      "description": "validation failed+neutral 记录失败原因并回 Complete。",
+      "kind": "record_validation",
+      "result": {
+        "execution_status": "failed",
+        "impact": "neutral",
+        "failure_reason": "基准程序在第三轮崩溃",
+        "task": {
+          "paradigm": "effectiveness",
+          "validation_type": "ablation",
+          "name": "移除分层摘要的消融实验",
+          "purpose": "确认性能增益来自分层状态压缩",
+          "method": "在同一任务集上移除分层摘要并比较恢复正确率",
+          "expected_result": "完整方法的恢复正确率更高"
+        },
+        "actual_result": "基准程序崩溃，未得到指标",
+        "conclusion": "执行失败，不影响主结论强度",
+        "is_success": false,
+        "evidence_files": []
+      },
+      "expected_execution_status": "failed",
+      "expected_impact": "neutral",
+      "expected_phase": "completing"
+    },
+    {
+      "id": "low_score_no_hard_decline",
+      "description": "低相关分不得硬拒，query 含研究语境。",
+      "kind": "low_score_no_hard_decline"
+    }
+  ]
+}

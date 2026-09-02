@@ -1,0 +1,120 @@
+{
+  "version": "1.0",
+  "prompt_version": "evidence-ref/v1",
+  "domain": "computer_science",
+  "suite": "citation",
+  "cases": [
+    {
+      "id": "doi_unique",
+      "description": "DOI 可解析。",
+      "evidence": {
+        "source_id": null,
+        "title": "Systems paper A",
+        "authors": [],
+        "year": null,
+        "source_type": "paper",
+        "url": null,
+        "doi": "10.1145/eval.1",
+        "support": "支撑可测性。"
+      },
+      "identity": "10.1145/eval.1",
+      "expected_parseable": true
+    },
+    {
+      "id": "doi_duplicate",
+      "description": "重复 DOI。",
+      "evidence": {
+        "source_id": null,
+        "title": "Systems paper A copy",
+        "authors": [],
+        "year": null,
+        "source_type": "paper",
+        "url": null,
+        "doi": "10.1145/eval.1",
+        "support": "同一来源重复出现。"
+      },
+      "identity": "10.1145/eval.1",
+      "expected_parseable": true
+    },
+    {
+      "id": "url_unique",
+      "description": "URL 可解析。",
+      "evidence": {
+        "source_id": null,
+        "title": "Open dataset",
+        "authors": [],
+        "year": null,
+        "source_type": "dataset",
+        "url": "https://example.edu/data",
+        "doi": null,
+        "support": "提供评测数据。"
+      },
+      "identity": "https://example.edu/data",
+      "expected_parseable": true
+    },
+    {
+      "id": "url_duplicate",
+      "description": "重复 URL。",
+      "evidence": {
+        "source_id": null,
+        "title": "Open dataset mirror",
+        "authors": [],
+        "year": null,
+        "source_type": "dataset",
+        "url": "https://example.edu/data",
+        "doi": null,
+        "support": "同一 URL 重复。"
+      },
+      "identity": "https://example.edu/data",
+      "expected_parseable": true
+    },
+    {
+      "id": "provider_id",
+      "description": "provider source_id 可解析。",
+      "evidence": {
+        "source_id": "openalex:W123",
+        "title": "OpenAlex work",
+        "authors": [],
+        "year": null,
+        "source_type": "paper",
+        "url": null,
+        "doi": null,
+        "support": "来自 OpenAlex。"
+      },
+      "identity": "openalex:W123",
+      "expected_parseable": true
+    },
+    {
+      "id": "provider_id_duplicate",
+      "description": "重复 provider-ID。",
+      "evidence": {
+        "source_id": "openalex:W123",
+        "title": "OpenAlex work again",
+        "authors": [],
+        "year": null,
+        "source_type": "paper",
+        "url": null,
+        "doi": null,
+        "support": "同一 provider-ID。"
+      },
+      "identity": "openalex:W123",
+      "expected_parseable": true
+    },
+    {
+      "id": "title_only_unparseable",
+      "description": "仅题名不可解析。",
+      "evidence": {
+        "source_id": null,
+        "title": "Unknown manuscript",
+        "authors": [],
+        "year": null,
+        "source_type": "other",
+        "url": null,
+        "doi": null,
+        "support": "缺少可解析标识。"
+      },
+      "identity": "title:Unknown manuscript",
+      "expected_parseable": false
+    }
+  ]
+}

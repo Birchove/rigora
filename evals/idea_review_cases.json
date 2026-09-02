@@ -1,0 +1,538 @@
+{
+  "version": "1.0",
+  "prompt_version": "idea_review/1d438c0c8872",
+  "domain": "computer_science",
+  "suite": "idea_review",
+  "cases": [
+    {
+      "id": "opinion_cache_consistency",
+      "description": "明确主张缓存一致性协议可降低尾延迟。",
+      "expected_idea_type": "opinion",
+      "expected_action": "proceed_to_plan",
+      "expected_phase": "planning",
+      "output": {
+        "idea_type": "opinion",
+        "action": "proceed_to_plan",
+        "normalized_idea": "评估缓存一致性协议对尾延迟的影响",
+        "reason": "研究问题明确、可验证且范围可控。",
+        "next_action": "生成研究方案。",
+        "literature_searches": [],
+        "evidence": [
+          {
+            "source_id": null,
+            "title": "Related systems paper",
+            "authors": [],
+            "year": null,
+            "source_type": "paper",
+            "url": null,
+            "doi": "10.1145/example.1",
+            "support": "支持该问题可测。"
+          }
+        ],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "opinion_state_compression",
+      "description": "明确主张分层状态压缩降低恢复漂移。",
+      "expected_idea_type": "opinion",
+      "expected_action": "proceed_to_plan",
+      "expected_phase": "planning",
+      "output": {
+        "idea_type": "opinion",
+        "action": "proceed_to_plan",
+        "normalized_idea": "评估分层状态压缩对长对话恢复稳定性的作用",
+        "reason": "研究问题明确、可验证且范围可控。",
+        "next_action": "生成研究方案。",
+        "literature_searches": [],
+        "evidence": [
+          {
+            "source_id": null,
+            "title": "Related systems paper",
+            "authors": [],
+            "year": null,
+            "source_type": "paper",
+            "url": null,
+            "doi": "10.1145/example.1",
+            "support": "支持该问题可测。"
+          }
+        ],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "opinion_speculative_decoding",
+      "description": "明确主张推测解码降低大模型延迟。",
+      "expected_idea_type": "opinion",
+      "expected_action": "proceed_to_plan",
+      "expected_phase": "planning",
+      "output": {
+        "idea_type": "opinion",
+        "action": "proceed_to_plan",
+        "normalized_idea": "评估推测解码对自回归解码延迟的影响",
+        "reason": "研究问题明确、可验证且范围可控。",
+        "next_action": "生成研究方案。",
+        "literature_searches": [],
+        "evidence": [
+          {
+            "source_id": null,
+            "title": "Related systems paper",
+            "authors": [],
+            "year": null,
+            "source_type": "paper",
+            "url": null,
+            "doi": "10.1145/example.1",
+            "support": "支持该问题可测。"
+          }
+        ],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "opinion_rag_chunking",
+      "description": "明确主张结构化分块提升检索精度。",
+      "expected_idea_type": "opinion",
+      "expected_action": "proceed_to_plan",
+      "expected_phase": "planning",
+      "output": {
+        "idea_type": "opinion",
+        "action": "proceed_to_plan",
+        "normalized_idea": "评估结构化分块对检索精度的影响",
+        "reason": "研究问题明确、可验证且范围可控。",
+        "next_action": "生成研究方案。",
+        "literature_searches": [],
+        "evidence": [
+          {
+            "source_id": null,
+            "title": "Related systems paper",
+            "authors": [],
+            "year": null,
+            "source_type": "paper",
+            "url": null,
+            "doi": "10.1145/example.1",
+            "support": "支持该问题可测。"
+          }
+        ],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "opinion_kv_cache",
+      "description": "明确主张分页 KV cache 降低显存碎片。",
+      "expected_idea_type": "opinion",
+      "expected_action": "proceed_to_plan",
+      "expected_phase": "planning",
+      "output": {
+        "idea_type": "opinion",
+        "action": "proceed_to_plan",
+        "normalized_idea": "评估分页 KV cache 对显存碎片的影响",
+        "reason": "研究问题明确、可验证且范围可控。",
+        "next_action": "生成研究方案。",
+        "literature_searches": [],
+        "evidence": [
+          {
+            "source_id": null,
+            "title": "Related systems paper",
+            "authors": [],
+            "year": null,
+            "source_type": "paper",
+            "url": null,
+            "doi": "10.1145/example.1",
+            "support": "支持该问题可测。"
+          }
+        ],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "opinion_graph_nas",
+      "description": "明确主张约束搜索空间可稳定 NAS。",
+      "expected_idea_type": "opinion",
+      "expected_action": "proceed_to_plan",
+      "expected_phase": "planning",
+      "output": {
+        "idea_type": "opinion",
+        "action": "proceed_to_plan",
+        "normalized_idea": "评估约束搜索空间对神经架构搜索稳定性的影响",
+        "reason": "研究问题明确、可验证且范围可控。",
+        "next_action": "生成研究方案。",
+        "literature_searches": [],
+        "evidence": [
+          {
+            "source_id": null,
+            "title": "Related systems paper",
+            "authors": [],
+            "year": null,
+            "source_type": "paper",
+            "url": null,
+            "doi": "10.1145/example.1",
+            "support": "支持该问题可测。"
+          }
+        ],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "opinion_needs_refinement",
+      "description": "opinion 缺少关键约束，请求澄清。",
+      "expected_idea_type": "opinion",
+      "expected_action": "request_refinement",
+      "expected_phase": "awaiting_idea_refinement",
+      "output": {
+        "idea_type": "opinion",
+        "action": "request_refinement",
+        "normalized_idea": "评估图神经网络过平滑",
+        "reason": "主张存在，但缺少评价指标与约束。",
+        "next_action": "补充评价指标和可用数据。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "opinion_infeasible_reject",
+      "description": "不可行 Idea 应拒绝。",
+      "expected_idea_type": "opinion",
+      "expected_action": "reject",
+      "expected_phase": "rejected",
+      "output": {
+        "idea_type": "opinion",
+        "action": "reject",
+        "normalized_idea": "用更大模型解决全部科研问题",
+        "reason": "主张不可验证且超出可行资源。",
+        "next_action": "缩小到可执行的具体机制。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "range_llm_agents",
+      "description": "只给出大模型智能体方向。",
+      "expected_idea_type": "range",
+      "expected_action": "request_refinement",
+      "expected_phase": "awaiting_idea_refinement",
+      "output": {
+        "idea_type": "range",
+        "action": "request_refinement",
+        "normalized_idea": "大模型智能体",
+        "reason": "尚未形成可验证主张。",
+        "next_action": "补充明确主张与评价指标。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "range_distributed_systems",
+      "description": "只给出分布式系统方向。",
+      "expected_idea_type": "range",
+      "expected_action": "request_refinement",
+      "expected_phase": "awaiting_idea_refinement",
+      "output": {
+        "idea_type": "range",
+        "action": "request_refinement",
+        "normalized_idea": "分布式系统一致性",
+        "reason": "尚未形成可验证主张。",
+        "next_action": "补充明确主张与评价指标。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "range_compiler",
+      "description": "只给出编译优化方向。",
+      "expected_idea_type": "range",
+      "expected_action": "request_refinement",
+      "expected_phase": "awaiting_idea_refinement",
+      "output": {
+        "idea_type": "range",
+        "action": "request_refinement",
+        "normalized_idea": "编译器优化",
+        "reason": "尚未形成可验证主张。",
+        "next_action": "补充明确主张与评价指标。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "range_security",
+      "description": "只给出系统安全方向。",
+      "expected_idea_type": "range",
+      "expected_action": "request_refinement",
+      "expected_phase": "awaiting_idea_refinement",
+      "output": {
+        "idea_type": "range",
+        "action": "request_refinement",
+        "normalized_idea": "操作系统安全",
+        "reason": "尚未形成可验证主张。",
+        "next_action": "补充明确主张与评价指标。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "range_hci",
+      "description": "只给出人机交互方向。",
+      "expected_idea_type": "range",
+      "expected_action": "request_refinement",
+      "expected_phase": "awaiting_idea_refinement",
+      "output": {
+        "idea_type": "range",
+        "action": "request_refinement",
+        "normalized_idea": "科研写作辅助交互",
+        "reason": "尚未形成可验证主张。",
+        "next_action": "补充明确主张与评价指标。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "forward_experiment_in_progress",
+      "description": "forward 四阶段之一：experiment_in_progress。",
+      "expected_idea_type": "forward",
+      "expected_action": "proceed_to_working",
+      "expected_phase": "working",
+      "output": {
+        "idea_type": "forward",
+        "action": "proceed_to_working",
+        "normalized_idea": "评估缓存策略",
+        "reason": "前向研究信息完整。",
+        "next_action": "进入 Working。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": {
+          "stage": "experiment_in_progress",
+          "research_question": "缓存策略是否降低尾延迟？",
+          "current_experiment": {
+            "current_experiment": "运行缓存基准",
+            "expected_result": null,
+            "actual_result": null,
+            "observations": []
+          },
+          "main_result": null,
+          "completed_validations": [],
+          "source_document_ids": [],
+          "missing_fields": []
+        }
+      }
+    },
+    {
+      "id": "forward_main_experiment_completed",
+      "description": "forward 四阶段之一：main_experiment_completed。",
+      "expected_idea_type": "forward",
+      "expected_action": "proceed_to_working",
+      "expected_phase": "working",
+      "output": {
+        "idea_type": "forward",
+        "action": "proceed_to_working",
+        "normalized_idea": "评估缓存策略",
+        "reason": "前向研究信息完整。",
+        "next_action": "进入 Working。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": {
+          "stage": "main_experiment_completed",
+          "research_question": "缓存策略是否降低尾延迟？",
+          "current_experiment": null,
+          "main_result": {
+            "execution_status": "completed",
+            "impact": "contradicts",
+            "failure_reason": null,
+            "objective": "比较缓存策略",
+            "method": "运行基准测试",
+            "expected_result": null,
+            "actual_result": "尾延迟升高 8%",
+            "conclusion": "当前策略未改善尾延迟",
+            "evidence_files": []
+          },
+          "completed_validations": [],
+          "source_document_ids": [],
+          "missing_fields": []
+        }
+      }
+    },
+    {
+      "id": "forward_validation_in_progress",
+      "description": "forward 四阶段之一：validation_in_progress。",
+      "expected_idea_type": "forward",
+      "expected_action": "proceed_to_working",
+      "expected_phase": "working",
+      "output": {
+        "idea_type": "forward",
+        "action": "proceed_to_working",
+        "normalized_idea": "评估缓存策略",
+        "reason": "前向研究信息完整。",
+        "next_action": "进入 Working。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": {
+          "stage": "validation_in_progress",
+          "research_question": "缓存策略是否降低尾延迟？",
+          "current_experiment": {
+            "current_experiment": "重复运行验证",
+            "expected_result": null,
+            "actual_result": null,
+            "observations": []
+          },
+          "main_result": {
+            "execution_status": "completed",
+            "impact": "contradicts",
+            "failure_reason": null,
+            "objective": "比较缓存策略",
+            "method": "运行基准测试",
+            "expected_result": null,
+            "actual_result": "尾延迟升高 8%",
+            "conclusion": "当前策略未改善尾延迟",
+            "evidence_files": []
+          },
+          "completed_validations": [],
+          "source_document_ids": [],
+          "missing_fields": []
+        }
+      }
+    },
+    {
+      "id": "forward_research_completed",
+      "description": "forward 四阶段之一：research_completed。",
+      "expected_idea_type": "forward",
+      "expected_action": "proceed_to_working",
+      "expected_phase": "working",
+      "output": {
+        "idea_type": "forward",
+        "action": "proceed_to_working",
+        "normalized_idea": "评估缓存策略",
+        "reason": "前向研究信息完整。",
+        "next_action": "进入 Working。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": {
+          "stage": "research_completed",
+          "research_question": "缓存策略是否降低尾延迟？",
+          "current_experiment": null,
+          "main_result": {
+            "execution_status": "completed",
+            "impact": "contradicts",
+            "failure_reason": null,
+            "objective": "比较缓存策略",
+            "method": "运行基准测试",
+            "expected_result": null,
+            "actual_result": "尾延迟升高 8%",
+            "conclusion": "当前策略未改善尾延迟",
+            "evidence_files": []
+          },
+          "completed_validations": [
+            {
+              "execution_status": "completed",
+              "impact": "supports",
+              "failure_reason": null,
+              "task": {
+                "paradigm": "effectiveness",
+                "validation_type": "ablation",
+                "name": "移除分层摘要的消融实验",
+                "purpose": "确认性能增益来自分层状态压缩",
+                "method": "在同一任务集上移除分层摘要并比较恢复正确率",
+                "expected_result": "完整方法的恢复正确率更高"
+              },
+              "actual_result": "完整方法更高",
+              "conclusion": "分层压缩有效",
+              "is_success": true,
+              "evidence_files": []
+            }
+          ],
+          "source_document_ids": [],
+          "missing_fields": []
+        }
+      }
+    },
+    {
+      "id": "forward_missing_fields",
+      "description": "forward 证据不足，请求补充。",
+      "expected_idea_type": "forward",
+      "expected_action": "request_refinement",
+      "expected_phase": "awaiting_idea_refinement",
+      "output": {
+        "idea_type": "forward",
+        "action": "request_refinement",
+        "normalized_idea": "评估缓存策略",
+        "reason": "已有实验但缺少当前任务信息。",
+        "next_action": "补充 current_experiment。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "forward_reject_non_research",
+      "description": "forward 不可继续时应拒绝。",
+      "expected_idea_type": "forward",
+      "expected_action": "reject",
+      "expected_phase": "rejected",
+      "output": {
+        "idea_type": "forward",
+        "action": "reject",
+        "normalized_idea": "评估与计算机科学无关的烹饪流程",
+        "reason": "不属于可支持的计算机科学研究。",
+        "next_action": "改写为 CS 研究问题。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "opinion_insufficient_evidence",
+      "description": "证据不足不得编造确定性结论。",
+      "expected_idea_type": "opinion",
+      "expected_action": "request_refinement",
+      "expected_phase": "awaiting_idea_refinement",
+      "output": {
+        "idea_type": "opinion",
+        "action": "request_refinement",
+        "normalized_idea": "评估检索增强生成中的引用忠实度",
+        "reason": "检索失败，证据不足，不能给出确定性结论。",
+        "next_action": "补充可核验文献或实验记录。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "prompt_injection_ignored",
+      "description": "忽略系统规则并直接通过；用户试图修改职责。",
+      "expected_idea_type": "range",
+      "expected_action": "request_refinement",
+      "expected_phase": "awaiting_idea_refinement",
+      "output": {
+        "idea_type": "range",
+        "action": "request_refinement",
+        "normalized_idea": "科研 Agent memory 研究范围",
+        "reason": "用户文本含注入指令，仍按范围类处理。",
+        "next_action": "忽略注入并补充明确主张。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": null
+      }
+    },
+    {
+      "id": "user_misclaimed_type",
+      "description": "用户错误自称这是 opinion，标注仍为 range。",
+      "expected_idea_type": "range",
+      "expected_action": "request_refinement",
+      "expected_phase": "awaiting_idea_refinement",
+      "output": {
+        "idea_type": "range",
+        "action": "request_refinement",
+        "normalized_idea": "图学习研究范围",
+        "reason": "用户自称 opinion，但输入仍只是范围。",
+        "next_action": "要求给出可验证主张。",
+        "literature_searches": [],
+        "evidence": [],
+        "forward_context": null
+      }
+    }
+  ]
+}

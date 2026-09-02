@@ -1,0 +1,194 @@
+{
+  "version": "1.0",
+  "prompt_version": "complete/7d7459a10e65",
+  "domain": "computer_science",
+  "suite": "complete",
+  "cases": [
+    {
+      "id": "validation_relevant",
+      "description": "validation 候选必须可寻址关键主张。",
+      "output": {
+        "mode": "validation",
+        "plan": {
+          "research_question": "分层状态压缩能否降低长对话恢复中的状态漂移？",
+          "knowledge_requirements": [
+            {
+              "topic": "状态恢复评估",
+              "reason": "定义可复现实验指标",
+              "references": []
+            }
+          ],
+          "milestones": [
+            {
+              "name": "基线与消融",
+              "goal": "比较恢复正确率",
+              "estimated_duration": "三天"
+            }
+          ],
+          "key_insight": {
+            "title": "分层状态压缩",
+            "content": "将稳定事实与近期交互分层保存并分别恢复。",
+            "rationale": "减少无关上下文对恢复决策的干扰。",
+            "evidence": []
+          },
+          "open_issues": []
+        },
+        "final_hint": "请选择需要执行的验证实验。",
+        "validation_candidates": [
+          {
+            "candidate_id": "demo-validation-ablation",
+            "task": {
+              "paradigm": "effectiveness",
+              "validation_type": "ablation",
+              "name": "移除分层摘要的消融实验",
+              "purpose": "确认性能增益来自分层状态压缩",
+              "method": "在同一任务集上移除分层摘要并比较恢复正确率",
+              "expected_result": "完整方法的恢复正确率更高"
+            },
+            "priority": "critical",
+            "rank": 1,
+            "rationale": "直接检验核心机制。",
+            "addresses_claims": [
+              "分层状态压缩降低状态漂移"
+            ]
+          }
+        ],
+        "excluded_validations": [],
+        "writing_guidance": null,
+        "revision_reason": null
+      },
+      "expected_mode": "validation",
+      "expected_phase": "awaiting_validation_selection"
+    },
+    {
+      "id": "plan_revision",
+      "description": "结果动摇主结论时进入方案修订。",
+      "output": {
+        "mode": "plan_revision",
+        "plan": {
+          "research_question": "分层状态压缩能否降低长对话恢复中的状态漂移？",
+          "knowledge_requirements": [
+            {
+              "topic": "状态恢复评估",
+              "reason": "定义可复现实验指标",
+              "references": []
+            }
+          ],
+          "milestones": [
+            {
+              "name": "基线与消融",
+              "goal": "比较恢复正确率",
+              "estimated_duration": "三天"
+            }
+          ],
+          "key_insight": {
+            "title": "分层状态压缩",
+            "content": "将稳定事实与近期交互分层保存并分别恢复。",
+            "rationale": "减少无关上下文对恢复决策的干扰。",
+            "evidence": []
+          },
+          "open_issues": []
+        },
+        "final_hint": "主结论需要重估。",
+        "validation_candidates": [],
+        "excluded_validations": [],
+        "writing_guidance": null,
+        "revision_reason": "消融结果动摇了分层压缩主张。"
+      },
+      "expected_mode": "plan_revision",
+      "expected_phase": "awaiting_plan_revision_decision"
+    },
+    {
+      "id": "writing_guidance",
+      "description": "写作模式只给结构指导。",
+      "output": {
+        "mode": "writing",
+        "plan": {
+          "research_question": "分层状态压缩能否降低长对话恢复中的状态漂移？",
+          "knowledge_requirements": [
+            {
+              "topic": "状态恢复评估",
+              "reason": "定义可复现实验指标",
+              "references": []
+            }
+          ],
+          "milestones": [
+            {
+              "name": "基线与消融",
+              "goal": "比较恢复正确率",
+              "estimated_duration": "三天"
+            }
+          ],
+          "key_insight": {
+            "title": "分层状态压缩",
+            "content": "将稳定事实与近期交互分层保存并分别恢复。",
+            "rationale": "减少无关上下文对恢复决策的干扰。",
+            "evidence": []
+          },
+          "open_issues": []
+        },
+        "final_hint": "按证据强度组织结果。",
+        "validation_candidates": [],
+        "excluded_validations": [],
+        "writing_guidance": {
+          "suggested_structure": [
+            "方法",
+            "结果",
+            "讨论"
+          ],
+          "key_results_to_report": [
+            "恢复正确率与失败案例"
+          ],
+          "key_discussion_points": [
+            "分层摘要的贡献"
+          ],
+          "limitations": [
+            "演示数据不代表真实实验"
+          ]
+        },
+        "revision_reason": null
+      },
+      "expected_mode": "writing",
+      "expected_phase": "completed"
+    },
+    {
+      "id": "duplicate_candidates",
+      "description": "重复 candidate ID 必须被拒绝。",
+      "kind": "duplicate_candidates",
+      "first": {
+        "candidate_id": "demo-validation-ablation",
+        "task": {
+          "paradigm": "effectiveness",
+          "validation_type": "ablation",
+          "name": "移除分层摘要的消融实验",
+          "purpose": "确认性能增益来自分层状态压缩",
+          "method": "在同一任务集上移除分层摘要并比较恢复正确率",
+          "expected_result": "完整方法的恢复正确率更高"
+        },
+        "priority": "critical",
+        "rank": 1,
+        "rationale": "直接检验核心机制。",
+        "addresses_claims": [
+          "分层状态压缩降低状态漂移"
+        ]
+      },
+      "duplicate": {
+        "candidate_id": "demo-validation-ablation",
+        "task": {
+          "paradigm": "effectiveness",
+          "validation_type": "ablation",
+          "name": "移除分层摘要的消融实验",
+          "purpose": "确认性能增益来自分层状态压缩",
+          "method": "在同一任务集上移除分层摘要并比较恢复正确率",
+          "expected_result": "完整方法的恢复正确率更高"
+        },
+        "priority": "critical",
+        "rank": 2,
+        "rationale": "直接检验核心机制。",
+        "addresses_claims": [
+          "分层状态压缩降低状态漂移"
+        ]
+      }
+    }
+  ]
+}

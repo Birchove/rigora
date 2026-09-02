@@ -1,11 +1,22 @@
-# Key Insight Check Eval
+# Agent Eval Suites
 
-`key_insight_check_cases.json` 是 Check Agent 评分链路的最小回归集，覆盖明确通过、明确退回、单项低分不否决和四舍五入边界四种情况。
+每个 `*_cases.json` 都是 versioned `EvalSuite`：`version=1.0`、`prompt_version`、`domain=computer_science`。runner 只评 schema、routing、rubric 和稳定性，不用另一个 LLM 当发布 gate。没有真实 model provider 时，`provider_mode` 固定为 `demo`，不伪造真实模型质量。
 
-当前 Eval 验证 Harness 的确定性聚合与决策，不评价 LLM 是否能从自然语言稳定地产生合理的五维分数。接入真实 model provider 后，应另建 model-based Eval，并固定模型版本、Prompt 版本和重复采样次数。
+| Suite | 覆盖 |
+| --- | --- |
+| `idea_review_cases.json` | ≥20 条 CS 标注，覆盖 opinion/range/forward、reject/refinement、四种 forward stage、证据不足、prompt injection、用户错误自称 type |
+| `plan_loop_cases.json` | low/mid/high 的 1/2/3 路径、candidate ID 唯一性、跨路径隔离、差异 profile、单选 gate、exhausted override、专家 rubric、prompt isolation |
+| `key_insight_check_cases.json` | 明确通过/退回、单项低分不否决、6.0 通过边界、5.9 失败边界；重复采样评五维稳定性 |
+| `working_qa_cases.json` | success 未确认不推进、主实验 plan issue、validation `completed+contradicts` / `failed+neutral`、低分不得硬拒 |
+| `complete_cases.json` | validation relevance、duplicate candidate ID、plan revision、WritingGuidance |
+| `retrieval_relevance_cases.json` | ≥20 条人工 relevance 标注，校准 lexical ranker 阈值 0.3；低分不得改回硬拒 |
+| `citation_cases.json` | 可解析率与 DOI/URL/provider-ID duplicate rate |
+| `demo_workflow_cases.json` | demo fixture 完整流程 success rate |
+
+必要条件 gate 不进入 dataset，也不是通过条件。
 
 运行：
 
 ```powershell
-uv run --offline --no-sync pytest -q -p no:cacheprovider tests/evals/test_key_insight_check_eval.py
+uv run pytest -q -p no:cacheprovider tests/evals
 ```

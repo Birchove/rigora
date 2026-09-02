@@ -1,0 +1,295 @@
+{
+  "version": "1.0",
+  "prompt_version": "lexical-ranker/v1",
+  "domain": "computer_science",
+  "suite": "retrieval_relevance",
+  "ranker": "lexical",
+  "cases": [
+    {
+      "id": "rel_cache_latency",
+      "description": "lexical score 0.667 at threshold 0.3",
+      "query": "cache latency tail",
+      "chunk": {
+        "chunk_id": "rel_cache_latency",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "cache latency measurements on kv cache"
+      },
+      "relevant": true
+    },
+    {
+      "id": "rel_state_compression",
+      "description": "lexical score 0.750 at threshold 0.3",
+      "query": "state compression recovery drift",
+      "chunk": {
+        "chunk_id": "rel_state_compression",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "state compression recovery for long context"
+      },
+      "relevant": true
+    },
+    {
+      "id": "rel_speculative",
+      "description": "lexical score 1.000 at threshold 0.3",
+      "query": "speculative decoding latency",
+      "chunk": {
+        "chunk_id": "rel_speculative",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "speculative decoding reduces latency"
+      },
+      "relevant": true
+    },
+    {
+      "id": "rel_rag_chunk",
+      "description": "lexical score 1.000 at threshold 0.3",
+      "query": "retrieval chunk overlap precision",
+      "chunk": {
+        "chunk_id": "rel_rag_chunk",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "retrieval chunk overlap and precision tradeoff"
+      },
+      "relevant": true
+    },
+    {
+      "id": "rel_kv_page",
+      "description": "lexical score 1.000 at threshold 0.3",
+      "query": "paged kv cache fragmentation",
+      "chunk": {
+        "chunk_id": "rel_kv_page",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "paged kv cache reduces fragmentation"
+      },
+      "relevant": true
+    },
+    {
+      "id": "rel_nas_constraint",
+      "description": "lexical score 1.000 at threshold 0.3",
+      "query": "neural architecture search constraint",
+      "chunk": {
+        "chunk_id": "rel_nas_constraint",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "neural architecture search constraint space"
+      },
+      "relevant": true
+    },
+    {
+      "id": "rel_compiler_pass",
+      "description": "lexical score 1.000 at threshold 0.3",
+      "query": "compiler pass alias analysis",
+      "chunk": {
+        "chunk_id": "rel_compiler_pass",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "compiler pass alias analysis improves codegen"
+      },
+      "relevant": true
+    },
+    {
+      "id": "rel_consensus",
+      "description": "lexical score 1.000 at threshold 0.3",
+      "query": "raft consensus commit latency",
+      "chunk": {
+        "chunk_id": "rel_consensus",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "raft consensus commit latency under partitions"
+      },
+      "relevant": true
+    },
+    {
+      "id": "rel_gnn_over",
+      "description": "lexical score 1.000 at threshold 0.3",
+      "query": "graph neural network oversmoothing",
+      "chunk": {
+        "chunk_id": "rel_gnn_over",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "graph neural network oversmoothing on deep stacks"
+      },
+      "relevant": true
+    },
+    {
+      "id": "rel_security_aslr",
+      "description": "lexical score 1.000 at threshold 0.3",
+      "query": "address space layout randomization",
+      "chunk": {
+        "chunk_id": "rel_security_aslr",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "address space layout randomization for kernels"
+      },
+      "relevant": true
+    },
+    {
+      "id": "irrel_banana",
+      "description": "lexical score 0.000 at threshold 0.3",
+      "query": "cache latency tail protocol",
+      "chunk": {
+        "chunk_id": "irrel_banana",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "banana bread recipe flour sugar"
+      },
+      "relevant": false
+    },
+    {
+      "id": "irrel_weather",
+      "description": "lexical score 0.000 at threshold 0.3",
+      "query": "state compression recovery",
+      "chunk": {
+        "chunk_id": "irrel_weather",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "tomorrow weather forecast rain umbrella"
+      },
+      "relevant": false
+    },
+    {
+      "id": "irrel_sports",
+      "description": "lexical score 0.000 at threshold 0.3",
+      "query": "speculative decoding",
+      "chunk": {
+        "chunk_id": "irrel_sports",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "football league scores weekend"
+      },
+      "relevant": false
+    },
+    {
+      "id": "irrel_music",
+      "description": "lexical score 0.000 at threshold 0.3",
+      "query": "retrieval precision",
+      "chunk": {
+        "chunk_id": "irrel_music",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "piano concerto tempo rubato"
+      },
+      "relevant": false
+    },
+    {
+      "id": "boundary_one_of_three",
+      "description": "lexical score 0.333 at threshold 0.3",
+      "query": "cache latency mystery",
+      "chunk": {
+        "chunk_id": "boundary_one_of_three",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "cache only notes"
+      },
+      "relevant": true
+    },
+    {
+      "id": "boundary_one_of_four",
+      "description": "lexical score 0.250 at threshold 0.3",
+      "query": "cache latency mystery protocol",
+      "chunk": {
+        "chunk_id": "boundary_one_of_four",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "cache only notes"
+      },
+      "relevant": false
+    },
+    {
+      "id": "rel_quantization",
+      "description": "lexical score 1.000 at threshold 0.3",
+      "query": "int8 quantization accuracy drop",
+      "chunk": {
+        "chunk_id": "rel_quantization",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "int8 quantization accuracy drop on transformers"
+      },
+      "relevant": true
+    },
+    {
+      "id": "rel_distill",
+      "description": "lexical score 1.000 at threshold 0.3",
+      "query": "knowledge distillation student teacher",
+      "chunk": {
+        "chunk_id": "rel_distill",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "knowledge distillation student teacher gap"
+      },
+      "relevant": true
+    },
+    {
+      "id": "irrel_travel",
+      "description": "lexical score 0.000 at threshold 0.3",
+      "query": "compiler alias analysis",
+      "chunk": {
+        "chunk_id": "irrel_travel",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "airport boarding pass luggage"
+      },
+      "relevant": false
+    },
+    {
+      "id": "irrel_cooking",
+      "description": "lexical score 0.000 at threshold 0.3",
+      "query": "raft consensus commit",
+      "chunk": {
+        "chunk_id": "irrel_cooking",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "olive oil pasta recipe salt"
+      },
+      "relevant": false
+    },
+    {
+      "id": "rel_bloom",
+      "description": "lexical score 1.000 at threshold 0.3",
+      "query": "bloom filter false positive",
+      "chunk": {
+        "chunk_id": "rel_bloom",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "bloom filter false positive rate memory"
+      },
+      "relevant": true
+    },
+    {
+      "id": "irrel_garden",
+      "description": "lexical score 0.000 at threshold 0.3",
+      "query": "bloom filter hashing",
+      "chunk": {
+        "chunk_id": "irrel_garden",
+        "document_id": "eval-doc",
+        "ordinal": 0,
+        "heading_path": [],
+        "markdown": "garden tulips watering can"
+      },
+      "relevant": false
+    }
+  ]
+}

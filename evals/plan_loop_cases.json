@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "prompt_version": "plan_loop/7372c00d6fb6",
+  "domain": "computer_science",
+  "suite": "plan_loop",
+  "cases": [
+    {
+      "id": "mode_low",
+      "description": "low 模式仅 1 条路径。",
+      "mode": "low",
+      "expected_path_count": 1
+    },
+    {
+      "id": "mode_mid",
+      "description": "mid 模式 2 条路径且 ID 唯一。",
+      "mode": "mid",
+      "expected_path_count": 2
+    },
+    {
+      "id": "mode_high",
+      "description": "high 模式 3 条路径、差异 profile 可追溯。",
+      "mode": "high",
+      "expected_path_count": 3
+    },
+    {
+      "id": "prompt_isolation",
+      "description": "动态 payload 不得重复 sys_input。",
+      "kind": "prompt_isolation"
+    },
+    {
+      "id": "single_select_gate",
+      "description": "用户只能单选一条候选。",
+      "kind": "single_select_gate",
+      "expected_requires_candidate_id": true
+    },
+    {
+      "id": "exhausted_override",
+      "description": "检查耗尽后允许 override。",
+      "kind": "exhausted_override",
+      "expected_disposition": "exhausted"
+    },
+    {
+      "id": "expert_rubric",
+      "description": "专家 rubric 覆盖研究问题、点睛之笔和里程碑。",
+      "kind": "expert_rubric",
+      "required_fields": [
+        "research_question",
+        "key_insight",
+        "milestones"
+      ]
+    },
+    {
+      "id": "plan_injection",
+      "description": "注入指令不能改写规划职责。",
+      "kind": "prompt_isolation"
+    }
+  ]
+}

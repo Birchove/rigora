@@ -1,58 +1,83 @@
-[
-  {
-    "id": "clear_pass",
-    "description": "五个维度均有充分表现，应稳定通过。",
-    "key_insight_summary": "用结构化状态压缩降低长对话研究任务中的恢复漂移。",
-    "scores": {
-      "research_fit": 7.0,
-      "novelty": 7.0,
-      "research_value": 7.0,
-      "testability_feasibility": 7.0,
-      "evidence_support": 7.0
+{
+  "version": "1.0",
+  "prompt_version": "key_insight_check/5e26849b67f2",
+  "domain": "computer_science",
+  "suite": "key_insight_check",
+  "cases": [
+    {
+      "id": "clear_pass",
+      "description": "五个维度均有充分表现，应稳定通过。",
+      "key_insight_summary": "用结构化状态压缩降低长对话研究任务中的恢复漂移。",
+      "scores": {
+        "research_fit": 7.0,
+        "novelty": 7.0,
+        "research_value": 7.0,
+        "testability_feasibility": 7.0,
+        "evidence_support": 7.0
+      },
+      "expected_final_score": 7.0,
+      "expected_check_decision": true,
+      "expected_phase": "awaiting_plan_decision"
     },
-    "expected_final_score": 7.0,
-    "expected_check_decision": true
-  },
-  {
-    "id": "clear_revision",
-    "description": "五个维度整体不足，应返回修改请求。",
-    "key_insight_summary": "仅宣称使用更大的模型可以改善全部研究结果。",
-    "scores": {
-      "research_fit": 5.0,
-      "novelty": 5.0,
-      "research_value": 5.0,
-      "testability_feasibility": 5.0,
-      "evidence_support": 5.0
+    {
+      "id": "clear_revision",
+      "description": "五个维度整体不足，应返回修改请求。",
+      "key_insight_summary": "仅宣称使用更大的模型可以改善全部研究结果。",
+      "scores": {
+        "research_fit": 5.0,
+        "novelty": 5.0,
+        "research_value": 5.0,
+        "testability_feasibility": 5.0,
+        "evidence_support": 5.0
+      },
+      "expected_final_score": 5.0,
+      "expected_check_decision": false,
+      "expected_phase": "planning"
     },
-    "expected_final_score": 5.0,
-    "expected_check_decision": false
-  },
-  {
-    "id": "low_single_dimension_no_veto",
-    "description": "证据支持单项偏低，但加权总分达标，不应触发单项否决。",
-    "key_insight_summary": "先用代理指标验证状态压缩机制，再扩展到真实任务。",
-    "scores": {
-      "research_fit": 7.0,
-      "novelty": 7.0,
-      "research_value": 7.0,
-      "testability_feasibility": 7.0,
-      "evidence_support": 2.4
+    {
+      "id": "low_single_dimension_no_veto",
+      "description": "证据支持单项偏低，但加权总分达标，不应触发单项否决。",
+      "key_insight_summary": "先用代理指标验证状态压缩机制，再扩展到真实任务。",
+      "scores": {
+        "research_fit": 7.0,
+        "novelty": 7.0,
+        "research_value": 7.0,
+        "testability_feasibility": 7.0,
+        "evidence_support": 2.4
+      },
+      "expected_final_score": 6.3,
+      "expected_check_decision": true,
+      "expected_phase": "awaiting_plan_decision"
     },
-    "expected_final_score": 6.3,
-    "expected_check_decision": true
-  },
-  {
-    "id": "rounded_threshold_pass",
-    "description": "加权值四舍五入后恰为 6.0，应按包含边界通过。",
-    "key_insight_summary": "在固定资源约束下比较两种可复现实验路径。",
-    "scores": {
-      "research_fit": 5.96,
-      "novelty": 5.96,
-      "research_value": 5.96,
-      "testability_feasibility": 5.96,
-      "evidence_support": 5.96
+    {
+      "id": "rounded_threshold_pass",
+      "description": "加权值四舍五入后恰为 6.0，应按包含边界通过。",
+      "key_insight_summary": "在固定资源约束下比较两种可复现实验路径。",
+      "scores": {
+        "research_fit": 5.96,
+        "novelty": 5.96,
+        "research_value": 5.96,
+        "testability_feasibility": 5.96,
+        "evidence_support": 5.96
+      },
+      "expected_final_score": 6.0,
+      "expected_check_decision": true,
+      "expected_phase": "awaiting_plan_decision"
     },
-    "expected_final_score": 6.0,
-    "expected_check_decision": true
-  }
-]
+    {
+      "id": "total_only_fail_5_9",
+      "description": "加权总分 5.9 未达 6.0，应按 total-only 规则失败。",
+      "key_insight_summary": "五项均衡但总分略低于通过阈值。",
+      "scores": {
+        "research_fit": 5.9,
+        "novelty": 5.9,
+        "research_value": 5.9,
+        "testability_feasibility": 5.9,
+        "evidence_support": 5.9
+      },
+      "expected_final_score": 5.9,
+      "expected_check_decision": false,
+      "expected_phase": "planning"
+    }
+  ]
+}
