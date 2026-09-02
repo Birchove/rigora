@@ -18,7 +18,14 @@ def test_readme_documents_required_start_commands():
 
 def test_env_example_has_no_secret_values():
     text = Path(".env.example").read_text(encoding="utf-8")
-    assert "RESEARCH_MENTOR_MODEL_API_KEY=" in text
+    for name in (
+        "RESEARCH_MENTOR_QWEN_API_KEY=",
+        "RESEARCH_MENTOR_QWEN_BASE_URL=",
+        "RESEARCH_MENTOR_DEEPSEEK_API_KEY=",
+        "RESEARCH_MENTOR_CHATGPT_API_KEY=",
+        "RESEARCH_MENTOR_GLM_API_KEY=",
+    ):
+        assert name in text
     assert "sk-" not in text
 
 

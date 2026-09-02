@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import httpx
 from openai import AsyncOpenAI
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from research_mentor.adapters.demo.model import DemoModelAdapter
@@ -16,6 +17,7 @@ from research_mentor.adapters.model.openai_compatible import (
 from research_mentor.adapters.model.openai_responses import (
     OpenAIResponsesModelAdapter,
 )
+from research_mentor.adapters.model.routing import RoutingModelAdapter
 from research_mentor.adapters.sql.session import create_engine, create_session_factory
 from research_mentor.adapters.sql.uow import SqlUnitOfWork
 from research_mentor.application.command_bus import CommandBus
@@ -26,7 +28,7 @@ from research_mentor.application.documents import DocumentService
 from research_mentor.application.journal import ExportService, JournalRenderer
 from research_mentor.application.demo import DemoService
 from research_mentor.adapters.filestore.local import LocalFileStore
-from research_mentor.config import Settings
+from research_mentor.config import SHARED_AGENTS, SLOTS, Settings, SlotName
 from research_mentor.ports.model import StructuredModelPort
 
 
@@ -55,17 +57,63 @@ class ApplicationContainer:
             await self._provider_close()
 
 
+def _usable_secret(secret: SecretStr | None) -> str | None:
+    if secret is None:
+        return None
+    raw = secret.get_secret_value().strip()
+    return raw or None
+
+
+def _build_vendor_adapter(
+    settings: Settings,
+    slot: SlotName,
+) -> tuple[StructuredModelPort, Callable[[], Awaitable[Any]] | None]:
+    api_key = _usable_secret(settings.slot_api_key(slot))
+    api_style = settings.slot_api_style(slot)
+    base_url = settings.slot_base_url(slot)
+    if api_style == "responses":
+        client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        return OpenAIResponsesModelAdapter(client), client.close
+    if not base_url:
+        raise ValueError(f"{slot} chat_completions requires base_url")
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+    client = httpx.AsyncClient(headers=headers)
+    return (
+        OpenAICompatibleModelAdapter(client, base_url=base_url),
+        client.aclose,
+    )
+
+
 def _build_model(
     settings: Settings,
 ) -> tuple[StructuredModelPort, Callable[[], Awaitable[Any]] | None]:
+    routes: dict[str, StructuredModelPort] = {}
+    closers: list[Callable[[], Awaitable[Any]]] = []
+    for slot in SLOTS:
+        agents = getattr(settings, f"{slot}_agents")
+        if not agents:
+            continue
+        adapter, closer = _build_vendor_adapter(settings, slot)
+        if closer is not None:
+            closers.append(closer)
+        routes[settings.slot_model(slot)] = adapter
+        for agent in agents:
+            if agent in SHARED_AGENTS:
+                routes.setdefault(agent, adapter)
+            else:
+                routes[agent] = adapter
+    if routes:
+
+        async def close_all() -> None:
+            for closer in closers:
+                await closer()
+
+        return RoutingModelAdapter(routes, fallback=DemoModelAdapter()), close_all
+
     if settings.model_provider == "demo":
         return DemoModelAdapter(), None
 
-    api_key = (
-        settings.model_api_key.get_secret_value()
-        if settings.model_api_key is not None
-        else None
-    )
+    api_key = _usable_secret(settings.model_api_key)
     if settings.model_provider == "openai":
         client = AsyncOpenAI(api_key=api_key)
         return OpenAIResponsesModelAdapter(client), client.close

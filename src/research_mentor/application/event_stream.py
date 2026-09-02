@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
@@ -12,6 +13,9 @@ from research_mentor.hyperparameters import (
     SSE_POLL_INTERVAL_SECONDS,
 )
 from research_mentor.ports.events import PersistedPublicEvent
+
+
+logger = logging.getLogger("research_mentor.events")
 
 
 PUBLIC_EVENT_TYPES = {
@@ -118,6 +122,23 @@ def _project(event: PersistedPublicEvent) -> tuple[str, dict[str, Any]] | None:
     return public_type, payload
 
 
+def _event_summary(public_type: str, payload: dict[str, Any]) -> str:
+    parts = [public_type]
+    for key in (
+        "agent_name",
+        "stage",
+        "status",
+        "phase_before",
+        "phase_after",
+        "error_code",
+        "public_message",
+    ):
+        value = payload.get(key)
+        if value not in (None, ""):
+            parts.append(f"{key}={value}")
+    return " ".join(parts)
+
+
 def encode_sse(event: PersistedPublicEvent) -> str | None:
     projected = _project(event)
     if projected is None:
@@ -172,8 +193,18 @@ class EventStreamService:
                 if event.sequence <= cursor or event.sequence in seen:
                     continue
                 seen.add(event.sequence)
-                chunk = encode_sse(event)
+                projected = _project(event)
                 cursor = event.sequence
+                if projected is None:
+                    continue
+                public_type, payload = projected
+                logger.info(
+                    "%s seq=%s %s",
+                    project_id,
+                    event.sequence,
+                    _event_summary(public_type, payload),
+                )
+                chunk = encode_sse(event)
                 if chunk is None:
                     continue
                 emitted = True

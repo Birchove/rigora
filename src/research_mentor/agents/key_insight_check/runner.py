@@ -43,5 +43,7 @@ class KeyInsightCheckRunner:
             result = result.model_dump(mode="python", warnings=False)
         return KeyInsightAssessment.model_validate(result)
 
-    def run_sync(self, request: KeyInsightCheckInput) -> KeyInsightAssessment:
-        return asyncio.run(self.run(request))
+    def run_sync(
+        self, request: KeyInsightCheckInput, *, model_profile: str = "default"
+    ) -> KeyInsightAssessment:
+        return asyncio.run(self.run(request, model_profile=model_profile))

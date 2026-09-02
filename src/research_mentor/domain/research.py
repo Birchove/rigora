@@ -81,6 +81,8 @@ class PlanCandidatePath(BaseModel):
     candidate_index: int = Field(ge=1, le=3)
     model_profile: str
     focus_hint: str
+    plan_model_profile: str = "default"
+    check_model_profile: str = "default"
     plan: ResearchPlan | None = None
     response_to_user: str | None = None
     change_summary: list[str] = Field(default_factory=list)

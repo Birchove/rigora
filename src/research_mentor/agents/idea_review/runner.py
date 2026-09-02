@@ -41,5 +41,7 @@ class IdeaReviewRunner:
             result = result.model_dump(mode="python", warnings=False)
         return IdeaReviewOutput.model_validate(result)
 
-    def run_sync(self, request: IdeaReviewInput) -> IdeaReviewOutput:
-        return asyncio.run(self.run(request))
+    def run_sync(
+        self, request: IdeaReviewInput, *, model_profile: str = "default"
+    ) -> IdeaReviewOutput:
+        return asyncio.run(self.run(request, model_profile=model_profile))

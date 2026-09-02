@@ -95,7 +95,7 @@ Demo 项目：`demo-project-planning`、`demo-project-working`、`demo-project-v
 
 ## Demo 快速开始
 
-默认 `RESEARCH_MENTOR_MODEL_PROVIDER=demo` 且 `RESEARCH_MENTOR_DEMO_MODE=true`，不需要 API key。API 进程的 lifespan 会启动 durable worker，并在空库时 seed 三个 demo 项目。
+默认各商家 `AGENTS` 留空（`model_provider=demo`）且 `RESEARCH_MENTOR_DEMO_MODE=true`，不需要 API key。API 进程的 lifespan 会启动 durable worker，并在空库时 seed 三个 demo 项目。
 
 ```powershell
 uv sync --all-groups
@@ -121,27 +121,18 @@ pwsh -File scripts/dev.ps1
 
 ## 真实模型配置
 
-`.env` 中按 provider 填写，模板见 `.env.example`。
-
-OpenAI Responses API：
+复制 `.env.example` 为 `.env`。千问 / Deepseek / ChatGPT / GLM 各填：API key、`BASE_URL`、模型名、`API_STYLE`、覆盖的 Agent 列表。`plan_loop` 与 `key_insight_check` 可以同时写在多家下面，`high/mid/low` 按 ChatGPT→千问→GLM 做 3/2/1 路交叉审查。同一把 ChatGPT key 的第二个模型用 `CHATGPT_2_*`（key/url/style 留空则继承主槽）。官方 URL 已写在模板里；中转改 `BASE_URL` 并把 `API_STYLE` 设为 `chat_completions`。未分配的 Agent 走 demo。
 
 ```powershell
-$env:RESEARCH_MENTOR_MODEL_PROVIDER = "openai"
-$env:RESEARCH_MENTOR_MODEL_NAME = "gpt-5-mini"
-$env:RESEARCH_MENTOR_MODEL_API_KEY = "<your-key>"
+$env:RESEARCH_MENTOR_QWEN_API_KEY = "<your-key>"
+$env:RESEARCH_MENTOR_QWEN_BASE_URL = "https://your-relay.example/v1"
+$env:RESEARCH_MENTOR_QWEN_MODEL = "qwen-plus"
+$env:RESEARCH_MENTOR_QWEN_API_STYLE = "chat_completions"
+$env:RESEARCH_MENTOR_QWEN_AGENTS = "idea_review,plan_loop,key_insight_check,working_qa,complete"
 $env:RESEARCH_MENTOR_DEMO_MODE = "false"
 ```
 
-OpenAI-compatible JSON Schema API：
-
-```powershell
-$env:RESEARCH_MENTOR_MODEL_PROVIDER = "openai_compatible"
-$env:RESEARCH_MENTOR_MODEL_BASE_URL = "https://example.openai.azure.com/v1"
-$env:RESEARCH_MENTOR_MODEL_API_KEY = "<your-key>"
-$env:RESEARCH_MENTOR_DEMO_MODE = "false"
-```
-
-`openai_compatible` 必须提供 `RESEARCH_MENTOR_MODEL_BASE_URL`。有凭据的真实 provider smoke 只在发布环境执行并记录 request id，结果不得提交进仓库。
+`API_STYLE=responses` 走 OpenAI Responses API；`chat_completions` 走 `openai_compatible` 的 `{BASE_URL}/chat/completions`。有凭据的真实 provider smoke 只在发布环境执行并记录 request id，结果不得提交进仓库。
 
 ## 文献、解析与可选排序
 

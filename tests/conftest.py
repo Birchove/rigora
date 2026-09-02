@@ -23,6 +23,45 @@ from research_mentor.domain.research import (
 from research_mentor.harness.scoring import finalize_key_insight_check
 
 
+@pytest.fixture(autouse=True)
+def clear_vendor_settings_environment(monkeypatch):
+    for name in (
+        "RESEARCH_MENTOR_QWEN_API_KEY",
+        "RESEARCH_MENTOR_QWEN_BASE_URL",
+        "RESEARCH_MENTOR_QWEN_MODEL",
+        "RESEARCH_MENTOR_QWEN_API_STYLE",
+        "RESEARCH_MENTOR_QWEN_AGENTS",
+        "RESEARCH_MENTOR_DEEPSEEK_API_KEY",
+        "RESEARCH_MENTOR_DEEPSEEK_BASE_URL",
+        "RESEARCH_MENTOR_DEEPSEEK_MODEL",
+        "RESEARCH_MENTOR_DEEPSEEK_API_STYLE",
+        "RESEARCH_MENTOR_DEEPSEEK_AGENTS",
+        "RESEARCH_MENTOR_CHATGPT_API_KEY",
+        "RESEARCH_MENTOR_CHATGPT_BASE_URL",
+        "RESEARCH_MENTOR_CHATGPT_MODEL",
+        "RESEARCH_MENTOR_CHATGPT_API_STYLE",
+        "RESEARCH_MENTOR_CHATGPT_AGENTS",
+        "RESEARCH_MENTOR_CHATGPT_2_API_KEY",
+        "RESEARCH_MENTOR_CHATGPT_2_BASE_URL",
+        "RESEARCH_MENTOR_CHATGPT_2_MODEL",
+        "RESEARCH_MENTOR_CHATGPT_2_API_STYLE",
+        "RESEARCH_MENTOR_CHATGPT_2_AGENTS",
+        "RESEARCH_MENTOR_GLM_API_KEY",
+        "RESEARCH_MENTOR_GLM_BASE_URL",
+        "RESEARCH_MENTOR_GLM_MODEL",
+        "RESEARCH_MENTOR_GLM_API_STYLE",
+        "RESEARCH_MENTOR_GLM_AGENTS",
+        "RESEARCH_MENTOR_VENDOR",
+        "RESEARCH_MENTOR_DEFAULT_MODEL",
+        "RESEARCH_MENTOR_AGENT_IDEA_REVIEW_MODEL",
+        "RESEARCH_MENTOR_AGENT_PLAN_LOOP_MODEL",
+        "RESEARCH_MENTOR_AGENT_KEY_INSIGHT_CHECK_MODEL",
+        "RESEARCH_MENTOR_AGENT_WORKING_QA_MODEL",
+        "RESEARCH_MENTOR_AGENT_COMPLETE_MODEL",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+
 @pytest.fixture
 def initial_input() -> InitialInput:
     return InitialInput(

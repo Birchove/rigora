@@ -38,5 +38,7 @@ class CompleteRunner:
             result = result.model_dump(mode="python", warnings=False)
         return CompleteAgentOutput.model_validate(result)
 
-    def run_sync(self, request: CompleteAgentInput) -> CompleteAgentOutput:
-        return asyncio.run(self.run(request))
+    def run_sync(
+        self, request: CompleteAgentInput, *, model_profile: str = "default"
+    ) -> CompleteAgentOutput:
+        return asyncio.run(self.run(request, model_profile=model_profile))

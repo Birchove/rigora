@@ -1,6 +1,7 @@
 """Durable Agent run execution with leases, retries and cooperative cancellation."""
 
 import asyncio
+import logging
 from collections.abc import Awaitable, Callable, Mapping
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
@@ -21,6 +22,9 @@ from research_mentor.hyperparameters import (
     WORKER_POLL_INTERVAL_SECONDS,
 )
 from research_mentor.ports.events import OutboxEvent
+
+
+logger = logging.getLogger("research_mentor.runs")
 
 
 RunHandler: TypeAlias = Callable[
@@ -185,6 +189,14 @@ class AgentRunWorker:
             )
             return
 
+        logger.info(
+            "run start project=%s agent=%s run=%s attempt=%s",
+            run.project_id,
+            run.agent_name,
+            run.run_id,
+            run.attempt,
+        )
+
         renewal = asyncio.create_task(self._renew_during_call(run.run_id))
         outcome = "succeeded"
         public_message = "运行已完成。"
@@ -215,6 +227,15 @@ class AgentRunWorker:
                 await renewal
             except asyncio.CancelledError:
                 pass
+
+        logger.info(
+            "run %s project=%s agent=%s run=%s%s",
+            outcome,
+            run.project_id,
+            run.agent_name,
+            run.run_id,
+            f" error={error_code}" if error_code else "",
+        )
 
         if outcome == "cancelled" or await self._cancel_requested(run.run_id):
             await self.confirm_cancelled(run.run_id)

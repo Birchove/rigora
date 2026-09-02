@@ -83,6 +83,52 @@ def test_plan_mode_creates_isolated_candidate_paths(
     assert session.plan_generation_mode == mode
 
 
+def test_high_mode_rotates_plan_and_check_models(
+    bundle, plan_output, assessment
+) -> None:
+    orchestrator, model, _ = bundle
+    orchestrator._config = HarnessConfig(
+        plan_check_pairs=(
+            ("gpt-plan", "qwen-check"),
+            ("qwen-plan", "glm-check"),
+            ("glm-plan", "gpt-check"),
+        )
+    )
+    for index in range(3):
+        model.enqueue(
+            "plan_loop",
+            plan_output.model_copy(
+                update={"response_to_user": f"candidate-{index + 1}"}, deep=True
+            ),
+        )
+
+    session = orchestrator.run_plan("s1", mode="high")
+
+    assert [item.plan_model_profile for item in session.plan_candidates] == [
+        "gpt-plan",
+        "qwen-plan",
+        "glm-plan",
+    ]
+    assert [item.check_model_profile for item in session.plan_candidates] == [
+        "qwen-check",
+        "glm-check",
+        "gpt-check",
+    ]
+    assert [
+        call.model_profile for call in model.calls if call.agent_name == "plan_loop"
+    ] == ["gpt-plan", "qwen-plan", "glm-plan"]
+
+    for candidate in session.plan_candidates:
+        model.enqueue("key_insight_check", assessment)
+        session = orchestrator.run_check("s1", candidate_id=candidate.candidate_id)
+
+    assert [
+        call.model_profile
+        for call in model.calls
+        if call.agent_name == "key_insight_check"
+    ] == ["qwen-check", "glm-check", "gpt-check"]
+
+
 def test_high_mode_selects_exactly_one_candidate_and_preserves_others(
     bundle, plan_output, assessment
 ) -> None:

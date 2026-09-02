@@ -17,9 +17,11 @@ const previewProject: ProjectView = {
 
 function LiveWorkspace({ projectId }: { projectId: string }) {
   const client = useMemo(() => createClient(), []);
-  const { project, refresh } = useProject(projectId, {
-    getProject: (id) => client.getProject(id),
-  });
+  const projectApi = useMemo(
+    () => ({ getProject: (id: string) => client.getProject(id) }),
+    [client],
+  );
+  const { project, refresh } = useProject(projectId, projectApi);
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
   const [parseStatus, setParseStatus] = useState<string | null>(null);
 

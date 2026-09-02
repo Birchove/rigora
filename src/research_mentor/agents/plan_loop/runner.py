@@ -38,5 +38,7 @@ class PlanLoopRunner:
             result = result.model_dump(mode="python", warnings=False)
         return PlanLoopOutput.model_validate(result)
 
-    def run_sync(self, request: PlanLoopInput) -> PlanLoopOutput:
-        return asyncio.run(self.run(request))
+    def run_sync(
+        self, request: PlanLoopInput, *, model_profile: str = "default"
+    ) -> PlanLoopOutput:
+        return asyncio.run(self.run(request, model_profile=model_profile))

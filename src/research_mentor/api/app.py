@@ -13,6 +13,7 @@ from research_mentor.api.exports import router as exports_router
 from research_mentor.api.events import router as events_router
 from research_mentor.bootstrap import build_container
 from research_mentor.config import Settings
+from research_mentor.runtime_logging import install_runtime_logging
 
 
 api_router = APIRouter()
@@ -51,6 +52,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
+    install_runtime_logging()
     application = FastAPI(
         title="Research Mentor API",
         version="1.0.0",

@@ -93,6 +93,9 @@ class ResearchMentorOrchestrator:
         self._complete_runner = complete_runner
         self._config = config
 
+    def _agent_model(self, agent_name: str) -> str:
+        return self._config.model_for_agent(agent_name)
+
     def _load_for_phase(
         self,
         session_id: str,
@@ -174,7 +177,8 @@ class ResearchMentorOrchestrator:
                 IdeaReviewInput(
                     idea=idea.model_copy(deep=True),
                     sys_input=IdeaReviewSysInput(current_date=self._current_date()),
-                )
+                ),
+                model_profile=self._agent_model("idea_review"),
             )
             refinement_code = (
                 "idea_refinement" if output.action == "request_refinement" else None
@@ -268,7 +272,8 @@ class ResearchMentorOrchestrator:
                     if session.pending_plan_revision_context is not None
                     else None
                 ),
-            )
+            ),
+            model_profile=self._config.plan_model_for_path(0),
         )
         if is_initial and output.change_summary:
             raise InvariantViolationError(
@@ -308,6 +313,8 @@ class ResearchMentorOrchestrator:
         candidates: list[PlanCandidatePath] = []
         outputs: list[PlanLoopOutput] = []
         for index in range(count_by_mode[mode]):
+            plan_model = self._config.plan_model_for_path(index)
+            check_model = self._config.check_model_for_path(index)
             output = self._plan_loop_runner.run_sync(
                 PlanLoopInput(
                     idea=session.initial_input.model_copy(deep=True),
@@ -322,7 +329,8 @@ class ResearchMentorOrchestrator:
                         if session.pending_plan_revision_context is not None
                         else None
                     ),
-                )
+                ),
+                model_profile=plan_model,
             )
             if output.change_summary:
                 raise InvariantViolationError(
@@ -335,6 +343,8 @@ class ResearchMentorOrchestrator:
                     candidate_index=index + 1,
                     model_profile=f"plan-{mode}-{index + 1}",
                     focus_hint=focus_hints[index],
+                    plan_model_profile=plan_model,
+                    check_model_profile=check_model,
                     plan=output.plan.model_copy(deep=True),
                     response_to_user=output.response_to_user,
                 )
@@ -425,7 +435,8 @@ class ResearchMentorOrchestrator:
                     if revision_context is not None
                     else None
                 ),
-            )
+            ),
+            model_profile=candidate.plan_model_profile,
         )
         candidate.plan = output.plan.model_copy(deep=True)
         candidate.response_to_user = output.response_to_user
@@ -488,7 +499,8 @@ class ResearchMentorOrchestrator:
                 ),
                 plan=candidate.plan.model_copy(deep=True),
                 previous_check_feedback=None,
-            )
+            ),
+            model_profile=candidate.check_model_profile,
         )
         output = finalize_key_insight_check(assessment, self._config)
         candidate.check_round += 1
@@ -562,7 +574,8 @@ class ResearchMentorOrchestrator:
                 key_insight_input=session.latest_plan_output.model_copy(deep=True),
                 plan=session.active_plan.model_copy(deep=True),
                 previous_check_feedback=None,
-            )
+            ),
+            model_profile=self._config.check_model_for_path(0),
         )
         output = finalize_key_insight_check(assessment, self._config)
         phase_after = route_key_insight_check(
@@ -864,7 +877,8 @@ class ResearchMentorOrchestrator:
                 task_context=session.current_task.model_copy(deep=True),
                 conversation_turns=[],
                 compact_context=None,
-            )
+            ),
+            model_profile=self._agent_model("working_qa"),
         )
         if output.updated_experiment_info is not None:
             session.current_task = session.current_task.model_copy(
@@ -1006,7 +1020,8 @@ class ResearchMentorOrchestrator:
                     result.model_copy(deep=True)
                     for result in session.completed_validations
                 ],
-            )
+            ),
+            model_profile=self._agent_model("complete"),
         )
         phase_after = route_complete(output).next_phase
         session.latest_complete_output = output.model_copy(deep=True)

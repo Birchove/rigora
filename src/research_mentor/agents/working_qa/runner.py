@@ -38,5 +38,7 @@ class WorkingQARunner:
             result = result.model_dump(mode="python", warnings=False)
         return WorkingQAOutput.model_validate(result)
 
-    def run_sync(self, request: WorkingQAInput) -> WorkingQAOutput:
-        return asyncio.run(self.run(request))
+    def run_sync(
+        self, request: WorkingQAInput, *, model_profile: str = "default"
+    ) -> WorkingQAOutput:
+        return asyncio.run(self.run(request, model_profile=model_profile))
