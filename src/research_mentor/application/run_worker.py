@@ -11,6 +11,15 @@ from research_mentor.adapters.model.errors import ModelTemporarilyUnavailable
 from research_mentor.domain.jobs import AgentRun
 from research_mentor.errors import ModelOutputInvalid
 from research_mentor.harness.state import SessionEvent, SessionEventType
+from research_mentor.hyperparameters import (
+    RETRY_BACKOFF_CAP_SECONDS,
+    RUN_LEASE_RENEWAL_SECONDS,
+    RUN_LEASE_SECONDS,
+    RUN_RETRY_LIMIT,
+    RUN_TIMEOUT_SECONDS,
+    SCHEMA_REPAIR_RETRY_LIMIT,
+    WORKER_POLL_INTERVAL_SECONDS,
+)
 from research_mentor.ports.events import OutboxEvent
 
 
@@ -53,11 +62,11 @@ class AgentRunWorker:
         *,
         handlers: Mapping[str, RunHandler],
         worker_id: str,
-        lease_seconds: float = 30.0,
-        lease_renewal_seconds: float = 10.0,
-        run_timeout: float = 120.0,
-        retry_limit: int = 3,
-        poll_interval: float = 0.25,
+        lease_seconds: float = RUN_LEASE_SECONDS,
+        lease_renewal_seconds: float = RUN_LEASE_RENEWAL_SECONDS,
+        run_timeout: float = RUN_TIMEOUT_SECONDS,
+        retry_limit: int = RUN_RETRY_LIMIT,
+        poll_interval: float = WORKER_POLL_INTERVAL_SECONDS,
         now: Callable[[], datetime] | None = None,
         new_id: Callable[[], str] | None = None,
     ) -> None:
@@ -223,7 +232,7 @@ class AgentRunWorker:
         self, handler: RunHandler, run: AgentRun
     ) -> Any:
         repair_errors: list[dict[str, Any]] | None = None
-        for repair_count in range(3):
+        for repair_count in range(SCHEMA_REPAIR_RETRY_LIMIT + 1):
             if await self._cancel_requested(run.run_id):
                 raise _RunCancelled
             try:
@@ -233,7 +242,7 @@ class AgentRunWorker:
                     repair_errors,
                 )
             except ModelOutputInvalid as exc:
-                if repair_count == 2:
+                if repair_count == SCHEMA_REPAIR_RETRY_LIMIT:
                     raise
                 repair_errors = self._minimal_schema_errors(exc.errors)
             if await self._cancel_requested(run.run_id):
@@ -318,7 +327,7 @@ class AgentRunWorker:
             if run.attempt >= self._retry_limit:
                 exhausted = True
             else:
-                delay = min(2**run.attempt, 30)
+                delay = min(2**run.attempt, RETRY_BACKOFF_CAP_SECONDS)
                 await uow.runs.requeue_retry(
                     run_id,
                     worker_id=self.worker_id,

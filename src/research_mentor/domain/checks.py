@@ -52,6 +52,7 @@ class KeyInsightCheckOutput(BaseModel):
 class CheckDecision(BaseModel):
     final_score: float = Field(ge=0.0, le=10.0)
     passed: bool
+    failed_dimensions: list[str] = Field(default_factory=list)
 
 
 class CheckRound(BaseModel):

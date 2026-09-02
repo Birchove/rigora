@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from research_mentor.agents.complete.contracts import CompleteAgentInput, CompleteAgentOutput
 from research_mentor.agents.complete.prompting import build_complete_invocation
+from research_mentor.hyperparameters import MODEL_REQUEST_TIMEOUT_SECONDS
 from research_mentor.ports.model import ModelRequest, StructuredModelPort
 
 
@@ -18,7 +19,7 @@ class CompleteRunner:
         request: CompleteAgentInput,
         *,
         model_profile: str = "default",
-        timeout: float = 30.0,
+        timeout: float = MODEL_REQUEST_TIMEOUT_SECONDS,
         trace_id: str = "local",
     ) -> CompleteAgentOutput:
         invocation = build_complete_invocation(request)

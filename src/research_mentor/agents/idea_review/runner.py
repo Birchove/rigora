@@ -9,6 +9,7 @@ from research_mentor.agents.idea_review.contracts import (
     IdeaReviewOutput,
 )
 from research_mentor.agents.idea_review.prompting import build_idea_review_invocation
+from research_mentor.hyperparameters import MODEL_REQUEST_TIMEOUT_SECONDS
 from research_mentor.ports.model import ModelRequest, StructuredModelPort
 
 
@@ -21,7 +22,7 @@ class IdeaReviewRunner:
         request: IdeaReviewInput,
         *,
         model_profile: str = "default",
-        timeout: float = 30.0,
+        timeout: float = MODEL_REQUEST_TIMEOUT_SECONDS,
         trace_id: str = "local",
     ) -> IdeaReviewOutput:
         invocation = build_idea_review_invocation(request)

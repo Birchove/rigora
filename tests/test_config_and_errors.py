@@ -38,8 +38,12 @@ def test_harness_config_defaults():
     assert config.max_check_rounds == 5
     assert config.pass_score == 6.0
     assert config.rag_relevance_threshold == 0.3
-    assert config.scoring_rule_version == "v1"
-    assert "min_dimension_score" not in config.__dataclass_fields__
+    assert config.scoring_rule_version == "v1.1"
+    assert config.dimension_floors["research_fit"] == 3.5
+    assert config.dimension_floors["novelty"] == 3.0
+    assert config.dimension_floors["research_value"] == 3.0
+    assert config.dimension_floors["testability_feasibility"] == 3.0
+    assert config.dimension_floors["evidence_support"] == 2.5
 
 
 def test_harness_config_is_immutable():

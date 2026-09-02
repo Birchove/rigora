@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from research_mentor.adapters.sql.models import DocumentChunkRow, DocumentRow
 from research_mentor.domain.documents import DocumentChunk
+from research_mentor.hyperparameters import RETRIEVAL_CANDIDATE_LIMIT
 from research_mentor.ports.retrieval import RankResult, RetrievalRankerPort
 
 
@@ -16,7 +17,7 @@ class RetrievalService:
         session_factory: async_sessionmaker[AsyncSession],
         ranker: RetrievalRankerPort,
         *,
-        candidate_limit: int = 200,
+        candidate_limit: int = RETRIEVAL_CANDIDATE_LIMIT,
     ) -> None:
         if candidate_limit < 1:
             raise ValueError("candidate_limit must be positive")

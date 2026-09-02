@@ -13,6 +13,7 @@ from research_mentor.domain.experiments import (
     ValidationResult,
 )
 from research_mentor.domain.research import InitialInput, ResearchPlan, UserPlanFeedback
+from research_mentor.hyperparameters import MAX_CHECK_ROUNDS, PLAN_CANDIDATE_MAX
 
 DEFAULT_PLANNING_GUIDELINES = [
     "ResearchPlan 必须直接服务于 normalized_idea，不得擅自改变用户已经确认的核心研究目标。",
@@ -57,12 +58,12 @@ class PlanLoopInput(BaseModel):
     sys_input: PlanLoopSysInput
     review_result: IdeaReviewOutput
     check_round: int = Field(default=0, ge=0)
-    max_check_rounds: int = Field(default=5, ge=1)
+    max_check_rounds: int = Field(default=MAX_CHECK_ROUNDS, ge=1)
     previous_insight_check: KeyInsightCheckOutput | None = None
     previous_plan: ResearchPlan | None = None
     user_feedback: UserPlanFeedback | None = None
     revision_context: PlanRevisionContext | None = None
-    candidate_index: int = Field(default=1, ge=1, le=3)
+    candidate_index: int = Field(default=1, ge=1, le=PLAN_CANDIDATE_MAX)
     candidate_focus: str | None = None
 
     @model_validator(mode="after")

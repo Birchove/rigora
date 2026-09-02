@@ -22,6 +22,7 @@ from research_mentor.domain.evidence import (
     RetrievalDiagnostics,
 )
 from research_mentor.domain.research import InitialInput
+from research_mentor.hyperparameters import MODEL_REQUEST_TIMEOUT_SECONDS
 from research_mentor.ports.model import ModelRequest, StructuredModelPort
 
 
@@ -68,7 +69,7 @@ class IdeaReviewRetrievalPipeline:
         model_profile: str,
         openalex_limit: int,
         current_date: date | None = None,
-        timeout: float = 30.0,
+        timeout: float = MODEL_REQUEST_TIMEOUT_SECONDS,
     ) -> None:
         if openalex_limit < 1:
             raise ValueError("openalex_limit must be positive")

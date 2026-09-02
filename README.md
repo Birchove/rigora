@@ -69,7 +69,7 @@ final_score =
   + 0.15 × evidence_support
 ```
 
-加权结果先保留一位小数，`final_score >= 6.0` 即通过。不设置单项分数否决条件。Working 检索分只作 diagnostics；低分或空结果不得在模型前硬拒。
+加权结果先保留一位小数。通过条件为 `final_score >= 6.0`，且各维不低于下界：`research_fit >= 3.5`、`novelty >= 3.0`、`research_value >= 3.0`、`testability_feasibility >= 3.0`、`evidence_support >= 2.5`。权重与阈值集中在 `src/research_mentor/hyperparameters.py`。Working 检索分只作 diagnostics；低分或空结果不得在模型前硬拒。
 
 ## 产品边界与 v1 scope
 

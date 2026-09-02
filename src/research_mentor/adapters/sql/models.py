@@ -115,6 +115,7 @@ class AgentRunRow(Base):
     row_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     cancel_requested: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     input_snapshot: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    config_snapshot: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
 
 
 class ProcessedCommandRow(Base):

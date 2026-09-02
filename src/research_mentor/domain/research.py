@@ -4,6 +4,7 @@ from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 
+from research_mentor.hyperparameters import IDEA_TEXT_MAX_LENGTH
 from research_mentor.domain.evidence import EvidenceRef
 from research_mentor.domain.checks import CheckRound
 from research_mentor.domain.experiments import (
@@ -13,7 +14,9 @@ from research_mentor.domain.experiments import (
 )
 
 NonBlankText = Annotated[str, StringConstraints(min_length=1)]
-IdeaText = Annotated[str, StringConstraints(min_length=1, max_length=19999)]
+IdeaText = Annotated[
+    str, StringConstraints(min_length=1, max_length=IDEA_TEXT_MAX_LENGTH)
+]
 
 
 def _reject_blank(value: str, field_name: str) -> None:

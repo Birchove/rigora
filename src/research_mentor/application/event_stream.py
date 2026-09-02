@@ -7,6 +7,10 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
 from research_mentor.application.views import ProjectNotFoundError
+from research_mentor.hyperparameters import (
+    SSE_HEARTBEAT_INTERVAL_SECONDS,
+    SSE_POLL_INTERVAL_SECONDS,
+)
 from research_mentor.ports.events import PersistedPublicEvent
 
 
@@ -128,8 +132,8 @@ class EventStreamService:
         self,
         uow_factory: Callable[[], Any],
         *,
-        poll_interval: float = 1.0,
-        heartbeat_interval: float = 15.0,
+        poll_interval: float = SSE_POLL_INTERVAL_SECONDS,
+        heartbeat_interval: float = SSE_HEARTBEAT_INTERVAL_SECONDS,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         monotonic: Callable[[], float] = time.monotonic,
     ) -> None:

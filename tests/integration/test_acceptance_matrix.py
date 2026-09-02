@@ -19,7 +19,7 @@ SCENARIOS: dict[int, tuple[str, ...]] = {
     3: ("tests/harness/test_orchestrator_idea_review_v1.py::test_non_cs_domain_returns_refinement_without_model",),
     4: ("tests/integration/test_forward_stages.py::test_each_forward_stage_skips_plan_loop_and_enters_working",),
     5: ("tests/harness/test_orchestrator_completion_v1.py::test_record_main_result_confirms_task_and_forward_runs_complete",),
-    6: ("tests/harness/test_scoring.py::test_scoring_passes_high_total_even_when_one_dimension_is_low",),
+    6: ("tests/harness/test_scoring.py::test_scoring_fails_when_dimension_is_below_floor",),
     7: ("tests/harness/test_orchestrator_plan_loop_v1.py::test_candidate_key_insight_override_is_audited",),
     8: ("tests/harness/test_working_context.py::test_successful_low_rank_is_diagnostic_only",),
     9: ("tests/harness/test_working_context.py::test_rank_unavailable_does_not_decline_question",),

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from research_mentor.agents.plan_loop.contracts import PlanLoopInput, PlanLoopOutput
 from research_mentor.agents.plan_loop.prompting import build_plan_loop_invocation
+from research_mentor.hyperparameters import MODEL_REQUEST_TIMEOUT_SECONDS
 from research_mentor.ports.model import ModelRequest, StructuredModelPort
 
 
@@ -18,7 +19,7 @@ class PlanLoopRunner:
         request: PlanLoopInput,
         *,
         model_profile: str = "default",
-        timeout: float = 30.0,
+        timeout: float = MODEL_REQUEST_TIMEOUT_SECONDS,
         trace_id: str = "local",
     ) -> PlanLoopOutput:
         invocation = build_plan_loop_invocation(request)

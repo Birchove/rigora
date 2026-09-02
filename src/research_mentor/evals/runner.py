@@ -44,6 +44,11 @@ from research_mentor.harness.routing import (
 )
 from research_mentor.harness.scoring import finalize_key_insight_check
 from research_mentor.harness.validation import ValidationQueue
+from research_mentor.hyperparameters import (
+    MAX_CHECK_ROUNDS,
+    PLAN_CANDIDATE_COUNTS,
+    RAG_RELEVANCE_THRESHOLD,
+)
 from research_mentor.ports.retrieval import RetrievalRankerPort
 
 
@@ -108,7 +113,7 @@ def build_demo_agents() -> DemoAgents:
 
 def evaluate_retrieval(
     suite: EvalSuite,
-    threshold: float = 0.3,
+    threshold: float = RAG_RELEVANCE_THRESHOLD,
     *,
     ranker: RetrievalRankerPort | None = None,
 ) -> EvalReport:
@@ -192,7 +197,7 @@ def _eval_plan_loop(suite: EvalSuite, agents: DemoAgents) -> EvalReport:
     contract = behavior = 0
     for case in suite.cases:
         payload = case.model_dump()
-        count_by_mode = {"low": 1, "mid": 2, "high": 3}
+        count_by_mode = PLAN_CANDIDATE_COUNTS
         mode = payload.get("mode")
         if mode in count_by_mode:
             contract += 1
@@ -268,7 +273,7 @@ def _eval_key_insight(suite: EvalSuite, agents: DemoAgents) -> EvalReport:
             and first.final_score == payload["expected_final_score"]
             and first.check_decision == payload["expected_check_decision"]
         ):
-            phase = route_key_insight_check(first, check_round=1, max_check_rounds=5)
+            phase = route_key_insight_check(first, check_round=1, max_check_rounds=MAX_CHECK_ROUNDS)
             if payload.get("expected_phase") in {None, phase.value}:
                 behavior += 1
     return _rates(suite, contract, behavior, len(suite.cases))

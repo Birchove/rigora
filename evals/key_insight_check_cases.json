@@ -35,8 +35,8 @@
       "expected_phase": "planning"
     },
     {
-      "id": "low_single_dimension_no_veto",
-      "description": "证据支持单项偏低，但加权总分达标，不应触发单项否决。",
+      "id": "low_single_dimension_fails_floor",
+      "description": "证据支持单项低于 2.5 下界，即使加权总分达标也不通过。",
       "key_insight_summary": "先用代理指标验证状态压缩机制，再扩展到真实任务。",
       "scores": {
         "research_fit": 7.0,
@@ -46,8 +46,8 @@
         "evidence_support": 2.4
       },
       "expected_final_score": 6.3,
-      "expected_check_decision": true,
-      "expected_phase": "awaiting_plan_decision"
+      "expected_check_decision": false,
+      "expected_phase": "planning"
     },
     {
       "id": "rounded_threshold_pass",

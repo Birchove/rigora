@@ -7,6 +7,11 @@ from pydantic import BaseModel, Field
 
 from research_mentor.agents.working_qa.contracts import CompactContext, WorkingContext
 from research_mentor.config import Settings
+from research_mentor.hyperparameters import (
+    COMPACT_SUMMARY_BUDGET_DENOMINATOR,
+    COMPACT_SUMMARY_MAX_CHARS,
+    WORKING_RETRIEVAL_TOP_K,
+)
 from research_mentor.domain.conversations import ConversationTurn
 from research_mentor.domain.documents import DocumentChunk
 from research_mentor.domain.evidence import EvidenceRef, RetrievalDiagnostics
@@ -51,7 +56,7 @@ class WorkingContextBuilder:
             self._ranker.rank,
             rank_query,
             source.document_chunks,
-            limit=10,
+            limit=WORKING_RETRIEVAL_TOP_K,
         )
         ranked_evidence = [
             EvidenceRef(
@@ -188,7 +193,12 @@ class WorkingContextBuilder:
                 if item.content.splitlines()[0].strip()
             ]
             compact_context = CompactContext(
-                summary="；".join(summary_parts)[: min(2000, budget // 4)],
+                summary="；".join(summary_parts)[
+                    : min(
+                        COMPACT_SUMMARY_MAX_CHARS,
+                        budget // COMPACT_SUMMARY_BUDGET_DENOMINATOR,
+                    )
+                ],
                 source_turn_ids=[item.turn_id for item in compacted],
                 facts=list(source.facts),
                 unresolved_questions=list(source.unresolved_questions),

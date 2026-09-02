@@ -46,12 +46,24 @@ def test_scoring_passes_when_total_passes() -> None:
     assert output.final_score == 7.0
     assert output.check_decision is True
     assert output.revision_request == []
-    assert output.scoring_rule_version == "v1"
+    assert output.scoring_rule_version == "v1.1"
 
 
-def test_scoring_passes_high_total_even_when_one_dimension_is_low() -> None:
+def test_scoring_fails_when_dimension_is_below_floor() -> None:
     output = finalize_key_insight_check(
         assessment(evidence_support=2.4),
+        HarnessConfig(),
+    )
+
+    assert output.final_score == 6.3
+    assert output.check_decision is False
+    assert output.revision_request == ["建议1", "建议2", "建议3"]
+    assert "evidence_support" in output.decision_reason
+
+
+def test_scoring_passes_when_dimension_meets_floor() -> None:
+    output = finalize_key_insight_check(
+        assessment(evidence_support=2.5),
         HarnessConfig(),
     )
 
@@ -60,7 +72,7 @@ def test_scoring_passes_high_total_even_when_one_dimension_is_low() -> None:
     assert output.revision_request == []
 
 
-def test_harness_score_has_no_dimension_veto() -> None:
+def test_harness_score_applies_dimension_floors() -> None:
     decision = score_check(
         assessment(
             research_fit=8,
@@ -73,7 +85,8 @@ def test_harness_score_has_no_dimension_veto() -> None:
     )
 
     assert decision.final_score == 7.0
-    assert decision.passed is True
+    assert decision.passed is False
+    assert decision.failed_dimensions == ["evidence_support"]
 
 
 def test_scoring_rejects_total_below_threshold() -> None:

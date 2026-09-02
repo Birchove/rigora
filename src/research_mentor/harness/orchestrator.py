@@ -49,6 +49,10 @@ from research_mentor.domain.research import (
 )
 from research_mentor.domain.completion import ValidationSelection
 from research_mentor.errors import IllegalTransitionError, InvariantViolationError
+from research_mentor.hyperparameters import (
+    PLAN_CANDIDATE_COUNTS,
+    PLAN_CANDIDATE_FOCUS_HINTS,
+)
 from research_mentor.harness.routing import (
     route_idea_review,
     route_complete,
@@ -299,12 +303,8 @@ class ResearchMentorOrchestrator:
             raise InvariantViolationError("planning requires initial_input and idea_review")
         if session.plan_candidates:
             return self._revise_candidate_plan(session, candidate_id)
-        count_by_mode = {"low": 1, "mid": 2, "high": 3}
-        focus_hints = (
-            "最小可行、风险受控的验证路径",
-            "强调研究增量与对照解释的平衡路径",
-            "强调高信息增益与关键假设压力测试的路径",
-        )
+        count_by_mode = PLAN_CANDIDATE_COUNTS
+        focus_hints = PLAN_CANDIDATE_FOCUS_HINTS
         candidates: list[PlanCandidatePath] = []
         outputs: list[PlanLoopOutput] = []
         for index in range(count_by_mode[mode]):

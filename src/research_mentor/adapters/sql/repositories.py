@@ -347,6 +347,7 @@ class SqlAgentRunRepository:
             row_version=row.row_version,
             cancel_requested=row.cancel_requested,
             input_snapshot=row.input_snapshot or {},
+            config_snapshot=row.config_snapshot or {},
         )
 
     async def get(self, run_id: str) -> AgentRun | None:

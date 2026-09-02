@@ -11,6 +11,7 @@ from research_mentor.domain.evidence import (
     RetrievalDiagnostics,
 )
 from research_mentor.domain.research import ForwardResearchContext, InitialInput
+from research_mentor.hyperparameters import SEARCH_PLAN_MAX_QUERIES
 
 DEFAULT_IDEA_REVIEW_GUIDELINES = [
     "idea_review_agent 负责判断用户输入属于opinion、range 或 forward。对于 forward 类型，应进一步判断已有实验信息是否足以进入 Working 阶段：\n    - 信息充分：action = proceed_to_working\n    - 信息不足：action = request_refinement\n    Harness 不自行进行语义分类，只负责校验idea_type 与 action 的组合并执行状态路由。",
@@ -49,7 +50,7 @@ SearchQuery = Annotated[
 
 
 class SearchPlan(BaseModel):
-    queries: list[SearchQuery] = Field(min_length=1, max_length=4)
+    queries: list[SearchQuery] = Field(min_length=1, max_length=SEARCH_PLAN_MAX_QUERIES)
 
 
 class IdeaReviewOutput(BaseModel):

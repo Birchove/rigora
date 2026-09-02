@@ -11,6 +11,7 @@ from research_mentor.agents.key_insight_check.contracts import (
 from research_mentor.agents.key_insight_check.prompting import (
     build_key_insight_check_invocation,
 )
+from research_mentor.hyperparameters import MODEL_REQUEST_TIMEOUT_SECONDS
 from research_mentor.ports.model import ModelRequest, StructuredModelPort
 
 
@@ -23,7 +24,7 @@ class KeyInsightCheckRunner:
         request: KeyInsightCheckInput,
         *,
         model_profile: str = "default",
-        timeout: float = 30.0,
+        timeout: float = MODEL_REQUEST_TIMEOUT_SECONDS,
         trace_id: str = "local",
     ) -> KeyInsightAssessment:
         invocation = build_key_insight_check_invocation(request)

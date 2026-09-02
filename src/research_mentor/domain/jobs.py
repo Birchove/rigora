@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, JsonValue
 
+from research_mentor.hyperparameters import run_config_snapshot
+
 AgentName = Literal["idea_review", "plan_loop", "key_insight_check", "working_qa", "complete"]
 AgentRunStatus = Literal[
     "queued", "running", "succeeded", "failed", "timed_out", "cancelled"
@@ -30,3 +32,4 @@ class AgentRun(BaseModel):
     row_version: int = Field(default=1, ge=1)
     cancel_requested: bool = False
     input_snapshot: dict[str, JsonValue] = Field(default_factory=dict)
+    config_snapshot: dict[str, JsonValue] = Field(default_factory=run_config_snapshot)

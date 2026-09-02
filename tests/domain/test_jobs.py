@@ -24,6 +24,8 @@ def test_agent_run_supports_timeout_as_public_status() -> None:
     )
 
     assert run.status == "timed_out"
+    assert run.config_snapshot["check_pass_score"] == 6.0
+    assert run.config_snapshot["check_dimension_floors"]["evidence_support"] == 2.5
 
 
 def test_agent_run_rejects_negative_attempt() -> None:

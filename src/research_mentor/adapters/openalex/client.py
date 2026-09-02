@@ -9,6 +9,11 @@ import httpx
 from research_mentor.adapters.openalex.mapping import deduplicate, map_work
 from research_mentor.domain.evidence import LiteratureRecord, RetrievalDiagnostics
 from research_mentor.errors import LiteratureSearchUnavailable
+from research_mentor.hyperparameters import (
+    OPENALEX_DEFAULT_LIMIT,
+    OPENALEX_MAX_ATTEMPTS,
+    OPENALEX_PER_PAGE_CAP,
+)
 
 
 OPENALEX_URL = "https://api.openalex.org/works"
@@ -27,7 +32,7 @@ class OpenAlexRetriever:
         mailto: str | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
-        max_attempts: int = 3,
+        max_attempts: int = OPENALEX_MAX_ATTEMPTS,
     ) -> None:
         self._client = client
         self._mailto = mailto
@@ -41,7 +46,7 @@ class OpenAlexRetriever:
         self,
         query: str,
         *,
-        limit: int = 10,
+        limit: int = OPENALEX_DEFAULT_LIMIT,
     ) -> list[LiteratureRecord]:
         self._query_sequence += 1
         query_id = f"q{self._query_sequence}"
@@ -50,7 +55,7 @@ class OpenAlexRetriever:
             return []
         params = {
             "search": query,
-            "per-page": min(limit, 50),
+            "per-page": min(limit, OPENALEX_PER_PAGE_CAP),
             "select": SELECT_FIELDS,
         }
         if self._mailto:
@@ -85,7 +90,7 @@ class OpenAlexRetriever:
         self,
         queries: Sequence[str],
         *,
-        limit: int = 10,
+        limit: int = OPENALEX_DEFAULT_LIMIT,
     ) -> tuple[list[LiteratureRecord], list[RetrievalDiagnostics]]:
         records: list[LiteratureRecord] = []
         diagnostics: list[RetrievalDiagnostics] = []
