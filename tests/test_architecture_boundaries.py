@@ -84,6 +84,20 @@ def _boundary_violations(module: str, imports: list[str]) -> list[str]:
                 and target_parts[3] in {"runner", "prompting"}
             ):
                 violations.append(f"{module} imports another agent runtime {target}")
+            if any(
+                _matches(target, prefix)
+                for prefix in (
+                    "research_mentor.adapters",
+                    "research_mentor.application",
+                    "research_mentor.harness.orchestrator",
+                    "research_mentor.harness.state",
+                )
+            ):
+                violations.append(
+                    f"{module} imports provider, repository, or harness state {target}"
+                )
+            if "repository" in target_parts:
+                violations.append(f"{module} imports repository {target}")
     if _matches(module, "research_mentor.adapters"):
         violations.extend(
             f"{module} imports orchestrator {target}"
