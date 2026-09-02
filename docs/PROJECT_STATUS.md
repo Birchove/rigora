@@ -35,9 +35,11 @@ main / origin/main（Task 1–26 实现基线为 661c0c6，另含最新交接文
 
 2026-09-01 增量裁决已把验收场景扩充为 34 项，并调整尚未完成的 Task 16、18、19、20、28、30–32。旧/新版《AI+ 创新大赛》的流程图和图片不能绕过这些显式裁决。
 
-同日用户确认《Working RAG 与用户控制增量设计》：v1 取消低分硬拒，Working query 必须带研究/阶段/任务上下文；success 只提出结果确认；forward 正式允许 `plan=None`；等待状态的新 idea 使用显式 restart。Task 19 先修正已完成 Task 16 中与新裁决冲突的低分短路，再继续 completion loop。
+同日用户确认《Working RAG 与用户控制增量设计》：v1 取消低分硬拒，Working query 必须带研究/阶段/任务上下文；Working→Complete 仅由用户 `finish_working` 触发，Agent 不再输出 `success`；forward 正式允许 `plan=None`；等待状态的新 idea 使用显式 restart。Task 19 先修正已完成 Task 16 中与新裁决冲突的低分短路，再继续 completion loop。
 
 2026-09-02 已将外部最新版 `design_document/AI+ 创新大赛.md` 的全部内容同步到 `docs/design/AI+ 创新大赛.md`（仓库副本仅规范行尾空白），并完成前端差异审阅。Task 27–29 计划已显式补充：证据检索/采用状态与筛选、受限证据列表、自然语言与结构化内容分流式呈现、project/phase draft 恢复、Markdown 清理与安全外链、panel/composer 互斥及背景滚动锁定。该设计同步本身不计作 Task；Task 27 的完成证据见 5.6。
+
+2026-09-02 审计跟进：大赛文档历史流程图（含 `Error`、Agent3 `success`、单一 `opinion_fail`）不能覆盖当前 14 个 `SessionPhase`。`reject` 是 Idea 终态。`CHECK_LOOP_EXHAUSTED` 与 `AWAITING_PLAN_REVISION_DECISION` 分别承接原流程图的 Error 回滚/继续。high 模式在 plan/check slot 不足 2 个时记录警告并允许同模型自审。
 
 ## 3. 产品设计摘要
 

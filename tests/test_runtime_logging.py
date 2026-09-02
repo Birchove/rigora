@@ -1,6 +1,11 @@
 import logging
 
-from research_mentor.runtime_logging import DropPollingAccessFilter, install_runtime_logging
+from research_mentor.runtime_logging import (
+    DropPollingAccessFilter,
+    RedactSecretsFilter,
+    install_runtime_logging,
+    redact_secrets,
+)
 
 
 def _record(message: str) -> logging.LogRecord:
@@ -41,3 +46,20 @@ def test_install_runtime_logging_is_idempotent() -> None:
         sum(getattr(item, "research_mentor_runtime", False) for item in package.handlers)
         == 1
     )
+    assert sum(isinstance(item, RedactSecretsFilter) for item in package.filters) == 1
+
+
+def test_log_redaction_masks_keys_and_connection_strings() -> None:
+    assert redact_secrets("using sk-live-secret-key-value") == "using sk-***"
+    assert redact_secrets("Authorization: Bearer tok_abc.def") == "Authorization: Bearer ***"
+    assert redact_secrets("api_key=super-secret") == "api_key=***"
+    assert (
+        redact_secrets("db=postgresql://user:pass@localhost:5432/mentor")
+        == "db=postgresql://***/mentor"
+    )
+    filter_ = RedactSecretsFilter()
+    record = _record("Bearer tok_abc api_key=xyz sk-abcdefghijklmnop")
+    assert filter_.filter(record) is True
+    assert "sk-" not in record.getMessage() or "sk-***" in record.getMessage()
+    assert "tok_abc" not in record.getMessage()
+    assert "xyz" not in record.getMessage()

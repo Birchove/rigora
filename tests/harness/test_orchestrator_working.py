@@ -13,7 +13,11 @@ from research_mentor.agents.idea_review.contracts import IdeaReviewOutput
 from research_mentor.agents.idea_review.runner import IdeaReviewRunner
 from research_mentor.agents.key_insight_check.runner import KeyInsightCheckRunner
 from research_mentor.agents.plan_loop.runner import PlanLoopRunner
-from research_mentor.agents.working_qa.contracts import WorkingQAOutput
+from research_mentor.agents.working_qa.contracts import (
+    CompactContext,
+    WorkingContext,
+    WorkingQAOutput,
+)
 from research_mentor.agents.working_qa.runner import WorkingQARunner
 from research_mentor.config import HarnessConfig
 from research_mentor.domain.completion import (
@@ -28,6 +32,7 @@ from research_mentor.domain.experiments import (
     ValidationTask,
 )
 from research_mentor.domain.research import ForwardResearchContext, UserPlanDecision
+from research_mentor.domain.evidence import EvidenceRef, RetrievalDiagnostics
 from research_mentor.errors import (
     InvariantViolationError,
     ModelOutputInvalid,
@@ -292,6 +297,53 @@ def test_accepted_plan_rejects_replacement_and_start_event_has_no_active_plan(
     assert payload["question"] == "已接受方案的下一步？"
     assert "sys_input" not in payload
     assert payload["compact_context"] is None
+
+
+def test_working_qa_fills_retrieval_fields_from_working_context(
+    bundle, initial_input, research_plan
+):
+    orchestrator, model, repository = enter_forward_context(bundle, initial_input)
+    orchestrator.start_working("s1", main_task(), plan=research_plan)
+    session = repository.get("s1")
+    context = WorkingContext(
+        research_context=session.research_context,
+        current_task=session.current_task,
+        compact_context=CompactContext(
+            summary="压缩上下文",
+            source_turn_ids=[],
+            facts=["已记录基线"],
+            unresolved_questions=[],
+        ),
+        evidence_refs=[
+            EvidenceRef(title="Adopted", source_type="paper", support="相关")
+        ],
+        retrieval_diagnostics=[
+            RetrievalDiagnostics(
+                query="q",
+                provider="demo",
+                candidate_count=1,
+                selected_count=1,
+                top_relevance=0.4,
+                status="ok",
+            )
+        ],
+        rank_status="ok",
+        top_relevance=0.4,
+        decline_as_unrelated=False,
+    )
+    model.enqueue(
+        "working_qa",
+        WorkingQAOutput(action="answer", reason="继续", reply="继续执行"),
+    )
+
+    orchestrator.run_working_qa("s1", "下一步？", working_context=context)
+
+    payload = parse_latest_call(model, "working_qa", "working_qa_data")
+    assert payload["compact_context"]["summary"] == "压缩上下文"
+    assert payload["top_relevance"] == 0.4
+    assert payload["rank_status"] == "ok"
+    assert payload["decline_as_unrelated"] is False
+    assert payload["evidence_refs"][0]["title"] == "Adopted"
 
 
 def test_working_replaces_snapshot_and_finish_working_proposes_completion(

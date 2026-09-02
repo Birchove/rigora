@@ -90,6 +90,7 @@ def _boundary_violations(module: str, imports: list[str]) -> list[str]:
                     "research_mentor.adapters",
                     "research_mentor.application",
                     "research_mentor.harness.orchestrator",
+                    "research_mentor.harness.orchestration",
                     "research_mentor.harness.state",
                 )
             ):
@@ -103,6 +104,7 @@ def _boundary_violations(module: str, imports: list[str]) -> list[str]:
             f"{module} imports orchestrator {target}"
             for target in imports
             if _matches(target, "research_mentor.harness.orchestrator")
+            or _matches(target, "research_mentor.harness.orchestration")
         )
     return violations
 

@@ -2,67 +2,32 @@
 
 from enum import StrEnum
 
-from pydantic import BaseModel, Field, JsonValue
+from pydantic import BaseModel, JsonValue
 
-from research_mentor.agents.complete.contracts import CompleteAgentOutput
-from research_mentor.agents.idea_review.contracts import IdeaReviewOutput
-from research_mentor.agents.plan_loop.contracts import PlanLoopOutput, PlanRevisionContext
-from research_mentor.domain.checks import KeyInsightCheckOutput
-from research_mentor.domain.experiments import (
-    ExperimentTaskContext,
-    MainExperimentResult,
-    ValidationResult,
-)
-from research_mentor.domain.research import (
-    InitialInput,
-    OverrideRecord,
-    PlanCandidatePath,
-    PlanCandidateOverrideRecord,
-    PlanGenerationMode,
-    ResearchContext,
-    ResearchPlan,
-    UserPlanDecision,
-    UserPlanFeedback,
-)
-from research_mentor.domain.completion import WritingGuidance
 from research_mentor.harness.phase import SessionPhase
-from research_mentor.harness.validation import ValidationQueue
+from research_mentor.harness.session_slices import (
+    CompletionSlice,
+    IdeaReviewSlice,
+    PlanCheckSlice,
+    PlanRevisionRecord,
+    WorkingSlice,
+)
+
+__all__ = [
+    "CompletionSlice",
+    "IdeaReviewSlice",
+    "PlanCheckSlice",
+    "PlanRevisionRecord",
+    "ResearchSession",
+    "SessionEvent",
+    "SessionEventType",
+    "WorkingSlice",
+]
 
 
-class PlanRevisionRecord(BaseModel):
-    decision: str
-    mentor_reason: str
-    user_reason: str | None = None
-
-
-class ResearchSession(BaseModel):
+class ResearchSession(IdeaReviewSlice, PlanCheckSlice, WorkingSlice, CompletionSlice):
     session_id: str
     phase: SessionPhase = SessionPhase.AWAITING_IDEA
-    initial_input: InitialInput | None = None
-    idea_review: IdeaReviewOutput | None = None
-    research_context: ResearchContext | None = None
-    refinement_code: str | None = None
-    latest_plan_output: PlanLoopOutput | None = None
-    active_plan: ResearchPlan | None = None
-    latest_check: KeyInsightCheckOutput | None = None
-    check_round: int = 0
-    pending_plan_feedback: UserPlanFeedback | None = None
-    pending_plan_revision_context: PlanRevisionContext | None = None
-    plan_decision: UserPlanDecision | None = None
-    override_record: OverrideRecord | None = None
-    plan_generation_mode: PlanGenerationMode = "low"
-    plan_candidates: list[PlanCandidatePath] = Field(default_factory=list)
-    candidate_override_records: list[PlanCandidateOverrideRecord] = Field(
-        default_factory=list
-    )
-    current_task: ExperimentTaskContext | None = None
-    main_experiment: MainExperimentResult | None = None
-    completed_validations: list[ValidationResult] = Field(default_factory=list)
-    latest_complete_output: CompleteAgentOutput | None = None
-    validation_queue: ValidationQueue | None = None
-    writing_guidance: WritingGuidance | None = None
-    plan_revision_records: list[PlanRevisionRecord] = Field(default_factory=list)
-    pending_plan_issue_reason: str | None = None
 
 
 class SessionEventType(StrEnum):

@@ -244,6 +244,7 @@ export interface RecordValidationResultCommand extends CommandBase {
 
 export interface RunCompleteCommand extends CommandBase {
   type: "run_complete";
+  completion_status?: boolean;
 }
 
 export interface SelectValidationsCommand extends CommandBase {

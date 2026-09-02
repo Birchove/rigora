@@ -1,4 +1,5 @@
 import type { ProjectView } from "../api/types";
+import { TypewriterText } from "./TypewriterText";
 
 export function RunStatus({ project }: { project: ProjectView }) {
   const running = project.active_run != null
@@ -9,7 +10,7 @@ export function RunStatus({ project }: { project: ProjectView }) {
   return (
     <span className="run-status" aria-live="polite">
       <i aria-hidden="true" data-running={running ? "true" : "false"} />
-      {label}
+      <TypewriterText text={label} active={running} />
     </span>
   );
 }

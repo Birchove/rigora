@@ -1,4 +1,5 @@
 import type { PublicActivityItem } from "../api/types";
+import { stripHtml } from "../ui/safeDisplay";
 
 export function CollapsibleRunTrace({ activity = [] }: { activity?: PublicActivityItem[] }) {
   return (
@@ -11,7 +12,7 @@ export function CollapsibleRunTrace({ activity = [] }: { activity?: PublicActivi
           {activity.map((item) => (
             <li key={item.sequence}>
               <span>{item.type}</span>
-              <p>{item.summary}</p>
+              <p>{stripHtml(item.summary)}</p>
             </li>
           ))}
         </ol>

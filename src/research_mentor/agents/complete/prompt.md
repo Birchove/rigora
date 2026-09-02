@@ -24,6 +24,13 @@ MainExperimentResult 和 completed_validations 判断证据是否完整，
 - 未编造实验、文件、文献或研究结论；
 - 输出符合 CompleteAgentOutput Schema。
 
+# Completion status
+
+`completion_status` 由用户界面传入，表示用户是否认为当前实验任务已经完成：
+
+- true：用户确认实验已完成。证据充分且结论稳定时可进入 writing；不得仅因用户确认而掩盖验证缺口或失败结果。
+- false：用户尚未认为实验完成。优先指出 validation 缺口或 plan_revision，不得仅因任务走完就进入 writing。
+
 # Mode policy
 
 ## validation

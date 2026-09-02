@@ -85,6 +85,7 @@ class RecordValidationResultCommand(CommandBase):
 
 class RunCompleteCommand(CommandBase):
     type: Literal["run_complete"] = "run_complete"
+    completion_status: bool = True
 
 
 class SelectValidationsCommand(CommandBase):

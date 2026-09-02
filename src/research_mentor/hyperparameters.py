@@ -38,6 +38,8 @@ PLAN_CANDIDATE_FOCUS_HINTS: Final[tuple[str, ...]] = (
     "强调研究增量与对照解释的平衡路径",
     "强调高信息增益与关键假设压力测试的路径",
 )
+if len(PLAN_CANDIDATE_FOCUS_HINTS) != PLAN_CANDIDATE_MAX:
+    raise RuntimeError("PLAN_CANDIDATE_FOCUS_HINTS must match PLAN_CANDIDATE_MAX")
 
 # --- Retrieval / context ---
 RAG_RELEVANCE_THRESHOLD: Final = 0.3
@@ -52,6 +54,7 @@ DOCUMENT_CHUNK_OVERLAP_CHARS: Final = 200
 WORKING_CONTEXT_CHARACTER_BUDGET: Final = 12000
 COMPACT_SUMMARY_MAX_CHARS: Final = 2000
 COMPACT_SUMMARY_BUDGET_DENOMINATOR: Final = 4
+EVIDENCE_PANEL_VISIBLE_LIMIT: Final = 12
 
 # --- Text / upload limits ---
 IDEA_TEXT_MAX_LENGTH: Final = 19999

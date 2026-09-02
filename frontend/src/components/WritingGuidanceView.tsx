@@ -1,4 +1,5 @@
 import type { WritingGuidance } from "../api/types";
+import { stripHtml } from "../ui/safeDisplay";
 
 function GuidanceList({ heading, items }: { heading: string; items: string[] }) {
   if (items.length === 0) {
@@ -9,7 +10,7 @@ function GuidanceList({ heading, items }: { heading: string; items: string[] }) 
       <h2>{heading}</h2>
       <ul>
         {items.map((item) => (
-          <li key={item}>{item}</li>
+          <li key={item}>{stripHtml(item)}</li>
         ))}
       </ul>
     </>

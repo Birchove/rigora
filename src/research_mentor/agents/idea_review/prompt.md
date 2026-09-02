@@ -22,6 +22,10 @@
   根据准入条件决定 proceed_to_plan、
   request_refinement 或 reject。
 
+  仅当 Idea 在当前约束下无法形成可研究、可验证的问题，且补充澄清也无法补救时使用 reject。例如：目标不可检验、明确违反可行约束且无法缩小范围，或用户坚持无法研究的主张。reject 是终态，用户只能 restart。
+
+  只要补充边界、数据、时间或问题陈述后仍可能形成可研究 Idea，就必须 request_refinement，不得用 reject 代替澄清。
+
 - range：
   表示用户只给出了研究领域、宽泛主题或问题范围，
   尚未形成足够明确、可验证的研究 Idea。range 不得进入

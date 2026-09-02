@@ -1,9 +1,12 @@
 import { useState } from "react";
 
 import type { VisibleEvidenceItem } from "../api/types";
+import { safeHttpUrl, stripHtml } from "../ui/safeDisplay";
 import { DocumentPanel } from "./DocumentPanel";
 
 type EvidenceFilter = "all" | "adopted" | "discarded";
+
+const EVIDENCE_PANEL_VISIBLE_LIMIT = 12;
 
 export function EvidencePanel({
   evidence = [],
@@ -21,7 +24,7 @@ export function EvidencePanel({
     if (filter === "adopted") return item.selected;
     if (filter === "discarded") return !item.selected;
     return true;
-  });
+  }).slice(0, EVIDENCE_PANEL_VISIBLE_LIMIT);
   return (
     <aside className="evidence-panel" aria-label="证据">
       <div className="panel-heading">
@@ -40,17 +43,25 @@ export function EvidencePanel({
         </div>
       ) : (
         <ul className="evidence-list">
-          {visible.map((item) => (
-            <li key={`${item.title}:${item.url ?? ""}`}>
-              {item.url ? (
-                <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
-              ) : (
-                <strong>{item.title}</strong>
-              )}
-              <small>{item.source_type}{item.selected ? " · 采用" : " · 未采用"}</small>
-              <p>{item.summary ?? item.support ?? ""}</p>
-            </li>
-          ))}
+          {visible.map((item) => {
+            const title = stripHtml(item.title);
+            const href = safeHttpUrl(item.url);
+            const detail = stripHtml(item.summary ?? item.support ?? "");
+            return (
+              <li
+                key={`${item.title}:${item.url ?? ""}`}
+                className={item.selected ? "evidence-adopted" : "evidence-retrieved"}
+              >
+                {href ? (
+                  <a href={href} target="_blank" rel="noopener noreferrer">{title}</a>
+                ) : (
+                  <strong>{title}</strong>
+                )}
+                <small>{item.source_type}{item.selected ? " · 采用" : " · 未采用"}</small>
+                {detail ? <p>{detail}</p> : null}
+              </li>
+            );
+          })}
         </ul>
       )}
       <DocumentPanel

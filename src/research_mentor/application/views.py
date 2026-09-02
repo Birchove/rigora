@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from research_mentor.application.allowed_commands import allowed_commands
 from research_mentor.domain.completion import ValidationCandidate, WritingGuidance
-from research_mentor.domain.evidence import EvidenceRef, LiteratureRecord
+from research_mentor.domain.evidence import LiteratureRecord
 from research_mentor.domain.experiments import ExperimentTaskContext, ValidationTask
 from research_mentor.domain.jobs import AgentRun
 from research_mentor.domain.projects import ResearchProject
@@ -332,59 +332,102 @@ def _revision_reason(session: ResearchSession) -> str | None:
     return None
 
 
+def _evidence_key(*, title: str, url: str | None, record_id: str | None = None) -> str:
+    return url or record_id or title
+
+
+def _adopted_evidence_keys(session: ResearchSession) -> set[str]:
+    keys: set[str] = set()
+    review = session.idea_review
+    if review is not None:
+        for evidence in review.evidence:
+            keys.add(_evidence_key(title=evidence.title, url=evidence.url))
+            if evidence.source_id:
+                keys.add(evidence.source_id)
+    check = session.latest_check
+    if check is not None:
+        for evidence in check.assessment.evidence:
+            keys.add(_evidence_key(title=evidence.title, url=evidence.url))
+            if evidence.source_id:
+                keys.add(evidence.source_id)
+    for candidate in session.plan_candidates:
+        for round_item in candidate.check_history:
+            for evidence in round_item.output.assessment.evidence:
+                keys.add(_evidence_key(title=evidence.title, url=evidence.url))
+                if evidence.source_id:
+                    keys.add(evidence.source_id)
+    return keys
+
+
 def _visible_evidence(
     session: ResearchSession, literature: list[LiteratureRecord]
 ) -> list[VisibleEvidenceItem]:
+    adopted = _adopted_evidence_keys(session)
     items: list[VisibleEvidenceItem] = []
     seen: set[str] = set()
-    for record in literature:
-        key = record.url or record.record_id or record.title
+
+    def append_item(
+        *,
+        title: str,
+        source_type: str,
+        url: str | None,
+        summary: str | None = None,
+        support: str | None = None,
+        record_id: str | None = None,
+    ) -> None:
+        key = _evidence_key(title=title, url=url, record_id=record_id)
         if key in seen:
-            continue
+            return
         seen.add(key)
+        selected = key in adopted or title in adopted or (record_id in adopted if record_id else False)
         items.append(
             VisibleEvidenceItem(
-                title=record.title,
-                source_type=record.source_type,
-                url=record.url,
-                summary=record.summary,
-                selected=True,
+                title=title,
+                source_type=source_type,
+                url=url,
+                summary=summary,
+                support=support,
+                selected=selected,
             )
+        )
+
+    for record in literature:
+        append_item(
+            title=record.title,
+            source_type=record.source_type,
+            url=record.url,
+            summary=record.summary,
+            record_id=record.record_id,
         )
     review = session.idea_review
-    if review is None:
-        return items
-    for record in review.literature_searches:
-        key = record.url or record.record_id or record.title
-        if key in seen:
-            continue
-        seen.add(key)
-        items.append(
-            VisibleEvidenceItem(
+    if review is not None:
+        for record in review.literature_searches:
+            append_item(
                 title=record.title,
                 source_type=record.source_type,
                 url=record.url,
                 summary=record.summary,
-                selected=True,
+                record_id=record.record_id,
             )
-        )
-    for evidence in review.evidence:
-        key = evidence.url or evidence.title
-        if key in seen:
-            continue
-        seen.add(key)
-        items.append(_evidence_item(evidence))
+        for evidence in review.evidence:
+            append_item(
+                title=evidence.title,
+                source_type=evidence.source_type,
+                url=evidence.url,
+                support=evidence.support,
+                record_id=evidence.source_id,
+            )
+    check = session.latest_check
+    if check is not None:
+        for evidence in check.assessment.evidence:
+            append_item(
+                title=evidence.title,
+                source_type=evidence.source_type,
+                url=evidence.url,
+                support=evidence.support,
+                record_id=evidence.source_id,
+            )
     return items
-
-
-def _evidence_item(evidence: EvidenceRef) -> VisibleEvidenceItem:
-    return VisibleEvidenceItem(
-        title=evidence.title,
-        source_type=evidence.source_type,
-        url=evidence.url,
-        support=evidence.support,
-        selected=True,
-    )
 
 
 def _stage_progress(

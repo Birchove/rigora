@@ -235,6 +235,26 @@ class SqlDocumentRepository:
         await self._db.execute(delete(DocumentChunkRow).where(DocumentChunkRow.document_id == document_id))
         self._db.add_all([DocumentChunkRow(**chunk.model_dump(mode="python")) for chunk in chunks])
 
+    async def list_chunks_for_project(self, project_id: str) -> list[DocumentChunk]:
+        rows = (
+            await self._db.scalars(
+                select(DocumentChunkRow)
+                .join(DocumentRow, DocumentRow.document_id == DocumentChunkRow.document_id)
+                .where(DocumentRow.project_id == project_id)
+                .order_by(DocumentChunkRow.document_id, DocumentChunkRow.ordinal)
+            )
+        ).all()
+        return [
+            DocumentChunk(
+                chunk_id=row.chunk_id,
+                document_id=row.document_id,
+                ordinal=row.ordinal,
+                heading_path=list(row.heading_path or []),
+                markdown=row.markdown,
+            )
+            for row in rows
+        ]
+
     async def delete(self, document_id: str, *, project_id: str) -> bool:
         from sqlalchemy import delete
         result = await self._db.execute(delete(DocumentRow).where(

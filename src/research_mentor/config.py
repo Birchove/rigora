@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -17,6 +18,7 @@ from research_mentor.hyperparameters import (
     DOCUMENT_CHUNK_MAX_CHARS,
     DOCUMENT_CHUNK_OVERLAP_CHARS,
     MAX_CHECK_ROUNDS,
+    PLAN_CANDIDATE_MAX,
     RAG_RELEVANCE_THRESHOLD,
     RUN_LEASE_RENEWAL_SECONDS,
     RUN_LEASE_SECONDS,
@@ -76,6 +78,7 @@ VENDOR_DEFAULT_MODELS: dict[VendorName, str] = {
 
 _PLACEHOLDER_KEYS = frozenset({"xxxx", "XXXX"})
 _ENV_FILE = None if os.environ.get("PYTEST_VERSION") else ".env"
+logger = logging.getLogger("research_mentor.config")
 
 
 class Settings(BaseSettings):
@@ -257,8 +260,13 @@ class Settings(BaseSettings):
         if not groups:
             return ()
         n = len(groups)
+        if n < 2:
+            logger.warning(
+                "plan/check 可用 slot 不足 2 个（当前 %s），high 模式会退化为同模型自审",
+                n,
+            )
         pairs: list[tuple[str, str]] = []
-        for index in range(3):
+        for index in range(PLAN_CANDIDATE_MAX):
             plan_slot = groups[index % n]
             check_slot = groups[(index + 1) % n] if n > 1 else groups[0]
             pairs.append((self.slot_model(plan_slot), self.slot_model(check_slot)))

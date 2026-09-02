@@ -164,7 +164,7 @@ function draftFor(
         candidate_id: firstCandidateId(project, ["active"]),
       };
     case "run_complete":
-      return { type: "run_complete" };
+      return { type: "run_complete", completion_status: true };
     case "resume_working":
       return { type: "resume_working" };
     case "finish_working":

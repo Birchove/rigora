@@ -226,6 +226,16 @@ def test_working_finish_is_not_an_agent_route() -> None:
         working_output_factory("success")
 
 
+def test_unknown_working_action_lists_allowed_actions() -> None:
+    output = WorkingQAOutput.model_construct(
+        action="success",
+        reason="处理理由",
+        reply="处理回复",
+    )
+    with pytest.raises(InvariantViolationError, match="report_plan_issue"):
+        route_working_output(output)
+
+
 @pytest.mark.parametrize("action", ["answer", "clarify", "decline"])
 def test_non_success_working_actions_stay_working(action: str) -> None:
     assert route_working_output(working_output_factory(action)) is SessionPhase.WORKING

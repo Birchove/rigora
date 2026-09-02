@@ -190,7 +190,8 @@ ResearchPlan、用户约束和文献证据只用于判断 KeyInsight 是否合�
 
 # Final score
 
-使用以下公式：
+不要计算或输出 final_score，也不要输出 check_decision。
+五维分数只用于诊断；权威加权总分由 Harness 按下式计算，保留一位小数：
 
 final_score =
     0.20 × research_fit
@@ -199,12 +200,10 @@ final_score =
   + 0.20 × testability_feasibility
   + 0.15 × evidence_support
 
-final_score 保留一位小数。
-
 
 # Decision policy
 
-模型不输出权威 check_decision。
+模型不得输出 check_decision。
 
 Harness 将加权总分保留一位小数，并按以下唯一条件判定：
 
@@ -225,6 +224,7 @@ Harness 将加权总分保留一位小数，并按以下唯一条件判定：
 # Output
 
 只输出一个 JSON 对象，不得输出 Markdown、解释前言或额外文字。
+输出不得包含 final_score 或 check_decision 字段。
 
 {
   "diagnostics": {

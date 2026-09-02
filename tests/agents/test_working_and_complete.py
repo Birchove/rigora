@@ -207,7 +207,7 @@ def test_working_prompt_matches_fixed_sha256_oracle() -> None:
     )
 
     assert hashlib.sha256(prompt.read_bytes()).hexdigest() == (
-        "b1333fd11813e254ba31ec169c16f252d0e4d95b86510d27ef09b59da4a1e908"
+        "131a332b892d13550afa9a3f8373b3ff00c9e0b007a2590410eae8fcd9d21341"
     )
 
 
@@ -222,7 +222,7 @@ def test_complete_prompt_matches_fixed_sha256_oracle() -> None:
     )
 
     assert hashlib.sha256(prompt.read_bytes()).hexdigest() == (
-        "7d7459a10e650b8b58006462984d90b0e96153abda32cd728101040eeab0ea89"
+        "7324359059df3029ce81984042f31fb86e823552de95c0f34ff32035c10f1ba1"
     )
 
 

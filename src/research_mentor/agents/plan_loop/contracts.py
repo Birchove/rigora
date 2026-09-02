@@ -1,6 +1,6 @@
 """Contracts for the Plan Loop Agent."""
 
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -53,6 +53,34 @@ class PlanRevisionContext(BaseModel):
     user_feedback: str | None = None
 
 
+PlanLoopMode = Literal["initial", "check_revision", "user_revision", "result_revision"]
+
+
+def resolve_plan_loop_mode(
+    *,
+    previous_plan: ResearchPlan | None,
+    previous_insight_check: KeyInsightCheckOutput | None,
+    user_feedback: UserPlanFeedback | None,
+    revision_context: PlanRevisionContext | None,
+) -> PlanLoopMode:
+    if revision_context is not None:
+        return "result_revision"
+    presence = (
+        previous_plan is not None,
+        previous_insight_check is not None,
+        user_feedback is not None,
+    )
+    mapping: dict[tuple[bool, bool, bool], PlanLoopMode] = {
+        (False, False, False): "initial",
+        (True, True, False): "check_revision",
+        (True, False, True): "user_revision",
+    }
+    mode = mapping.get(presence)
+    if mode is None:
+        raise ValueError("PlanLoopInput 的修订输入组合无效")
+    return mode
+
+
 class PlanLoopInput(BaseModel):
     idea: InitialInput
     sys_input: PlanLoopSysInput
@@ -74,13 +102,15 @@ class PlanLoopInput(BaseModel):
             if self.user_feedback is not None and self.previous_plan is None:
                 raise ValueError("user feedback revision requires previous_plan")
             return self
-        presence = (
-            self.previous_plan is not None,
-            self.previous_insight_check is not None,
-            self.user_feedback is not None,
-        )
-        if presence not in ((False, False, False), (True, True, False), (True, False, True)):
-            raise ValueError("PlanLoopInput 的修订输入组合无效")
+        try:
+            resolve_plan_loop_mode(
+                previous_plan=self.previous_plan,
+                previous_insight_check=self.previous_insight_check,
+                user_feedback=self.user_feedback,
+                revision_context=self.revision_context,
+            )
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
         return self
 
 

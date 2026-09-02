@@ -14,7 +14,11 @@ from research_mentor.agents.key_insight_check.prompting import (
     build_key_insight_check_invocation,
 )
 from research_mentor.agents.key_insight_check.runner import KeyInsightCheckRunner
-from research_mentor.agents.plan_loop.contracts import PlanLoopInput, PlanLoopOutput
+from research_mentor.agents.plan_loop.contracts import (
+    PlanLoopInput,
+    PlanLoopOutput,
+    resolve_plan_loop_mode,
+)
 from research_mentor.agents.plan_loop.prompting import build_plan_loop_invocation
 from research_mentor.agents.plan_loop.runner import PlanLoopRunner
 from research_mentor.domain.checks import KeyInsightAssessment, KeyInsightCheckOutput
@@ -83,6 +87,38 @@ def test_plan_loop_round_fields_are_explicit(
     assert value.check_round == 0
     assert value.max_check_rounds == 5
     assert "loop_round" not in value.__class__.model_fields
+
+
+def test_resolve_plan_loop_mode_matches_input_validator(
+    research_plan, check_output, user_feedback
+) -> None:
+    assert (
+        resolve_plan_loop_mode(
+            previous_plan=None,
+            previous_insight_check=None,
+            user_feedback=None,
+            revision_context=None,
+        )
+        == "initial"
+    )
+    assert (
+        resolve_plan_loop_mode(
+            previous_plan=research_plan,
+            previous_insight_check=check_output,
+            user_feedback=None,
+            revision_context=None,
+        )
+        == "check_revision"
+    )
+    assert (
+        resolve_plan_loop_mode(
+            previous_plan=research_plan,
+            previous_insight_check=None,
+            user_feedback=user_feedback,
+            revision_context=None,
+        )
+        == "user_revision"
+    )
 
 
 @pytest.mark.parametrize(

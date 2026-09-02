@@ -1,5 +1,6 @@
 from dataclasses import FrozenInstanceError
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
@@ -213,6 +214,24 @@ def test_settings_allows_shared_plan_and_check_across_vendors(monkeypatch):
         ("qwen-plan", "glm-plan"),
         ("glm-plan", "gpt-plan"),
     )
+
+
+def test_plan_check_pairs_warns_when_only_one_slot_would_self_review(monkeypatch):
+    monkeypatch.setenv("RESEARCH_MENTOR_CHATGPT_API_KEY", "openai-test-key")
+    monkeypatch.setenv("RESEARCH_MENTOR_CHATGPT_MODEL", "gpt-plan")
+    monkeypatch.setenv("RESEARCH_MENTOR_CHATGPT_AGENTS", "[key_insight_check, plan_loop]")
+
+    settings = Settings()
+    with patch("research_mentor.config.logger.warning") as warning:
+        pairs = settings.plan_check_pairs()
+
+    assert pairs == (
+        ("gpt-plan", "gpt-plan"),
+        ("gpt-plan", "gpt-plan"),
+        ("gpt-plan", "gpt-plan"),
+    )
+    warning.assert_called_once()
+    assert "同模型自审" in warning.call_args.args[0]
 
 
 def test_settings_chatgpt_2_inherits_key_for_second_model(monkeypatch):

@@ -20,9 +20,15 @@ from research_mentor.application.commands import (
     FinishWorkingCommand,
     SelectValidationsCommand,
 )
+from research_mentor.adapters.embeddings.lexical import LexicalRanker
+from research_mentor.application.context_service import (
+    WorkingContextBuilder,
+    WorkingContextSource,
+)
 from research_mentor.application.handlers import CancelRunHandler, RestartResearchHandler
 from research_mentor.application.orchestration import apply_orchestrator
 from research_mentor.config import Settings
+from research_mentor.domain.evidence import EvidenceRef
 from research_mentor.domain.jobs import AgentRun
 from research_mentor.domain.projects import ResearchProject
 from research_mentor.domain.research import InitialInput
@@ -404,20 +410,24 @@ class AgentRunHandlers:
     ) -> None:
         del repair_errors
         question = str(snapshot.get("question") or "")
+        context = await self._build_working_context(run.project_id, question)
         await self._run(
             run,
             lambda orchestrator, session_id: orchestrator.run_working_qa(
-                session_id, question
+                session_id, question, working_context=context
             ),
         )
 
     async def complete(
         self, run: AgentRun, snapshot: dict[str, Any], repair_errors: list[dict[str, Any]] | None
     ) -> None:
-        del snapshot, repair_errors
+        del repair_errors
+        completion_status = bool(snapshot.get("completion_status", True))
         await self._run(
             run,
-            lambda orchestrator, session_id: orchestrator.run_complete(session_id, True),
+            lambda orchestrator, session_id: orchestrator.run_complete(
+                session_id, completion_status
+            ),
         )
 
     async def _idea_for_run(self, run: AgentRun, snapshot: dict[str, Any]) -> InitialInput:
@@ -434,6 +444,54 @@ class AgentRunHandlers:
                 update={"original_idea": str(snapshot.get("refinement") or "")}
             )
 
+    async def _build_working_context(self, project_id: str, question: str):
+        async with self._uow_factory() as uow:
+            project = await uow.projects.get(project_id)
+            if project is None:
+                return None
+            session = await uow.sessions.get(project.session_id)
+            if (
+                session is None
+                or session.research_context is None
+                or session.current_task is None
+            ):
+                return None
+            chunks = []
+            list_chunks = getattr(uow.documents, "list_chunks_for_project", None)
+            if callable(list_chunks):
+                chunks = await list_chunks(project_id)
+            records = await uow.literature.list_for_project(project_id)
+        observations = list(session.current_task.experiment_info.observations)
+        actual = session.current_task.experiment_info.actual_result
+        facts = [item for item in observations if item.strip()]
+        if actual and actual.strip():
+            facts.append(actual)
+        evidence_refs = [
+            EvidenceRef(
+                source_id=record.record_id,
+                title=record.title,
+                authors=list(record.authors),
+                year=record.year,
+                source_type=record.source_type,
+                url=record.url,
+                doi=record.doi,
+                support=record.relevance or record.summary,
+            )
+            for record in records
+        ]
+        builder = WorkingContextBuilder(self._settings, LexicalRanker())
+        return await builder.build(
+            WorkingContextSource(
+                research_context=session.research_context,
+                current_task=session.current_task,
+                document_chunks=chunks,
+                evidence_refs=evidence_refs,
+                facts=facts,
+                current_stage=session.phase.value,
+            ),
+            question,
+        )
+
     async def _persist_literature(
         self, project_id: str, records: list[Any]
     ) -> None:
@@ -443,7 +501,7 @@ class AgentRunHandlers:
             for record in records:
                 try:
                     await uow.literature.add_for_project(
-                        project_id, record, selected=True
+                        project_id, record, selected=False
                     )
                 except ValueError:
                     continue

@@ -72,7 +72,9 @@ def route_working_output(
         return SessionPhase.AWAITING_PLAN_REVISION_DECISION
     if output.action in {"answer", "clarify", "decline"}:
         return SessionPhase.WORKING
-    raise InvariantViolationError(f"未知的 working action: {output.action}")
+    raise InvariantViolationError(
+        f"非法 working action {output.action!r}；允许: answer, clarify, decline, report_plan_issue"
+    )
 
 
 def route_complete(output: CompleteAgentOutput) -> RoutingDecision:

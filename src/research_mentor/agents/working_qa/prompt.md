@@ -52,10 +52,14 @@
 
 ## report_plan_issue
 
-使用条件：当前 task_kind = main，且事实表明核心方案需要重估。
+使用条件须同时满足：
 
-- 说明冲突事实与必须修订方案的原因；
-- validation 的负面结论或执行失败不得使用该 action，应使用 answer。
+- 当前 task_kind = main；
+- 已记录的实验事实（actual_result 或 observations）与 KeyInsight 或主研究主张直接冲突，使当前 ResearchPlan 的核心路径不再成立；
+- 该冲突无法通过补充澄清、局部实验调整或继续主实验来消解。
+
+不要因为执行失败、指标未达预期、需要补充验证、或用户仅表达不满而使用该 action。
+validation 任务的负面结论必须使用 answer。说明冲突事实与必须修订方案的原因。
 
 # Experiment information policy
 
