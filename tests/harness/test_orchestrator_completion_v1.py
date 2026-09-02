@@ -129,24 +129,14 @@ def candidate_alias(candidate_id: str, rank: int, original: ValidationCandidate)
     )
 
 
-def propose_success(orchestrator, model):
-    model.enqueue(
-        "working_qa",
-        WorkingQAOutput(
-            action="success",
-            reason="任务可能完成",
-            reply="",
-            updated_experiment_info=ExperimentInfo(
-                current_experiment="主实验", actual_result="恢复率下降"
-            ),
-        ),
-    )
-    orchestrator.run_working_qa("s1", "完成了吗？")
+def propose_finish(orchestrator, model):
+    del model
+    orchestrator.finish_working("s1")
 
 
 def test_success_is_proposal_and_resume_is_deterministic(completion_bundle):
     orchestrator, model, repository = completion_bundle
-    propose_success(orchestrator, model)
+    propose_finish(orchestrator, model)
 
     proposed = repository.get("s1")
     assert proposed.phase is SessionPhase.AWAITING_RESULT_RECORD
@@ -163,7 +153,7 @@ def test_success_is_proposal_and_resume_is_deterministic(completion_bundle):
 
 def test_record_main_result_confirms_task_and_forward_runs_complete(completion_bundle):
     orchestrator, model, repository = completion_bundle
-    propose_success(orchestrator, model)
+    propose_finish(orchestrator, model)
 
     recorded = orchestrator.record_main_result("s1", main_result())
 
@@ -218,7 +208,7 @@ def test_report_plan_issue_is_main_only(completion_bundle):
 
 def test_validation_queue_selects_by_rank_and_preserves_skip_reasons(completion_bundle):
     orchestrator, model, repository = completion_bundle
-    propose_success(orchestrator, model)
+    propose_finish(orchestrator, model)
     orchestrator.record_main_result("s1", main_result())
     output = CompleteAgentOutput(
         mode="validation", plan=None, final_hint="需要验证",
@@ -241,7 +231,7 @@ def test_validation_queue_selects_by_rank_and_preserves_skip_reasons(completion_
 
 def test_existing_pending_validation_precedes_new_complete_candidates(completion_bundle):
     orchestrator, model, repository = completion_bundle
-    propose_success(orchestrator, model)
+    propose_finish(orchestrator, model)
     orchestrator.record_main_result("s1", main_result())
     model.enqueue(
         "complete",
@@ -254,17 +244,7 @@ def test_existing_pending_validation_precedes_new_complete_candidates(completion
     orchestrator.select_validations(
         "s1", ValidationSelection(selected_candidate_ids=["v2", "v1"])
     )
-    model.enqueue(
-        "working_qa",
-        WorkingQAOutput(
-            action="success", reason="验证完成", reply="",
-            updated_experiment_info=ExperimentInfo(
-                current_experiment=candidate("v1", 1).task.name,
-                actual_result="结论稳定",
-            ),
-        ),
-    )
-    orchestrator.run_working_qa("s1", "完成了吗？")
+    orchestrator.finish_working("s1")
     orchestrator.record_validation_result(
         "s1",
         ValidationResult(
@@ -319,7 +299,7 @@ def test_existing_pending_validation_precedes_new_complete_candidates(completion
 
 def test_invalidating_validation_complete_interrupts_pending_queue(completion_bundle):
     orchestrator, model, repository = completion_bundle
-    propose_success(orchestrator, model)
+    propose_finish(orchestrator, model)
     orchestrator.record_main_result("s1", main_result())
     model.enqueue(
         "complete",
@@ -365,7 +345,7 @@ def test_invalidating_validation_complete_interrupts_pending_queue(completion_bu
 
 def test_completed_candidate_is_not_reoffered(completion_bundle):
     orchestrator, model, repository = completion_bundle
-    propose_success(orchestrator, model)
+    propose_finish(orchestrator, model)
     orchestrator.record_main_result("s1", main_result())
     model.enqueue(
         "complete",
@@ -415,7 +395,7 @@ def test_same_validation_task_with_different_ids_is_deduplicated_in_one_batch(
     completion_bundle
 ):
     orchestrator, model, repository = completion_bundle
-    propose_success(orchestrator, model)
+    propose_finish(orchestrator, model)
     orchestrator.record_main_result("s1", main_result())
     original = candidate("v1", 1)
     model.enqueue(
@@ -440,7 +420,7 @@ def test_imported_completed_validation_is_not_reoffered_without_queue_history(
     completion_bundle
 ):
     orchestrator, model, repository = completion_bundle
-    propose_success(orchestrator, model)
+    propose_finish(orchestrator, model)
     orchestrator.record_main_result("s1", main_result())
     completed_candidate = candidate("imported-v1", 1)
     completed = ValidationResult(

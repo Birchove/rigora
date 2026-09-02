@@ -1,13 +1,12 @@
 """Runner for the Plan Loop Agent."""
 
-import asyncio
-
 from pydantic import BaseModel
 
 from research_mentor.agents.plan_loop.contracts import PlanLoopInput, PlanLoopOutput
 from research_mentor.agents.plan_loop.prompting import build_plan_loop_invocation
 from research_mentor.hyperparameters import MODEL_REQUEST_TIMEOUT_SECONDS
 from research_mentor.ports.model import ModelRequest, StructuredModelPort
+from research_mentor.runtime_async import run_coro_sync
 
 
 class PlanLoopRunner:
@@ -41,4 +40,4 @@ class PlanLoopRunner:
     def run_sync(
         self, request: PlanLoopInput, *, model_profile: str = "default"
     ) -> PlanLoopOutput:
-        return asyncio.run(self.run(request, model_profile=model_profile))
+        return run_coro_sync(self.run(request, model_profile=model_profile))

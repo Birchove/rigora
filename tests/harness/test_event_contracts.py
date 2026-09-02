@@ -12,7 +12,6 @@ from research_mentor.agents.idea_review.contracts import IdeaReviewOutput
 from research_mentor.agents.idea_review.runner import IdeaReviewRunner
 from research_mentor.agents.key_insight_check.runner import KeyInsightCheckRunner
 from research_mentor.agents.plan_loop.runner import PlanLoopRunner
-from research_mentor.agents.working_qa.contracts import WorkingQAOutput
 from research_mentor.agents.working_qa.runner import WorkingQARunner
 from research_mentor.config import HarnessConfig
 from research_mentor.domain.completion import WritingGuidance
@@ -94,20 +93,6 @@ def _main_task() -> ExperimentTaskContext:
     )
 
 
-def _working_success() -> WorkingQAOutput:
-    return WorkingQAOutput(
-        action="success",
-        reason="主实验已完成。",
-        reply="",
-        updated_experiment_info=ExperimentInfo(
-            current_experiment="比较状态压缩与基线",
-            expected_result="压缩组更稳定",
-            actual_result="压缩组恢复正确率低于基线",
-            observations=["固定切分下重复三次"],
-        ),
-    )
-
-
 def _main_result() -> MainExperimentResult:
     return MainExperimentResult(
         objective="比较恢复正确率",
@@ -166,19 +151,17 @@ def _reach_completing(orchestrator, model, initial_input, plan_output, assessmen
     orchestrator.decide_plan("s1", decision)
     task = _main_task()
     orchestrator.start_working("s1", task)
-    working = _working_success()
-    model.enqueue("working_qa", working)
-    orchestrator.run_working_qa("s1", "请确认实验是否完成")
+    orchestrator.finish_working("s1")
     result = _main_result()
     orchestrator.record_main_result("s1", result)
-    return review, expected_plan, expected_check, decision, task, working, result
+    return review, expected_plan, expected_check, decision, task, result
 
 
 def test_main_accept_flow_emits_all_nine_exact_events(
     initial_input, plan_output, assessment
 ) -> None:
     orchestrator, model, repository = _bundle()
-    review, expected_plan, expected_check, decision, task, working, result = _reach_completing(
+    review, expected_plan, expected_check, decision, task, result = _reach_completing(
         orchestrator, model, initial_input, plan_output, assessment
     )
     complete = _complete_output(plan_output.plan)
@@ -193,7 +176,7 @@ def test_main_accept_flow_emits_all_nine_exact_events(
         SessionEventType.KEY_INSIGHT_CHECKED,
         SessionEventType.PLAN_DECIDED,
         SessionEventType.WORKING_STARTED,
-        SessionEventType.WORKING_TURN_COMPLETED,
+        SessionEventType.WORKING_FINISHED,
         SessionEventType.RESULT_RECORDED,
         SessionEventType.COMPLETE_GUIDANCE_GENERATED,
     ]
@@ -215,7 +198,7 @@ def test_main_accept_flow_emits_all_nine_exact_events(
         expected_check.model_dump(mode="json"),
         decision.model_dump(mode="json"),
         task.model_dump(mode="json"),
-        working.model_dump(mode="json"),
+        {"task_id": task.task_id},
         result.model_dump(mode="json"),
         {**complete.model_dump(mode="json"), "completion_status": True},
     ]

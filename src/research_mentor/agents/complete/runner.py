@@ -1,13 +1,12 @@
 """Runner for the Complete Agent."""
 
-import asyncio
-
 from pydantic import BaseModel
 
 from research_mentor.agents.complete.contracts import CompleteAgentInput, CompleteAgentOutput
 from research_mentor.agents.complete.prompting import build_complete_invocation
 from research_mentor.hyperparameters import MODEL_REQUEST_TIMEOUT_SECONDS
 from research_mentor.ports.model import ModelRequest, StructuredModelPort
+from research_mentor.runtime_async import run_coro_sync
 
 
 class CompleteRunner:
@@ -41,4 +40,4 @@ class CompleteRunner:
     def run_sync(
         self, request: CompleteAgentInput, *, model_profile: str = "default"
     ) -> CompleteAgentOutput:
-        return asyncio.run(self.run(request, model_profile=model_profile))
+        return run_coro_sync(self.run(request, model_profile=model_profile))

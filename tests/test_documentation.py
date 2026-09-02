@@ -24,6 +24,7 @@ def test_env_example_has_no_secret_values():
         "RESEARCH_MENTOR_DEEPSEEK_API_KEY=",
         "RESEARCH_MENTOR_CHATGPT_API_KEY=",
         "RESEARCH_MENTOR_GLM_API_KEY=",
+        "RESEARCH_MENTOR_OPENALEX_API_KEY=",
     ):
         assert name in text
     assert "sk-" not in text

@@ -2,7 +2,12 @@
 
 from datetime import datetime, timezone
 
-from research_mentor.domain.evidence import LiteratureRecord
+from research_mentor.domain.evidence import LiteratureRecord, RetrievalDiagnostics
+
+import logging
+
+
+logger = logging.getLogger("research_mentor.runs")
 
 
 class DemoRetrievalAdapter:
@@ -40,3 +45,32 @@ class DemoRetrievalAdapter:
             ),
         ]
         return [item.model_copy(deep=True) for item in records[:limit]]
+
+    async def search_many(
+        self,
+        queries: list[str],
+        *,
+        limit: int = 10,
+    ) -> tuple[list[LiteratureRecord], list[RetrievalDiagnostics]]:
+        records: list[LiteratureRecord] = []
+        diagnostics: list[RetrievalDiagnostics] = []
+        seen: set[str] = set()
+        for query in queries:
+            logger.info("demo literature search query=%r (not OpenAlex)", query)
+            found = await self.search(query, limit=limit)
+            diagnostics.append(
+                RetrievalDiagnostics(
+                    query=query,
+                    provider="demo",
+                    candidate_count=len(found),
+                    selected_count=len(found),
+                    status="ok" if found else "empty",
+                )
+            )
+            for record in found:
+                key = record.record_id or record.title
+                if key in seen:
+                    continue
+                seen.add(key)
+                records.append(record.model_copy(deep=True, update={"query_id": query}))
+        return records, diagnostics

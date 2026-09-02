@@ -7,7 +7,7 @@
 | `idea_review_cases.json` | ≥20 条 CS 标注，覆盖 opinion/range/forward、reject/refinement、四种 forward stage、证据不足、prompt injection、用户错误自称 type |
 | `plan_loop_cases.json` | low/mid/high 的 1/2/3 路径、candidate ID 唯一性、跨路径隔离、差异 profile、单选 gate、exhausted override、专家 rubric、prompt isolation |
 | `key_insight_check_cases.json` | 明确通过/退回、单项低于下界不通过、6.0 通过边界、5.9 失败边界；重复采样评五维稳定性 |
-| `working_qa_cases.json` | success 未确认不推进、主实验 plan issue、validation `completed+contradicts` / `failed+neutral`、低分不得硬拒 |
+| `working_qa_cases.json` | 普通问答保持 Working、主实验 plan issue、validation `completed+contradicts` / `failed+neutral`、低分不得硬拒 |
 | `complete_cases.json` | validation relevance、duplicate candidate ID、plan revision、WritingGuidance |
 | `retrieval_relevance_cases.json` | ≥20 条人工 relevance 标注，校准 lexical ranker 阈值 0.3；低分不得改回硬拒 |
 | `citation_cases.json` | 可解析率与 DOI/URL/provider-ID duplicate rate |

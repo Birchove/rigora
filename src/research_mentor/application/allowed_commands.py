@@ -13,7 +13,7 @@ _PHASE_COMMANDS: dict[SessionPhase, tuple[str, ...]] = {
     SessionPhase.CHECKING_KEY_INSIGHT: ("run_check", *_CONTROLS),
     SessionPhase.AWAITING_PLAN_DECISION: ("decide_plan", *_CONTROLS),
     SessionPhase.AWAITING_WORKING_CONTEXT: _CONTROLS,
-    SessionPhase.WORKING: ("send_working_message", *_CONTROLS),
+    SessionPhase.WORKING: ("send_working_message", "finish_working", *_CONTROLS),
     SessionPhase.COMPLETING: ("run_complete", *_CONTROLS),
     SessionPhase.AWAITING_VALIDATION_SELECTION: (
         "select_validations",

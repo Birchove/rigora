@@ -76,6 +76,8 @@ def test_phase_exposes_its_harness_entrypoint(
     assert commands[0] == expected_primary
     assert "restart_research" in commands
     assert "archive_project" in commands
+    if phase is SessionPhase.WORKING:
+        assert "finish_working" in commands
 
 
 def test_illegal_phase_is_rejected_by_server_authority() -> None:

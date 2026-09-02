@@ -15,6 +15,11 @@ from research_mentor.hyperparameters import (
     OPENALEX_PER_PAGE_CAP,
 )
 
+import logging
+
+
+logger = logging.getLogger("research_mentor.runs")
+
 
 OPENALEX_URL = "https://api.openalex.org/works"
 SELECT_FIELDS = (
@@ -30,12 +35,14 @@ class OpenAlexRetriever:
         client: httpx.AsyncClient,
         *,
         mailto: str | None = None,
+        api_key: str | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
         max_attempts: int = OPENALEX_MAX_ATTEMPTS,
     ) -> None:
         self._client = client
         self._mailto = mailto
+        self._api_key = api_key
         self._sleep = sleep
         self._now = now
         self._max_attempts = max_attempts
@@ -60,7 +67,10 @@ class OpenAlexRetriever:
         }
         if self._mailto:
             params["mailto"] = self._mailto
+        if self._api_key:
+            params["api_key"] = self._api_key
 
+        logger.info("openalex search start query=%r keyed=%s", query, bool(self._api_key))
         response = await self._request(query, params)
         retrieved_at = self._now()
         try:
@@ -84,6 +94,7 @@ class OpenAlexRetriever:
             ) from exc
         status = "ok" if records else "empty"
         self.last_diagnostics = self._diagnostics(query, records, status=status)
+        logger.info("openalex search done query=%r count=%s status=%s", query, len(records), status)
         return records
 
     async def search_many(
@@ -108,9 +119,14 @@ class OpenAlexRetriever:
         query: str,
         params: dict[str, str | int],
     ) -> httpx.Response:
+        headers = (
+            {"Authorization": f"Bearer {self._api_key}"} if self._api_key else None
+        )
         for attempt in range(self._max_attempts):
             try:
-                response = await self._client.get(OPENALEX_URL, params=params)
+                response = await self._client.get(
+                    OPENALEX_URL, params=params, headers=headers
+                )
             except httpx.TransportError as exc:
                 self._set_unavailable(query, "transport_error")
                 raise LiteratureSearchUnavailable("OpenAlex request failed") from exc

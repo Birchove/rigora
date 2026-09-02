@@ -271,6 +271,107 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
+}
+
+.structured-form,
+.structured-panel,
+.writing-guidance {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1.25rem;
+}
+
+.structured-field {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--ink);
+  font-size: 0.8rem;
+}
+
+.structured-field input,
+.structured-field textarea,
+.structured-field select {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+.structured-field textarea {
+  min-height: 4.5rem;
+  resize: vertical;
+}
+
+.structured-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.structured-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.structured-actions button,
+.structured-form button,
+.structured-panel button,
+.validation-candidates + .structured-check + button,
+.phase-card > button {
+  min-height: 2.4rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--panel);
+  font-size: 0.75rem;
+}
+
+.structured-actions .secondary-action,
+.allowed-actions .secondary-action {
+  border-color: var(--mentor-orange);
+  background: transparent;
+  color: var(--mentor-orange);
+}
+
+.structured-fieldset {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 0.8rem;
+}
+
+.override-details {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.plan-mode-row {
+  margin-top: 1rem;
+}
+
+.validation-candidates {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.validation-candidates label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.writing-guidance h2 {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
 }
 
 .evidence-panel {
@@ -317,12 +418,47 @@
   font-size: 2rem;
 }
 
-.evidence-empty p {
-  margin: 0;
+.evidence-list {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.evidence-list li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.evidence-list a,
+.evidence-list strong {
+  display: block;
+  font-size: 0.8rem;
+}
+
+.evidence-list small,
+.evidence-list p {
   color: var(--slate);
-  font-family: var(--font-reading);
-  font-size: 0.78rem;
-  line-height: 1.7;
+  font-size: 0.72rem;
+}
+
+.evidence-list p {
+  margin: 0.35rem 0 0;
+  line-height: 1.6;
+}
+
+.run-trace-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.run-trace-list span {
+  color: var(--mentor-orange);
+  font-family: var(--font-data);
+  font-size: 0.65rem;
+}
+
+.run-status i[data-running="true"] {
+  background: var(--mentor-orange);
 }
 
 .document-panel {
@@ -393,6 +529,16 @@
   color: var(--slate);
   font-family: var(--font-data);
   font-size: 0.6rem;
+}
+
+.command-error {
+  margin: 0.4rem 0 0;
+  color: var(--mentor-orange);
+  font-size: 0.75rem;
+}
+
+.command-error strong {
+  margin-right: 0.4rem;
 }
 
 .allowed-actions {

@@ -69,6 +69,10 @@ class ResumeWorkingCommand(CommandBase):
     type: Literal["resume_working"] = "resume_working"
 
 
+class FinishWorkingCommand(CommandBase):
+    type: Literal["finish_working"] = "finish_working"
+
+
 class RecordMainResultCommand(CommandBase):
     type: Literal["record_main_result"] = "record_main_result"
     result: MainExperimentResult
@@ -117,6 +121,7 @@ Command: TypeAlias = Annotated[
     | DecidePlanCommand
     | SendWorkingMessageCommand
     | ResumeWorkingCommand
+    | FinishWorkingCommand
     | RecordMainResultCommand
     | RecordValidationResultCommand
     | RunCompleteCommand

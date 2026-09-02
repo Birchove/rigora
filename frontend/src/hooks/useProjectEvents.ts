@@ -29,13 +29,17 @@ function initialSequence(source: string | ProjectView): number {
   return typeof source === "string" ? 0 : (source.last_event_sequence ?? 0);
 }
 
-function isPhaseChange(type: string): boolean {
+function shouldRefresh(type: string): boolean {
   return (
     type === "phase.changed"
     || type === "session.phase_changed"
     || type === "agent.stage"
+    || type === "run.started"
     || type === "run.completed"
     || type === "run.failed"
+    || type === "retrieval.started"
+    || type === "retrieval.results"
+    || type === "evidence.added"
   );
 }
 
@@ -61,7 +65,7 @@ export function useProjectEvents(
       lastApplied = sequence;
       retryIndex = 0;
       api.applyEvent(event);
-      if (isPhaseChange(event.type)) {
+      if (shouldRefresh(event.type)) {
         void api.getProject(projectId);
       }
       connect();

@@ -92,6 +92,7 @@ async def test_production_handlers_cover_commands_and_agents(tmp_path):
             "decide_plan",
             "send_working_message",
             "resume_working",
+            "finish_working",
             "record_main_result",
             "record_validation_result",
             "run_complete",
@@ -136,6 +137,9 @@ async def test_submit_idea_through_worker_reaches_working(tmp_path):
         after_idea = await views.get(project.project_id)
         assert after_idea.phase is SessionPhase.PLANNING
         assert after_idea.active_run is None
+        assert after_idea.visible_evidence
+        assert after_idea.stage_progress is not None
+        assert "等待生成研究方案" in after_idea.stage_progress.headline
 
         plan = await container.command_bus.dispatch(
             RunPlanCommand(

@@ -1,19 +1,27 @@
 import { useState } from "react";
 
+import type { VisibleEvidenceItem } from "../api/types";
 import { DocumentPanel } from "./DocumentPanel";
 
 type EvidenceFilter = "all" | "adopted" | "discarded";
 
 export function EvidencePanel({
+  evidence = [],
   transferStatus = null,
   parseStatus = null,
   onUpload,
 }: {
+  evidence?: VisibleEvidenceItem[];
   transferStatus?: string | null;
   parseStatus?: string | null;
   onUpload?: (file: File) => Promise<void>;
 }) {
   const [filter, setFilter] = useState<EvidenceFilter>("all");
+  const visible = evidence.filter((item) => {
+    if (filter === "adopted") return item.selected;
+    if (filter === "discarded") return !item.selected;
+    return true;
+  });
   return (
     <aside className="evidence-panel" aria-label="证据">
       <div className="panel-heading">
@@ -25,10 +33,26 @@ export function EvidencePanel({
         <button type="button" aria-pressed={filter === "adopted"} onClick={() => setFilter("adopted")}>本轮采用</button>
         <button type="button" aria-pressed={filter === "discarded"} onClick={() => setFilter("discarded")}>未采用</button>
       </div>
-      <div className="evidence-empty">
-        <span aria-hidden="true">∅</span>
-        <p>当前阶段尚无可展示证据。检索结果到达后会在这里区分“搜到”与“实际采用”。</p>
-      </div>
+      {visible.length === 0 ? (
+        <div className="evidence-empty">
+          <span aria-hidden="true">∅</span>
+          <p>当前阶段尚无可展示证据。检索结果到达后会在这里区分“搜到”与“实际采用”。</p>
+        </div>
+      ) : (
+        <ul className="evidence-list">
+          {visible.map((item) => (
+            <li key={`${item.title}:${item.url ?? ""}`}>
+              {item.url ? (
+                <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
+              ) : (
+                <strong>{item.title}</strong>
+              )}
+              <small>{item.source_type}{item.selected ? " · 采用" : " · 未采用"}</small>
+              <p>{item.summary ?? item.support ?? ""}</p>
+            </li>
+          ))}
+        </ul>
+      )}
       <DocumentPanel
         transferStatus={transferStatus}
         parseStatus={parseStatus}

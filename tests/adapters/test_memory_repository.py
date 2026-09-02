@@ -104,6 +104,7 @@ def test_session_phase_and_event_type_values_are_exact() -> None:
         "working_started",
         "working_turn_completed",
         "working_resumed",
+        "working_finished",
         "result_recorded",
         "complete_guidance_generated",
         "validations_selected",

@@ -90,6 +90,33 @@ async def test_create_project_and_fetch_view(monkeypatch, tmp_path):
             "last_event_sequence": 1,
             "active_run": None,
             "validation_candidates": [],
+            "visible_evidence": [],
+            "stage_progress": {
+                "headline": "等待提交研究想法",
+                "detail": None,
+                "check_round": 0,
+                "max_check_rounds": 5,
+                "candidate_count": 0,
+                "idea_type": None,
+                "idea_action": None,
+                "idea_reason": None,
+                "normalized_idea": None,
+                "plan_question": None,
+                "key_insight_title": None,
+                "last_check_score": None,
+                "last_check_passed": None,
+            },
+            "recent_activity": [
+                {
+                    "sequence": 1,
+                    "type": "session.phase_changed",
+                    "summary": "session.phase_changed phase_after=awaiting_idea",
+                }
+            ],
+            "plan_candidates": [],
+            "current_task": None,
+            "writing_guidance": None,
+            "revision_reason": None,
         }
 
         fetched = await client.get(

@@ -35,4 +35,9 @@ def test_install_runtime_logging_is_idempotent() -> None:
     install_runtime_logging()
     install_runtime_logging()
     access = logging.getLogger("uvicorn.access")
+    package = logging.getLogger("research_mentor")
     assert sum(isinstance(item, DropPollingAccessFilter) for item in access.filters) == 1
+    assert (
+        sum(getattr(item, "research_mentor_runtime", False) for item in package.handlers)
+        == 1
+    )

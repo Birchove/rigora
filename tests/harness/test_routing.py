@@ -3,6 +3,7 @@ import inspect
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from research_mentor.agents.idea_review.contracts import IdeaReviewOutput
 from research_mentor.agents.working_qa.contracts import WorkingQAOutput
@@ -105,16 +106,6 @@ def decision_factory(decision: str) -> UserPlanDecision:
 
 
 def working_output_factory(action: str) -> WorkingQAOutput:
-    if action == "success":
-        return WorkingQAOutput(
-            action=action,
-            reason="实验已完成",
-            reply="",
-            updated_experiment_info=ExperimentInfo(
-                current_experiment="主实验",
-                actual_result="观察结果",
-            ),
-        )
     return WorkingQAOutput(
         action=action,
         reason="处理理由",
@@ -230,11 +221,9 @@ def test_each_plan_decision_has_one_route(decision: str, phase: SessionPhase) ->
     assert route_plan_decision(decision_factory(decision)) is phase
 
 
-def test_working_success_requires_result_record() -> None:
-    assert (
-        route_working_output(working_output_factory("success"))
-        is SessionPhase.AWAITING_RESULT_RECORD
-    )
+def test_working_finish_is_not_an_agent_route() -> None:
+    with pytest.raises(ValidationError):
+        working_output_factory("success")
 
 
 @pytest.mark.parametrize("action", ["answer", "clarify", "decline"])
@@ -248,7 +237,7 @@ def test_non_success_working_actions_stay_working(action: str) -> None:
         idea_output_factory("opinion", "proceed_to_plan"),
         check_output_factory(True),
         decision_factory("override"),
-        working_output_factory("success"),
+        working_output_factory("answer"),
     ],
 )
 def test_routing_does_not_mutate_input_models(output) -> None:

@@ -44,6 +44,43 @@ function asCommandError(caught: unknown): CommandError {
   };
 }
 
+function composerBlankMessage(draft: CommandDraft): string | null {
+  if (draft.type === "submit_idea" && !draft.idea.original_idea.trim()) {
+    return "请先在输入框写下研究想法，再提交。";
+  }
+  if (draft.type === "submit_refinement" && !draft.refinement.trim()) {
+    return "请先填写补充说明，再提交。";
+  }
+  if (draft.type === "send_working_message" && !draft.question.trim()) {
+    return "请先填写要发送的问题，再提交。";
+  }
+  if (draft.type === "restart_research" && !draft.idea.original_idea.trim()) {
+    return "请先写下新的研究想法，再重新开始。";
+  }
+  if (draft.type === "decide_plan") {
+    if (draft.decision.decision === "request_revision" && !draft.decision.user_reason?.trim()) {
+      return "请求修改方案时需要写下理由。";
+    }
+    if (draft.decision.decision === "continue_imperfect" && !draft.decision.user_reason.trim()) {
+      return "不完美继续需要写下理由。";
+    }
+    if (draft.decision.decision === "override") {
+      const insight = draft.decision.overridden_key_insight;
+      if (!insight.title.trim() || !insight.content.trim() || !insight.rationale.trim()) {
+        return "覆盖点睛之笔需要填写标题、内容和理由。";
+      }
+    }
+  }
+  if (
+    draft.type === "decide_plan_revision"
+    && (draft.decision === "continue_with_warning" || draft.decision === "end_project")
+    && !draft.user_reason?.trim()
+  ) {
+    return "该修订决定需要写下理由。";
+  }
+  return null;
+}
+
 export function useCommand(project: ProjectView, api: CommandApi) {
   const pendingType = useRef<Command["type"] | null>(null);
   const pendingId = useRef<string | null>(null);
@@ -52,6 +89,11 @@ export function useCommand(project: ProjectView, api: CommandApi) {
   const [busy, setBusy] = useState(false);
 
   async function submit(draft: CommandDraft): Promise<CommandResponse | undefined> {
+    const blankMessage = composerBlankMessage(draft);
+    if (blankMessage !== null) {
+      setError({ code: "validation_error", message: blankMessage, retryable: false });
+      return undefined;
+    }
     lastDraft.current = draft;
     const commandId =
       pendingType.current === draft.type && pendingId.current

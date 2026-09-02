@@ -23,6 +23,10 @@ from research_mentor.harness.state import (
 )
 from research_mentor.ports.events import OutboxEvent
 from research_mentor.errors import IllegalTransitionError
+import logging
+
+
+logger = logging.getLogger("research_mentor.runs")
 
 
 CommandHandler: TypeAlias = Callable[
@@ -152,6 +156,12 @@ class CancelRunHandler:
             or not await uow.runs.request_cancel(run.run_id)
         ):
             raise IllegalTransitionError("no cancellable run")
+        logger.info(
+            "cancel requested project=%s run=%s status=%s",
+            project.project_id,
+            run.run_id,
+            run.status,
+        )
         return DeterministicCommandResult(
             project_id=project.project_id,
             command_id=command.command_id,

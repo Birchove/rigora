@@ -1,13 +1,12 @@
 """Runner for the Working QA Agent."""
 
-import asyncio
-
 from pydantic import BaseModel
 
 from research_mentor.agents.working_qa.contracts import WorkingQAInput, WorkingQAOutput
 from research_mentor.agents.working_qa.prompting import build_working_qa_invocation
 from research_mentor.hyperparameters import MODEL_REQUEST_TIMEOUT_SECONDS
 from research_mentor.ports.model import ModelRequest, StructuredModelPort
+from research_mentor.runtime_async import run_coro_sync
 
 
 class WorkingQARunner:
@@ -41,4 +40,4 @@ class WorkingQARunner:
     def run_sync(
         self, request: WorkingQAInput, *, model_profile: str = "default"
     ) -> WorkingQAOutput:
-        return asyncio.run(self.run(request, model_profile=model_profile))
+        return run_coro_sync(self.run(request, model_profile=model_profile))

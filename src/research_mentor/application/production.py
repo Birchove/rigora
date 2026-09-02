@@ -1,5 +1,6 @@
 """Production command and durable-run handlers."""
 
+import logging
 from collections.abc import Callable
 from typing import Any
 from uuid import uuid4
@@ -16,6 +17,7 @@ from research_mentor.application.commands import (
     RecordMainResultCommand,
     RecordValidationResultCommand,
     ResumeWorkingCommand,
+    FinishWorkingCommand,
     SelectValidationsCommand,
 )
 from research_mentor.application.handlers import CancelRunHandler, RestartResearchHandler
@@ -24,12 +26,21 @@ from research_mentor.config import Settings
 from research_mentor.domain.jobs import AgentRun
 from research_mentor.domain.projects import ResearchProject
 from research_mentor.domain.research import InitialInput
-from research_mentor.errors import InvariantViolationError
+from research_mentor.errors import InvariantViolationError, LiteratureSearchUnavailable
 from research_mentor.harness.orchestrator import ResearchMentorOrchestrator
 from research_mentor.harness.phase import SessionPhase
+from research_mentor.harness.retrieval_context import (
+    IdeaReviewRetrievalPipeline,
+    IdentityLiteratureRanker,
+    LiteratureBatchRetriever,
+)
 from research_mentor.harness.state import ResearchSession
 from research_mentor.harness.task_factory import TaskFactory
+from research_mentor.hyperparameters import OPENALEX_DEFAULT_LIMIT
 from research_mentor.ports.model import StructuredModelPort
+
+
+logger = logging.getLogger("research_mentor.runs")
 
 
 _AGENT_BY_COMMAND = {
@@ -122,11 +133,22 @@ class DecidePlanHandler(_OrchestratingHandler):
 
         def mutate(orchestrator: ResearchMentorOrchestrator, session_id: str) -> None:
             if isinstance(command.decision, ContinueImperfectPlanDecision):
-                if command.candidate_id is None:
-                    raise InvariantViolationError("continue_imperfect requires candidate_id")
+                current = orchestrator._repository.get(session_id)
+                candidate_id = command.candidate_id
+                if candidate_id is None:
+                    exhausted = [
+                        item
+                        for item in current.plan_candidates
+                        if item.disposition == "exhausted"
+                    ]
+                    if len(exhausted) != 1:
+                        raise InvariantViolationError(
+                            "continue_imperfect requires candidate_id"
+                        )
+                    candidate_id = exhausted[0].candidate_id
                 orchestrator.continue_imperfect_plan(
                     session_id,
-                    command.candidate_id,
+                    candidate_id,
                     user_reason=command.decision.user_reason,
                 )
                 return
@@ -164,6 +186,25 @@ class ResumeWorkingHandler(_OrchestratingHandler):
             project,
             session,
             lambda orchestrator, session_id: orchestrator.resume_working(session_id),
+        )
+
+
+class FinishWorkingHandler(_OrchestratingHandler):
+    async def __call__(
+        self,
+        command: CommandBase,
+        uow: Any,
+        project: ResearchProject,
+        session: ResearchSession,
+    ) -> CommandResult:
+        if not isinstance(command, FinishWorkingCommand):
+            raise TypeError("FinishWorkingHandler requires finish_working")
+        return await self._apply(
+            command,
+            uow,
+            project,
+            session,
+            lambda orchestrator, session_id: orchestrator.finish_working(session_id),
         )
 
 
@@ -281,10 +322,20 @@ class AgentRunHandlers:
         *,
         model: StructuredModelPort,
         settings: Settings,
+        retriever: LiteratureBatchRetriever | None = None,
     ) -> None:
         self._uow_factory = uow_factory
         self._model = model
         self._settings = settings
+        self._pipeline = None
+        if retriever is not None:
+            self._pipeline = IdeaReviewRetrievalPipeline(
+                model=model,
+                retriever=retriever,
+                ranker=IdentityLiteratureRanker(),
+                model_profile=settings.agent_models().get("idea_review", "default"),
+                openalex_limit=OPENALEX_DEFAULT_LIMIT,
+            )
 
     def mapping(self) -> dict[str, Any]:
         return {
@@ -299,12 +350,29 @@ class AgentRunHandlers:
         self, run: AgentRun, snapshot: dict[str, Any], repair_errors: list[dict[str, Any]] | None
     ) -> None:
         del repair_errors
+        idea = await self._idea_for_run(run, snapshot)
+        prepared = None
+        records: list[Any] = []
+        if self._pipeline is not None:
+            try:
+                transaction = await self._pipeline.review(
+                    project_id=run.project_id, initial_input=idea
+                )
+                prepared = transaction.review
+                records = list(transaction.literature_records)
+            except (LiteratureSearchUnavailable, Exception):
+                logger.exception(
+                    "idea review retrieval failed project=%s run=%s",
+                    run.project_id,
+                    run.run_id,
+                )
         await self._run(
             run,
-            lambda orchestrator, session_id: self._review_idea(
-                orchestrator, session_id, snapshot
+            lambda orchestrator, session_id: orchestrator.review_idea(
+                session_id, idea, prepared=prepared
             ),
         )
+        await self._persist_literature(run.project_id, records)
 
     async def plan_loop(
         self, run: AgentRun, snapshot: dict[str, Any], repair_errors: list[dict[str, Any]] | None
@@ -351,6 +419,34 @@ class AgentRunHandlers:
             run,
             lambda orchestrator, session_id: orchestrator.run_complete(session_id, True),
         )
+
+    async def _idea_for_run(self, run: AgentRun, snapshot: dict[str, Any]) -> InitialInput:
+        if "idea" in snapshot:
+            return InitialInput.model_validate(snapshot["idea"])
+        async with self._uow_factory() as uow:
+            project = await uow.projects.get(run.project_id)
+            if project is None:
+                raise InvariantViolationError(f"Project not found: {run.project_id}")
+            session = await uow.sessions.get(project.session_id)
+            if session is None or session.initial_input is None:
+                raise InvariantViolationError("idea_review requires initial_input")
+            return session.initial_input.model_copy(
+                update={"original_idea": str(snapshot.get("refinement") or "")}
+            )
+
+    async def _persist_literature(
+        self, project_id: str, records: list[Any]
+    ) -> None:
+        if not records:
+            return
+        async with self._uow_factory() as uow:
+            for record in records:
+                try:
+                    await uow.literature.add_for_project(
+                        project_id, record, selected=True
+                    )
+                except ValueError:
+                    continue
 
     async def _run(
         self,
@@ -402,6 +498,7 @@ def build_command_handlers(
     } | {
         "decide_plan": DecidePlanHandler(model=model, settings=settings),
         "resume_working": ResumeWorkingHandler(model=model, settings=settings),
+        "finish_working": FinishWorkingHandler(model=model, settings=settings),
         "record_main_result": RecordMainResultHandler(model=model, settings=settings),
         "record_validation_result": RecordValidationResultHandler(
             model=model, settings=settings
@@ -419,7 +516,8 @@ def build_run_handlers(
     *,
     model: StructuredModelPort,
     settings: Settings,
+    retriever: LiteratureBatchRetriever | None = None,
 ) -> dict[str, Any]:
     return AgentRunHandlers(
-        uow_factory, model=model, settings=settings
+        uow_factory, model=model, settings=settings, retriever=retriever
     ).mapping()

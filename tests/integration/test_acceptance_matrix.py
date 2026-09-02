@@ -46,7 +46,7 @@ SCENARIOS: dict[int, tuple[str, ...]] = {
     30: ("tests/test_architecture_boundaries.py::test_architecture_import_boundaries",),
     31: ("tests/harness/test_orchestrator_plan_loop_v1.py::test_plan_mode_creates_isolated_candidate_paths",),
     32: ("tests/harness/test_orchestrator_plan_loop_v1.py::test_exhausted_candidate_requires_explicit_override",),
-    33: ("tests/harness/test_routing.py::test_working_success_requires_result_record",),
+    33: ("tests/harness/test_orchestrator_completion_v1.py::test_success_is_proposal_and_resume_is_deterministic",),
     34: ("tests/agents/test_prompt_contracts.py::test_prompt_builders_preserve_exact_instruction_and_data_boundaries",),
 }
 

@@ -1,27 +1,9 @@
 {
   "version": "1.0",
-  "prompt_version": "working_qa/2cf7a671be87",
+  "prompt_version": "working_qa/b1333fd11813",
   "domain": "computer_science",
   "suite": "working_qa",
   "cases": [
-    {
-      "id": "success_stays_in_progress",
-      "description": "success 进入结果确认，任务仍为 in_progress。",
-      "output": {
-        "action": "success",
-        "reason": "当前实验事实已足够记录。",
-        "reply": "",
-        "updated_experiment_info": {
-          "current_experiment": "比较分层压缩与完整历史基线",
-          "expected_result": null,
-          "actual_result": "恢复正确率提升 4%",
-          "observations": []
-        },
-        "evidence": []
-      },
-      "expected_phase": "awaiting_result_record",
-      "task_status_after": "in_progress"
-    },
     {
       "id": "main_report_plan_issue",
       "description": "主实验 plan issue 进入方案修订决策。",

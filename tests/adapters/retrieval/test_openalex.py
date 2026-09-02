@@ -73,6 +73,21 @@ async def test_openalex_sends_fixed_bounded_query_parameters(respx_mock) -> None
     assert request.url.params["per-page"] == "50"
     assert request.url.params["mailto"] == "dev@example.com"
     assert request.url.params["select"].startswith("id,doi,title,")
+    assert "api_key" not in request.url.params
+    assert request.headers.get("authorization") is None
+
+
+@pytest.mark.asyncio
+async def test_openalex_sends_api_key_as_query_and_bearer(respx_mock) -> None:
+    route = respx_mock.get("https://api.openalex.org/works").mock(
+        return_value=httpx.Response(200, json=EMPTY_PAGE)
+    )
+    async with httpx.AsyncClient() as client:
+        await OpenAlexRetriever(client, api_key="test-openalex-key").search("x")
+
+    request = route.calls[0].request
+    assert request.url.params["api_key"] == "test-openalex-key"
+    assert request.headers["authorization"] == "Bearer test-openalex-key"
 
 
 @pytest.mark.asyncio

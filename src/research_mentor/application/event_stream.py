@@ -43,6 +43,7 @@ _INTERNAL_TYPE_MAP = {
     "working_started": "agent.stage",
     "working_turn_completed": "agent.stage",
     "working_resumed": "agent.stage",
+    "working_finished": "session.phase_changed",
     "result_recorded": "agent.stage",
     "complete_guidance_generated": "agent.stage",
     "validations_selected": "agent.stage",

@@ -10,9 +10,20 @@ interface AppShellProps {
   children: ReactNode;
   evidence: ReactNode;
   actionDock: ReactNode;
+  onCreateProject?: () => void;
+  onSelectProject?: (projectId: string) => void;
+  projects?: ProjectView[];
 }
 
-export function AppShell({ project, children, evidence, actionDock }: AppShellProps) {
+export function AppShell({
+  project,
+  children,
+  evidence,
+  actionDock,
+  onCreateProject,
+  onSelectProject,
+  projects,
+}: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const panelOpen = sidebarOpen || evidenceOpen;
@@ -46,7 +57,7 @@ export function AppShell({ project, children, evidence, actionDock }: AppShellPr
         </a>
         <PhaseTimeline phase={project.phase} />
         <div className="workspace-status-cluster">
-          <RunStatus phase={project.phase} />
+        <RunStatus project={project} />
           {project.is_demo ? <strong className="demo-badge">DEMO DATA</strong> : null}
           <button className="mobile-panel-toggle evidence-toggle" type="button" aria-controls="evidence-sheet" aria-expanded={evidenceOpen} onClick={() => setEvidenceOpen((open) => !open)}>证据</button>
         </div>
@@ -54,7 +65,12 @@ export function AppShell({ project, children, evidence, actionDock }: AppShellPr
 
       <div className="workspace-grid">
         <div id="project-drawer" className="project-drawer" data-open={sidebarOpen}>
-          <ProjectSidebar project={project} />
+          <ProjectSidebar
+            project={project}
+            projects={projects}
+            onCreateProject={onCreateProject}
+            onSelectProject={onSelectProject}
+          />
         </div>
         <main className="research-main" id="research-main">{children}</main>
         <div id="evidence-sheet" className="evidence-sheet" data-open={evidenceOpen}>{evidence}</div>

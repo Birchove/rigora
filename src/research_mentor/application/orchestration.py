@@ -21,6 +21,7 @@ from research_mentor.harness.orchestrator import ResearchMentorOrchestrator
 from research_mentor.harness.state import ResearchSession, SessionEvent
 from research_mentor.ports.events import OutboxEvent
 from research_mentor.ports.model import StructuredModelPort
+from research_mentor.runtime_async import bind_owner_loop, reset_owner_loop
 
 
 class SnapshotSessionRepository:
@@ -118,7 +119,11 @@ async def apply_orchestrator(
         mutate(orchestrator, session.session_id)
         return repository.session, list(repository.events)
 
-    updated, events = await asyncio.to_thread(run)
+    token = bind_owner_loop()
+    try:
+        updated, events = await asyncio.to_thread(run)
+    finally:
+        reset_owner_loop(token)
     await uow.sessions.save(updated, expected_version=expected_version)
     await persist_events(
         uow,

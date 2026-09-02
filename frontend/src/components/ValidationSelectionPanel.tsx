@@ -1,24 +1,26 @@
 import { useState } from "react";
 
 import type { ValidationCandidate } from "../api/types";
-import type { CommandApi } from "../hooks/useCommand";
-
-export type ValidationCommandApi = CommandApi;
-
-interface ValidationSelectionPanelProps {
-  candidates?: ValidationCandidate[];
-  api?: ValidationCommandApi;
-  expectedVersion?: number;
-}
+import type { CommandDraft } from "../hooks/useCommand";
+import { MENTOR_MICROCOPY } from "../ui/mentorMicrocopy";
 
 export function ValidationSelectionPanel({
   candidates = [],
-  api,
-  expectedVersion = 1,
-}: ValidationSelectionPanelProps) {
+  submit,
+  busy = false,
+}: {
+  candidates?: ValidationCandidate[];
+  submit?: (draft: CommandDraft) => Promise<unknown>;
+  busy?: boolean;
+}) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [finishWithoutMore, setFinishWithoutMore] = useState(false);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const disabled = submit === undefined || busy;
 
   function toggle(candidateId: string) {
+    setFinishWithoutMore(false);
     setSelected((current) => {
       const next = new Set(current);
       if (next.has(candidateId)) {
@@ -31,20 +33,32 @@ export function ValidationSelectionPanel({
   }
 
   function confirm() {
-    if (api === undefined) {
+    if (submit === undefined) {
       return;
     }
-    void api.dispatchCommand({
+    const selectedIds = candidates
+      .filter((candidate) => selected.has(candidate.candidate_id))
+      .map((candidate) => candidate.candidate_id);
+    if (!finishWithoutMore && selectedIds.length === 0) {
+      setError(MENTOR_MICROCOPY.validationRequired);
+      return;
+    }
+    if (finishWithoutMore && !reason.trim()) {
+      setError("结束本轮补充验证需要写下理由。");
+      return;
+    }
+    setError(null);
+    void submit({
       type: "select_validations",
-      command_id: crypto.randomUUID(),
-      expected_version: expectedVersion,
       selection: {
-        selected_candidate_ids: candidates
-          .filter((candidate) => selected.has(candidate.candidate_id))
-          .map((candidate) => candidate.candidate_id),
-        skipped_candidate_ids: [],
-        finish_without_more_validation: false,
-        user_reason: null,
+        selected_candidate_ids: finishWithoutMore ? [] : selectedIds,
+        skipped_candidate_ids: finishWithoutMore
+          ? candidates.map((candidate) => candidate.candidate_id)
+          : candidates
+            .filter((candidate) => !selected.has(candidate.candidate_id))
+            .map((candidate) => candidate.candidate_id),
+        finish_without_more_validation: finishWithoutMore,
+        user_reason: finishWithoutMore ? reason : null,
       },
     });
   }
@@ -62,7 +76,8 @@ export function ValidationSelectionPanel({
                 <input
                   type="checkbox"
                   aria-label={candidate.task.name}
-                  checked={selected.has(candidate.candidate_id)}
+                  checked={!finishWithoutMore && selected.has(candidate.candidate_id)}
+                  disabled={disabled || finishWithoutMore}
                   onChange={() => toggle(candidate.candidate_id)}
                 />
                 <span>{candidate.task.name}</span>
@@ -71,8 +86,33 @@ export function ValidationSelectionPanel({
           ))}
         </ul>
       ) : null}
-      {api !== undefined ? (
-        <button type="button" onClick={confirm}>
+      <label className="structured-check">
+        <input
+          type="checkbox"
+          checked={finishWithoutMore}
+          disabled={disabled}
+          onChange={(event) => {
+            setFinishWithoutMore(event.target.checked);
+            if (event.target.checked) {
+              setSelected(new Set());
+            }
+          }}
+        />
+        本轮不再补充验证
+      </label>
+      {finishWithoutMore ? (
+        <label className="structured-field">
+          结束理由
+          <textarea
+            value={reason}
+            disabled={disabled}
+            onChange={(event) => setReason(event.target.value)}
+          />
+        </label>
+      ) : null}
+      {error ? <p className="command-error" role="alert">{error}</p> : null}
+      {submit !== undefined ? (
+        <button type="button" onClick={confirm} disabled={disabled}>
           确认选择
         </button>
       ) : null}

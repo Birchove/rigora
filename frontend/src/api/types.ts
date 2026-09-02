@@ -48,6 +48,61 @@ export interface ValidationCandidate {
   task: ValidationTask;
 }
 
+export interface VisibleEvidenceItem {
+  title: string;
+  source_type: string;
+  url?: string | null;
+  summary?: string | null;
+  support?: string | null;
+  selected: boolean;
+}
+
+export interface StageProgress {
+  headline: string;
+  detail?: string | null;
+  check_round: number;
+  max_check_rounds: number;
+  candidate_count: number;
+  idea_type?: string | null;
+  idea_action?: string | null;
+  idea_reason?: string | null;
+  normalized_idea?: string | null;
+  plan_question?: string | null;
+  key_insight_title?: string | null;
+  last_check_score?: number | null;
+  last_check_passed?: boolean | null;
+}
+
+export interface PublicActivityItem {
+  sequence: number;
+  type: string;
+  summary: string;
+}
+
+export interface PlanCandidateView {
+  candidate_id: string;
+  disposition: string;
+  focus_hint?: string;
+  check_round?: number;
+}
+
+export interface CurrentTaskView {
+  task_id: string;
+  task_kind: "main" | "validation" | string;
+  origin: string;
+  status: string;
+  current_experiment?: string | null;
+  expected_result?: string | null;
+  validation_task?: ValidationTask | null;
+}
+
+export interface WritingGuidance {
+  suggested_structure: string[];
+  key_results_to_report: string[];
+  key_discussion_points: string[];
+  limitations: string[];
+}
+
 export interface ProjectView {
   project_id: string;
   title: string;
@@ -59,6 +114,13 @@ export interface ProjectView {
   last_event_sequence?: number;
   active_run?: ActiveRun | null;
   validation_candidates?: ValidationCandidate[];
+  visible_evidence?: VisibleEvidenceItem[];
+  stage_progress?: StageProgress | null;
+  recent_activity?: PublicActivityItem[];
+  plan_candidates?: PlanCandidateView[];
+  current_task?: CurrentTaskView | null;
+  writing_guidance?: WritingGuidance | null;
+  revision_reason?: string | null;
 }
 
 export interface InitialInput {
@@ -166,6 +228,10 @@ export interface ResumeWorkingCommand extends CommandBase {
   type: "resume_working";
 }
 
+export interface FinishWorkingCommand extends CommandBase {
+  type: "finish_working";
+}
+
 export interface RecordMainResultCommand extends CommandBase {
   type: "record_main_result";
   result: MainExperimentResult;
@@ -214,6 +280,7 @@ export type Command =
   | DecidePlanCommand
   | SendWorkingMessageCommand
   | ResumeWorkingCommand
+  | FinishWorkingCommand
   | RecordMainResultCommand
   | RecordValidationResultCommand
   | RunCompleteCommand

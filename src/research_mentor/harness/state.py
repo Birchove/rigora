@@ -74,6 +74,7 @@ class SessionEventType(StrEnum):
     WORKING_STARTED = "working_started"
     WORKING_TURN_COMPLETED = "working_turn_completed"
     WORKING_RESUMED = "working_resumed"
+    WORKING_FINISHED = "working_finished"
     RESULT_RECORDED = "result_recorded"
     COMPLETE_GUIDANCE_GENERATED = "complete_guidance_generated"
     VALIDATIONS_SELECTED = "validations_selected"

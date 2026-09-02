@@ -1,7 +1,5 @@
 """Runner for the Key Insight Check Agent."""
 
-import asyncio
-
 from pydantic import BaseModel
 
 from research_mentor.agents.key_insight_check.contracts import (
@@ -13,6 +11,7 @@ from research_mentor.agents.key_insight_check.prompting import (
 )
 from research_mentor.hyperparameters import MODEL_REQUEST_TIMEOUT_SECONDS
 from research_mentor.ports.model import ModelRequest, StructuredModelPort
+from research_mentor.runtime_async import run_coro_sync
 
 
 class KeyInsightCheckRunner:
@@ -46,4 +45,4 @@ class KeyInsightCheckRunner:
     def run_sync(
         self, request: KeyInsightCheckInput, *, model_profile: str = "default"
     ) -> KeyInsightAssessment:
-        return asyncio.run(self.run(request, model_profile=model_profile))
+        return run_coro_sync(self.run(request, model_profile=model_profile))

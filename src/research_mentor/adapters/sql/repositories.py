@@ -430,6 +430,13 @@ class SqlAgentRunRepository:
                 available_at=None,
                 lease_owner=worker_id,
                 lease_expires_at=lease_expires_at,
+                public_message={
+                    "idea_review": "正在检索文献并审查研究想法。",
+                    "plan_loop": "正在生成研究方案。",
+                    "key_insight_check": "正在校验点睛之笔。",
+                    "working_qa": "正在回答实验问题。",
+                    "complete": "正在整理完成建议。",
+                }.get(row.agent_name, "正在运行。"),
                 row_version=AgentRunRow.row_version + 1,
             )
         )

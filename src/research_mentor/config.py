@@ -39,7 +39,13 @@ VendorApiStyle = Literal["chat_completions", "responses"]
 VENDORS: tuple[VendorName, ...] = ("qwen", "deepseek", "chatgpt", "glm")
 SLOTS: tuple[SlotName, ...] = ("qwen", "deepseek", "chatgpt", "chatgpt_2", "glm")
 # high/mid/low 并行路径按此顺序取同时挂了 plan_loop 与 key_insight_check 的槽：一家提、下一家审
-PARALLEL_SLOT_ORDER: tuple[SlotName, ...] = ("chatgpt", "qwen", "glm", "deepseek")
+PARALLEL_SLOT_ORDER: tuple[SlotName, ...] = (
+    "chatgpt",
+    "chatgpt_2",
+    "qwen",
+    "glm",
+    "deepseek",
+)
 ALL_AGENTS: tuple[AgentName, ...] = (
     "idea_review",
     "plan_loop",
@@ -112,6 +118,8 @@ class Settings(BaseSettings):
     model_name: str = "gpt-5-mini"
     model_base_url: HttpUrl | None = None
     model_api_key: SecretStr | None = None
+    openalex_api_key: SecretStr | None = None
+    openalex_mailto: str | None = None
     database_url: str = "sqlite+aiosqlite:///./research_mentor.db"
     upload_root: Path = Path("./data/uploads")
     upload_allowed_media_types: tuple[str, ...] = UPLOAD_ALLOWED_MEDIA_TYPES
@@ -177,6 +185,7 @@ class Settings(BaseSettings):
             "chatgpt_api_key",
             "chatgpt_2_api_key",
             "glm_api_key",
+            "openalex_api_key",
         ):
             secret = getattr(self, field_name)
             if secret is None:

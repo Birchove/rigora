@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy import func, select
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from research_mentor.application.command_bus import CommandBus
@@ -146,6 +147,7 @@ def test_command_union_names_are_exact() -> None:
         "decide_plan",
         "send_working_message",
         "resume_working",
+        "finish_working",
         "record_main_result",
         "record_validation_result",
         "run_complete",
@@ -264,6 +266,64 @@ async def test_same_command_id_returns_original_receipt_without_reinvoking_handl
     assert second.run_id == first.run_id
     assert calls == 1
     assert len(state.runs) == 1
+
+
+@pytest.mark.asyncio
+async def test_sqlite_lock_on_recovery_lookup_is_retried(state, monkeypatch) -> None:
+    async def no_sleep(_delay: float) -> None:
+        return None
+
+    monkeypatch.setattr(
+        "research_mentor.application.command_bus.asyncio.sleep", no_sleep
+    )
+
+    find_calls = {"n": 0}
+
+    class LockingProcessed(ProcessedRepository):
+        async def find(self, project_id, command_id):
+            find_calls["n"] += 1
+            if find_calls["n"] <= 2:
+                raise OperationalError(
+                    "SELECT", {}, Exception("database is locked")
+                )
+            return await super().find(project_id, command_id)
+
+    class LockingUow(FakeUow):
+        async def __aenter__(self):
+            entered = await super().__aenter__()
+            entered.processed_commands = LockingProcessed(self.state.processed)
+            return entered
+
+    async def handler(command, uow, project, session):
+        return DeterministicCommandResult(
+            project_id=project.project_id,
+            command_id=command.command_id,
+            session_id=session.session_id,
+            version=project.version,
+            phase=session.phase,
+        )
+
+    command_bus = CommandBus(
+        lambda: LockingUow(state),
+        handlers={"resume_working": handler},
+        now=lambda: NOW,
+    )
+    command = TypeAdapter(Command).validate_python(
+        {
+            "type": "resume_working",
+            "project_id": "p1",
+            "command_id": "locked-1",
+            "expected_version": 1,
+        }
+    )
+    state.sessions["s1"] = ResearchSession(
+        session_id="s1", phase=SessionPhase.AWAITING_RESULT_RECORD
+    )
+
+    result = await command_bus.dispatch(command)
+
+    assert result.command_id == "locked-1"
+    assert result.result_kind == "deterministic"
 
 
 @pytest.mark.asyncio

@@ -90,6 +90,34 @@ export function createClient(
       return json<JsonValue[]>(`/projects/${encodeURIComponent(projectId)}/documents`);
     },
 
+    async downloadJournal(projectId: string, format: "md" | "json") {
+      const suffix = format === "json" ? "json" : "md";
+      const response = await fetcher(
+        `/api/v1/projects/${encodeURIComponent(projectId)}/journal.${suffix}`,
+      );
+      if (!response.ok) {
+        const fallback: ApiErrorEnvelope = {
+          error: {
+            code: "unexpected_response",
+            message: "服务器返回了无法识别的错误。",
+            retryable: response.status >= 500,
+            details: {},
+          },
+        };
+        const envelope = (await response.json().catch(() => fallback)) as ApiErrorEnvelope;
+        throw new ApiError(response.status, envelope.error ?? fallback.error);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `research-journal.${suffix}`;
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    },
+
     async uploadDocument(projectId: string, file: File) {
       const response = await fetcher(
         `/api/v1/projects/${encodeURIComponent(projectId)}/documents`,

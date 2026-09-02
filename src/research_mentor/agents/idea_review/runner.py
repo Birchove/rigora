@@ -1,7 +1,5 @@
 """Runner for the Idea Review Agent."""
 
-import asyncio
-
 from pydantic import BaseModel
 
 from research_mentor.agents.idea_review.contracts import (
@@ -11,6 +9,7 @@ from research_mentor.agents.idea_review.contracts import (
 from research_mentor.agents.idea_review.prompting import build_idea_review_invocation
 from research_mentor.hyperparameters import MODEL_REQUEST_TIMEOUT_SECONDS
 from research_mentor.ports.model import ModelRequest, StructuredModelPort
+from research_mentor.runtime_async import run_coro_sync
 
 
 class IdeaReviewRunner:
@@ -44,4 +43,4 @@ class IdeaReviewRunner:
     def run_sync(
         self, request: IdeaReviewInput, *, model_profile: str = "default"
     ) -> IdeaReviewOutput:
-        return asyncio.run(self.run(request, model_profile=model_profile))
+        return run_coro_sync(self.run(request, model_profile=model_profile))

@@ -150,7 +150,12 @@ class ResearchMentorOrchestrator:
         self._repository.add(session, event)
         return session.model_copy(deep=True)
 
-    def review_idea(self, session_id: str, idea: InitialInput) -> IdeaReviewOutput:
+    def review_idea(
+        self,
+        session_id: str,
+        idea: InitialInput,
+        prepared: IdeaReviewOutput | None = None,
+    ) -> IdeaReviewOutput:
         session = self._load_for_phase(
             session_id,
             {SessionPhase.AWAITING_IDEA, SessionPhase.AWAITING_IDEA_REFINEMENT},
@@ -172,6 +177,11 @@ class ResearchMentorOrchestrator:
                 next_action="请将问题限定为 computer science 研究，或使用通用 Agent。",
             )
             refinement_code = "unsupported_domain"
+        elif prepared is not None:
+            output = prepared.model_copy(deep=True)
+            refinement_code = (
+                "idea_refinement" if output.action == "request_refinement" else None
+            )
         else:
             output = self._idea_review_runner.run_sync(
                 IdeaReviewInput(
@@ -911,6 +921,22 @@ class ResearchMentorOrchestrator:
         event = self._event(
             session_id,
             SessionEventType.WORKING_RESUMED,
+            phase_before,
+            session.phase,
+            {"task_id": session.current_task.task_id},
+        )
+        self._commit(session, event)
+        return session.model_copy(deep=True)
+
+    def finish_working(self, session_id: str) -> ResearchSession:
+        session = self._load_for_phase(session_id, {SessionPhase.WORKING})
+        if session.current_task is None or session.current_task.status != "in_progress":
+            raise InvariantViolationError("finish_working requires an in-progress current task")
+        phase_before = session.phase
+        session.phase = SessionPhase.AWAITING_RESULT_RECORD
+        event = self._event(
+            session_id,
+            SessionEventType.WORKING_FINISHED,
             phase_before,
             session.phase,
             {"task_id": session.current_task.task_id},

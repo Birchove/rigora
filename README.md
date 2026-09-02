@@ -136,7 +136,7 @@ $env:RESEARCH_MENTOR_DEMO_MODE = "false"
 
 ## 文献、解析与可选排序
 
-- **OpenAlex**：真实文献检索走 `/works`。礼貌池需要联系邮箱，构造 `OpenAlexRetriever(..., mailto="you@example.com")` 时传入；未设置 mailto 仍可请求，但可能受到更严格限流。
+- **OpenAlex**：真实文献检索走 `/works`。免费账户 API key 用 `RESEARCH_MENTOR_OPENALEX_API_KEY`（查询参数 `api_key` 与 `Authorization: Bearer`）；礼貌池可另设 `RESEARCH_MENTOR_OPENALEX_MAILTO`。未设置 key / mailto 仍可请求，但额度与限流更严。
 - **Anydoc**：`firecrawl-anydoc` 已在默认依赖中。纯文本 / Markdown 走 `PlainTextParser`；PDF 等在线程池中转为规范 Markdown。
 - **FlagEmbedding**：可选本地 rerank。默认安装不下载大模型；需要时执行 `uv sync --extra local-ranking`。未安装时 ranker 返回显式不可用，不伪造分数。
 

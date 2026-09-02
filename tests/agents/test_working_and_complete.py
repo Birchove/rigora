@@ -119,25 +119,15 @@ def test_non_success_requires_reply(action: str) -> None:
         WorkingQAOutput(action=action, reason="reason", reply="")
 
 
-@pytest.mark.parametrize(
-    ("reply", "updated_experiment_info"),
-    [
-        ("已完成", None),
-        ("", None),
-        ("", ExperimentInfo(current_experiment="主实验")),
-        ("", ExperimentInfo(current_experiment="主实验", actual_result="  ")),
-    ],
-)
-def test_working_success_rejects_invalid_output_shapes(
-    reply: str,
-    updated_experiment_info: ExperimentInfo | None,
-) -> None:
+def test_working_output_rejects_success_action() -> None:
     with pytest.raises(ValidationError):
         WorkingQAOutput(
             action="success",
             reason="完成",
-            reply=reply,
-            updated_experiment_info=updated_experiment_info,
+            reply="",
+            updated_experiment_info=ExperimentInfo(
+                current_experiment="主实验", actual_result="正确率下降"
+            ),
         )
 
 
@@ -150,9 +140,9 @@ def test_working_output_preserves_complete_negative_snapshot() -> None:
     )
 
     output = WorkingQAOutput(
-        action="success",
+        action="answer",
         reason="实验已完成但不支持预期。",
-        reply="",
+        reply="当前结果低于基线，应如实记录。",
         updated_experiment_info=snapshot,
     )
 
@@ -217,7 +207,7 @@ def test_working_prompt_matches_fixed_sha256_oracle() -> None:
     )
 
     assert hashlib.sha256(prompt.read_bytes()).hexdigest() == (
-        "2cf7a671be87aad660dc8cf3c890d51f5cab42f669af30c4cf542423dbb2cf16"
+        "b1333fd11813e254ba31ec169c16f252d0e4d95b86510d27ef09b59da4a1e908"
     )
 
 

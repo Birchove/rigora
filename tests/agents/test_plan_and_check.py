@@ -18,6 +18,7 @@ from research_mentor.agents.plan_loop.contracts import PlanLoopInput, PlanLoopOu
 from research_mentor.agents.plan_loop.prompting import build_plan_loop_invocation
 from research_mentor.agents.plan_loop.runner import PlanLoopRunner
 from research_mentor.domain.checks import KeyInsightAssessment, KeyInsightCheckOutput
+from research_mentor.hyperparameters import MODEL_REQUEST_TIMEOUT_SECONDS
 
 
 @pytest.fixture
@@ -194,7 +195,7 @@ async def test_runner_invokes_once_with_typed_model_request(
     assert len(model.calls) == 1
     assert model.calls[0].agent_name == agent_name
     assert model.calls[0].output_model.__name__ == output_model_name
-    assert model.calls[0].timeout == 30.0
+    assert model.calls[0].timeout == MODEL_REQUEST_TIMEOUT_SECONDS
     assert model.calls[0].trace_id == "local"
 
 

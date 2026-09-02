@@ -31,8 +31,8 @@ describe("ProjectWorkspace", () => {
   it.each([
     ["awaiting_idea", "研究起点"],
     ["awaiting_idea_refinement", "补充研究边界"],
-    ["planning", "正在生成研究方案"],
-    ["checking_key_insight", "正在校验点睛之笔"],
+    ["planning", "等待生成研究方案"],
+    ["checking_key_insight", "等待校验点睛之笔"],
     ["awaiting_plan_decision", "研究方案"],
     ["awaiting_working_context", "准备实验上下文"],
     ["working", "实验问答"],
@@ -52,10 +52,16 @@ describe("ProjectWorkspace", () => {
   it.each([
     ["awaiting_idea", "submit_idea", "提交研究想法"],
     ["awaiting_plan_decision", "decide_plan", "确认方案"],
+    ["working", "finish_working", "实验已全部完成，进入下一步"],
     ["awaiting_result_record", "record_main_result", "记录主实验结果"],
-    ["awaiting_validation_selection", "select_validations", "选择验证任务"],
+    ["awaiting_validation_selection", "select_validations", "确认选择"],
   ] as const)("renders the server-allowed %s primary action", (phase, command, label) => {
-    render(<ProjectWorkspace project={project(phase, [command])} />);
+    render(
+      <ProjectWorkspace
+        project={project(phase, [command])}
+        api={{ dispatchCommand: async () => project(phase, [command]) }}
+      />,
+    );
 
     expect(screen.getByRole("button", { name: label })).toBeEnabled();
   });
@@ -64,6 +70,17 @@ describe("ProjectWorkspace", () => {
     render(<ProjectWorkspace project={project("awaiting_plan_decision", [])} />);
 
     expect(screen.queryByRole("button", { name: "确认方案" })).toBeNull();
+  });
+
+  it("does not infer finish_working from the working phase", () => {
+    render(
+      <ProjectWorkspace
+        project={project("working", ["send_working_message"])}
+        api={{ dispatchCommand: async () => project("working", ["send_working_message"]) }}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "实验已全部完成，进入下一步" })).toBeNull();
   });
 
   it("keeps demo data visibly marked in the workspace header", () => {

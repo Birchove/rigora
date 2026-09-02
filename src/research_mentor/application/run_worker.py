@@ -8,7 +8,10 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, TypeAlias
 from uuid import uuid4
 
-from research_mentor.adapters.model.errors import ModelTemporarilyUnavailable
+from research_mentor.adapters.model.errors import (
+    ModelProviderRejected,
+    ModelTemporarilyUnavailable,
+)
 from research_mentor.domain.jobs import AgentRun
 from research_mentor.errors import ModelOutputInvalid
 from research_mentor.harness.state import SessionEvent, SessionEventType
@@ -213,14 +216,39 @@ class AgentRunWorker:
         except ModelTemporarilyUnavailable as exc:
             outcome = "retry"
             public_message = str(exc)
+            logger.warning(
+                "model temporarily unavailable project=%s agent=%s run=%s: %s",
+                run.project_id,
+                run.agent_name,
+                run.run_id,
+                exc,
+                exc_info=True,
+            )
         except ModelOutputInvalid:
             outcome = "failed"
             public_message = "模型输出格式校验失败。"
             error_code = "model_output_invalid"
+        except ModelProviderRejected as exc:
+            outcome = "failed"
+            public_message = "模型拒绝了本次请求，请检查模型名与 JSON 输出兼容性后重试。"
+            error_code = "model_provider_rejected"
+            logger.exception(
+                "model provider rejected project=%s agent=%s run=%s: %s",
+                run.project_id,
+                run.agent_name,
+                run.run_id,
+                exc,
+            )
         except Exception:
             outcome = "failed"
             public_message = "运行失败，请重试。"
             error_code = "run_failed"
+            logger.exception(
+                "run failed project=%s agent=%s run=%s",
+                run.project_id,
+                run.agent_name,
+                run.run_id,
+            )
         finally:
             renewal.cancel()
             try:

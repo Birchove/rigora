@@ -3,7 +3,10 @@ from unittest.mock import AsyncMock
 import httpx
 import pytest
 
-from research_mentor.adapters.model.errors import ModelTemporarilyUnavailable
+from research_mentor.adapters.model.errors import (
+    ModelProviderRejected,
+    ModelTemporarilyUnavailable,
+)
 from research_mentor.adapters.model.openai_compatible import (
     OpenAICompatibleModelAdapter,
 )
@@ -92,7 +95,70 @@ async def test_compatible_adapter_maps_transient_http_status() -> None:
     client = AsyncMock()
     client.post.return_value = response(429, {"error": {"message": "limited"}})
 
-    with pytest.raises(ModelTemporarilyUnavailable):
+    with pytest.raises(ModelTemporarilyUnavailable, match="limited"):
         await OpenAICompatibleModelAdapter(
             client, base_url="https://provider.test/v1"
+        ).generate(REVIEW_REQUEST)
+
+
+@pytest.mark.asyncio
+async def test_compatible_adapter_falls_back_to_json_object() -> None:
+    client = AsyncMock()
+    client.post.side_effect = [
+        response(400, {"error": {"message": "This response_format type is unavailable now"}}),
+        response(
+            200,
+            {
+                "id": "req-fallback",
+                "choices": [
+                    {"message": {"content": f"```json\n{REVIEW_OUTPUT.model_dump_json()}\n```"}}
+                ],
+            },
+        ),
+    ]
+
+    result = await OpenAICompatibleModelAdapter(
+        client, base_url="https://provider.test/v1"
+    ).generate(REVIEW_REQUEST)
+
+    assert result == REVIEW_OUTPUT
+    assert client.post.await_count == 2
+    first = client.post.await_args_list[0].kwargs["json"]["response_format"]
+    second = client.post.await_args_list[1].kwargs["json"]["response_format"]
+    assert first["type"] == "json_schema"
+    assert second == {"type": "json_object"}
+    assert "json_schema" in client.post.await_args_list[1].kwargs["json"]["messages"][0]["content"]
+
+
+@pytest.mark.asyncio
+async def test_compatible_adapter_can_start_in_json_object_mode() -> None:
+    client = AsyncMock()
+    client.post.return_value = response(
+        200,
+        {"choices": [{"message": {"content": REVIEW_OUTPUT.model_dump_json()}}]},
+    )
+
+    await OpenAICompatibleModelAdapter(
+        client,
+        base_url="https://api.deepseek.com",
+        response_format_mode="json_object",
+    ).generate(REVIEW_REQUEST)
+
+    payload = client.post.await_args.kwargs["json"]
+    assert payload["response_format"] == {"type": "json_object"}
+
+
+@pytest.mark.asyncio
+async def test_compatible_adapter_maps_provider_rejection_body() -> None:
+    client = AsyncMock()
+    client.post.return_value = response(
+        400,
+        {"error": {"message": "Model Not Exist"}},
+    )
+
+    with pytest.raises(ModelProviderRejected, match="Model Not Exist"):
+        await OpenAICompatibleModelAdapter(
+            client,
+            base_url="https://api.deepseek.com",
+            response_format_mode="json_object",
         ).generate(REVIEW_REQUEST)

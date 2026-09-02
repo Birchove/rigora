@@ -13,9 +13,8 @@ from research_mentor.agents.idea_review.runner import IdeaReviewRunner
 from research_mentor.agents.key_insight_check.runner import KeyInsightCheckRunner
 from research_mentor.agents.plan_loop.runner import PlanLoopRunner
 from research_mentor.agents.working_qa.runner import WorkingQARunner
-from research_mentor.agents.working_qa.contracts import WorkingQAOutput
 from research_mentor.config import HarnessConfig
-from research_mentor.domain.experiments import ExperimentInfo, MainExperimentResult
+from research_mentor.domain.experiments import MainExperimentResult
 from research_mentor.domain.research import KeyInsight, UserPlanDecision
 from research_mentor.errors import InvariantViolationError
 from research_mentor.harness.orchestrator import ResearchMentorOrchestrator
@@ -255,16 +254,7 @@ def test_selected_candidate_result_revision_runs_without_user_reason(
     orchestrator.decide_plan(
         "s1", UserPlanDecision(decision="accept"), candidate_id=selected_id
     )
-    model.enqueue(
-        "working_qa",
-        WorkingQAOutput(
-            action="success", reason="主实验完成", reply="",
-            updated_experiment_info=ExperimentInfo(
-                current_experiment="主实验", actual_result="核心指标下降"
-            ),
-        ),
-    )
-    orchestrator.run_working_qa("s1", "主实验完成了吗？")
+    orchestrator.finish_working("s1")
     result = MainExperimentResult(
         objective="检验恢复率",
         method="固定切分对照",

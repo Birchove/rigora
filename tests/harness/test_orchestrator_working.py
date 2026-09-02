@@ -294,7 +294,7 @@ def test_accepted_plan_rejects_replacement_and_start_event_has_no_active_plan(
     assert payload["compact_context"] is None
 
 
-def test_working_replaces_snapshot_and_success_proposes_completion(
+def test_working_replaces_snapshot_and_finish_working_proposes_completion(
     bundle, initial_input, research_plan
 ):
     orchestrator, model, repository = enter_forward_context(bundle, initial_input)
@@ -320,22 +320,18 @@ def test_working_replaces_snapshot_and_success_proposes_completion(
     assert first_payload["question"] == "记录了什么？"
     assert "sys_input" not in first_payload
     assert first_payload["compact_context"] is None
-    success = WorkingQAOutput(
-        action="success", reason="实验运行完成", reply="",
-        updated_experiment_info=ExperimentInfo(current_experiment="完成测量", actual_result="正确率下降", observations=["负面结果"]),
-    )
-    model.enqueue("working_qa", success)
+    call_count = len(model.calls)
 
-    orchestrator.run_working_qa("s1", "现在完成了吗？")
+    orchestrator.finish_working("s1")
 
     stored = repository.get("s1")
-    payload = parse_latest_call(model, "working_qa", "working_qa_data")
+    event = repository.list_events("s1")[-1]
     assert stored.phase is SessionPhase.AWAITING_RESULT_RECORD
     assert stored.current_task is not None and stored.current_task.status == "in_progress"
-    assert stored.current_task.experiment_info == success.updated_experiment_info
-    assert "sys_input" not in payload
-    assert payload["compact_context"] is None
-    assert payload["research_context"]["plan"] == research_plan.model_dump(mode="json")
+    assert stored.current_task.experiment_info == updated
+    assert event.event_type is SessionEventType.WORKING_FINISHED
+    assert event.payload == {"task_id": stored.current_task.task_id}
+    assert len(model.calls) == call_count
 
 
 @pytest.mark.parametrize(
@@ -391,11 +387,7 @@ def test_working_runner_failures_are_fully_atomic(
 def test_record_results_enforce_kind_and_main_prerequisite_with_exact_events(bundle, initial_input, research_plan):
     orchestrator, model, repository = enter_forward_context(bundle, initial_input)
     orchestrator.start_working("s1", main_task(), plan=research_plan)
-    model.enqueue("working_qa", WorkingQAOutput(
-        action="success", reason="完成", reply="",
-        updated_experiment_info=ExperimentInfo(current_experiment="完成", actual_result="负面结果"),
-    ))
-    orchestrator.run_working_qa("s1", "完成了吗？")
+    orchestrator.finish_working("s1")
     before = len(repository.list_events("s1"))
 
     with pytest.raises(InvariantViolationError):
@@ -421,11 +413,7 @@ def test_record_results_enforce_kind_and_main_prerequisite_with_exact_events(bun
 def test_validation_result_requires_a_recorded_main_result(bundle, initial_input, research_plan):
     orchestrator, model, repository = enter_forward_context(bundle, initial_input)
     orchestrator.start_working("s1", validation_task(), plan=research_plan)
-    model.enqueue("working_qa", WorkingQAOutput(
-        action="success", reason="完成", reply="",
-        updated_experiment_info=ExperimentInfo(current_experiment="完成", actual_result="方差未降低"),
-    ))
-    orchestrator.run_working_qa("s1", "完成了吗？")
+    orchestrator.finish_working("s1")
     event_count = len(repository.list_events("s1"))
 
     with pytest.raises(InvariantViolationError):

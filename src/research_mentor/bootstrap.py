@@ -4,6 +4,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
+import logging
 
 import httpx
 from openai import AsyncOpenAI
@@ -11,6 +12,8 @@ from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from research_mentor.adapters.demo.model import DemoModelAdapter
+from research_mentor.adapters.demo.retrieval import DemoRetrievalAdapter
+from research_mentor.adapters.openalex.client import OpenAlexRetriever
 from research_mentor.adapters.model.openai_compatible import (
     OpenAICompatibleModelAdapter,
 )
@@ -30,6 +33,20 @@ from research_mentor.application.demo import DemoService
 from research_mentor.adapters.filestore.local import LocalFileStore
 from research_mentor.config import SHARED_AGENTS, SLOTS, Settings, SlotName
 from research_mentor.ports.model import StructuredModelPort
+
+
+logger = logging.getLogger("research_mentor.runs")
+
+# 国内网关走系统 HTTP 代理时经常读超时；这些 host 直连。
+_DIRECT_CONNECT_MARKERS = (
+    "wanjiedata.com",
+    "dashscope.aliyuncs.com",
+    "bigmodel.cn",
+)
+
+
+def _direct_connect(base_url: str) -> bool:
+    return any(marker in base_url for marker in _DIRECT_CONNECT_MARKERS)
 
 
 UowFactory = Callable[[], SqlUnitOfWork]
@@ -57,6 +74,12 @@ class ApplicationContainer:
             await self._provider_close()
 
 
+def _use_openalex(settings: Settings) -> bool:
+    if any(getattr(settings, f"{slot}_agents") for slot in SLOTS):
+        return True
+    return settings.model_provider != "demo"
+
+
 def _usable_secret(secret: SecretStr | None) -> str | None:
     if secret is None:
         return None
@@ -77,9 +100,17 @@ def _build_vendor_adapter(
     if not base_url:
         raise ValueError(f"{slot} chat_completions requires base_url")
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
-    client = httpx.AsyncClient(headers=headers)
+    direct = _direct_connect(base_url)
+    if direct:
+        logger.info("model http client direct-connect host=%s", base_url)
+    client = httpx.AsyncClient(headers=headers, trust_env=not direct)
+    # chat_completions 中转普遍不支持 json_schema，卡住会变成空超时。
     return (
-        OpenAICompatibleModelAdapter(client, base_url=base_url),
+        OpenAICompatibleModelAdapter(
+            client,
+            base_url=base_url,
+            response_format_mode="json_object",
+        ),
         client.aclose,
     )
 
@@ -142,9 +173,34 @@ async def build_container(settings: Settings) -> ApplicationContainer:
             handlers=build_command_handlers(model=model, settings=settings),
         )
         run_service = RunService(uow_factory)
+        retriever: Any = DemoRetrievalAdapter()
+        if _use_openalex(settings):
+            logger.info(
+                "literature retriever=OpenAlex demo_mode=%s keyed=%s",
+                settings.demo_mode,
+                bool(_usable_secret(settings.openalex_api_key)),
+            )
+            openalex_client = httpx.AsyncClient(timeout=30.0)
+            retriever = OpenAlexRetriever(
+                openalex_client,
+                mailto=settings.openalex_mailto,
+                api_key=_usable_secret(settings.openalex_api_key),
+            )
+            previous_close = provider_close
+
+            async def close_with_openalex() -> None:
+                if previous_close is not None:
+                    await previous_close()
+                await openalex_client.aclose()
+
+            provider_close = close_with_openalex
+        else:
+            logger.info("literature retriever=demo (no vendor agents, model_provider=demo)")
         worker = AgentRunWorker(
             uow_factory,
-            handlers=build_run_handlers(uow_factory, model=model, settings=settings),
+            handlers=build_run_handlers(
+                uow_factory, model=model, settings=settings, retriever=retriever
+            ),
             worker_id=f"api-{uuid4()}",
             lease_seconds=settings.run_lease_seconds,
             lease_renewal_seconds=settings.run_lease_renewal_seconds,

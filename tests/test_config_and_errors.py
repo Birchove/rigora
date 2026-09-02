@@ -230,8 +230,28 @@ def test_settings_chatgpt_2_inherits_key_for_second_model(monkeypatch):
     assert settings.slot_base_url("chatgpt_2") == "https://relay.example/v1"
     assert settings.slot_api_style("chatgpt_2") == "chat_completions"
     assert settings.slot_model("chatgpt_2") == "gpt-5.6-luna"
-    assert settings.agent_models()["working_qa"] == "gpt-5.6-luna"
-    assert settings.agent_models()["plan_loop"] == "gpt-5.6-sol"
+
+
+def test_settings_chatgpt_2_joins_parallel_plan_paths(monkeypatch):
+    monkeypatch.setenv("RESEARCH_MENTOR_CHATGPT_API_KEY", "shared-openai-key")
+    monkeypatch.setenv("RESEARCH_MENTOR_CHATGPT_AGENTS", "working_qa")
+    monkeypatch.setenv("RESEARCH_MENTOR_CHATGPT_2_MODEL", "gpt-5.6-sol")
+    monkeypatch.setenv("RESEARCH_MENTOR_CHATGPT_2_AGENTS", "[key_insight_check, plan_loop]")
+    monkeypatch.setenv("RESEARCH_MENTOR_QWEN_API_KEY", "qwen-test-key")
+    monkeypatch.setenv("RESEARCH_MENTOR_QWEN_MODEL", "qwen-plan")
+    monkeypatch.setenv("RESEARCH_MENTOR_QWEN_AGENTS", "[key_insight_check, plan_loop]")
+    monkeypatch.setenv("RESEARCH_MENTOR_GLM_API_KEY", "glm-test-key")
+    monkeypatch.setenv("RESEARCH_MENTOR_GLM_MODEL", "glm-plan")
+    monkeypatch.setenv("RESEARCH_MENTOR_GLM_AGENTS", "[key_insight_check, plan_loop]")
+
+    settings = Settings()
+
+    assert settings.parallel_slots() == ("chatgpt_2", "qwen", "glm")
+    assert settings.plan_check_pairs() == (
+        ("gpt-5.6-sol", "qwen-plan"),
+        ("qwen-plan", "glm-plan"),
+        ("glm-plan", "gpt-5.6-sol"),
+    )
 
 
 def test_settings_requires_key_when_agents_assigned(monkeypatch):

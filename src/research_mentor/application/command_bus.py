@@ -130,22 +130,38 @@ class CommandBus:
     async def _find_processed_result(
         self, command: Command
     ) -> CommandResult | None:
-        async with self._uow_factory() as uow:
-            existing = await uow.processed_commands.find(
-                command.project_id, command.command_id
-            )
-            if existing is None:
-                return None
-            return _RESULT_ADAPTER.validate_python(existing.receipt)
+        last_lock: OperationalError | None = None
+        for attempt in range(5):
+            try:
+                async with self._uow_factory() as uow:
+                    existing = await uow.processed_commands.find(
+                        command.project_id, command.command_id
+                    )
+                    if existing is None:
+                        return None
+                    return _RESULT_ADAPTER.validate_python(existing.receipt)
+            except OperationalError as exc:
+                if not self._is_sqlite_lock(exc):
+                    raise
+                last_lock = exc
+                await asyncio.sleep(0.05 * (attempt + 1))
+        if last_lock is not None:
+            raise last_lock
+        return None
 
     async def _recover_after_sqlite_lock(
         self, command: Command, original: OperationalError
     ) -> CommandResult:
         for attempt in range(5):
-            duplicate = await self._find_processed_result(command)
+            try:
+                duplicate = await self._find_processed_result(command)
+            except OperationalError as exc:
+                if not self._is_sqlite_lock(exc):
+                    raise
+                duplicate = None
             if duplicate is not None:
                 return duplicate
-            await asyncio.sleep(0.01 * (attempt + 1))
+            await asyncio.sleep(0.05 * (attempt + 1))
         try:
             return await self._dispatch_transaction(command)
         except ConcurrencyConflict:
