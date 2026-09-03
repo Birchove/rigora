@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { CommandType, Phase, ProjectView, UploadedDocumentView } from "../../api/types";
+import type { CommandType, Phase, ProjectView, ResearchJournal, UploadedDocumentView } from "../../api/types";
 import { UPLOAD_PARSE_LABELS, UPLOAD_TRANSFER_LABELS } from "../../ui/uploadLabels";
 import { AgentRunLive } from "../../components/AgentRunLive";
 import { AppShell } from "../../components/AppShell";
 import { CollapsibleRunTrace } from "../../components/CollapsibleRunTrace";
 import { EvidencePanel } from "../../components/EvidencePanel";
-import { ExportPanel } from "../../components/ExportPanel";
+import { JournalView } from "../../components/JournalView";
 import {
   useCommand,
   type CommandApi,
@@ -64,20 +64,18 @@ const activeRunStatuses = new Set(["queued", "running"]);
 
 const TSUNDERE_LENGTH_LIMIT = 16000;
 const COMPOSER_HARD_LIMIT = 19999;
+const COMPOSER_SINGLE_LINE_VISUAL = 42;
 
-// 输入框宽度随内容平滑增长（GPT 风格）：CJK/全角按 2 倍视觉宽度估算，触顶后不再增加
-const COMPOSER_WIDTH_MIN_REM = 34;
-const COMPOSER_WIDTH_MAX_REM = 56;
-const COMPOSER_GROW_VISUAL_LENGTH = 120;
-
-function composerWidthRem(draft: string): number {
+function draftVisualLength(draft: string): number {
   let visualLength = 0;
   for (const ch of draft) {
     visualLength += (ch.codePointAt(0) ?? 0) > 0x2e7f ? 2 : 1;
   }
-  const ratio = Math.min(1, visualLength / COMPOSER_GROW_VISUAL_LENGTH);
-  return COMPOSER_WIDTH_MIN_REM
-    + (COMPOSER_WIDTH_MAX_REM - COMPOSER_WIDTH_MIN_REM) * ratio;
+  return visualLength;
+}
+
+function needsMultiline(draft: string): boolean {
+  return draft.includes("\n") || draftVisualLength(draft) > COMPOSER_SINGLE_LINE_VISUAL;
 }
 
 function isRunActive(project: ProjectView): boolean {
@@ -260,9 +258,8 @@ function visibleCommands(project: ProjectView): CommandType[] {
       !panelOwnedCommands.has(command)
       // 后端恒允许 cancel_run，但没有活动 run 时点击必然报错，空闲时不渲染
       && command !== "cancel_run"
-      // archive_project 后端目前是 no-op 占位（不落库），前端不渲染；
-      // 后端真实现后由 allowed_commands 恢复。
-      && command !== "archive_project",
+      && command !== "archive_project"
+      && command !== "run_complete",
   );
 }
 
@@ -299,27 +296,32 @@ function Composer({
   const [draft, setDraft] = useState(() => sessionStorage.getItem(storageKey) ?? "");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const [multiline, setMultiline] = useState(false);
+  const [multiline, setMultiline] = useState(() => needsMultiline(sessionStorage.getItem(storageKey) ?? ""));
   const [restartConfirm, setRestartConfirm] = useState(false);
   const overTsundere = draft.length > TSUNDERE_LENGTH_LIMIT;
 
   useEffect(() => {
-    setDraft(sessionStorage.getItem(storageKey) ?? "");
+    const next = sessionStorage.getItem(storageKey) ?? "";
+    setDraft(next);
     setRestartConfirm(false);
+    setMultiline(needsMultiline(next));
   }, [storageKey]);
 
-  // 自动增高并探测是否超过一行：超过后“+”/发送按钮平滑移到左下/右下角。
-  // 阈值带迟滞（>48 开启、<40 关闭）：两种布局的换行宽度不同，
-  // 单一阈值会在 1↔2 行边界来回振荡。
+  // 超过一行后锁定多行布局与高度，避免 1↔2 行来回跳；内容回到一行才收起。
   useEffect(() => {
     const el = textareaRef.current;
     if (el === null) {
       return;
     }
-    el.style.height = "0px";
-    const content = el.scrollHeight;
-    el.style.height = `${Math.min(content, 160)}px`;
-    setMultiline((prev) => (content > 48 ? true : content < 40 ? false : prev));
+    const wrapped = needsMultiline(draft);
+    setMultiline(wrapped);
+    if (wrapped) {
+      el.style.height = "4.5rem";
+      el.style.overflowY = "auto";
+      return;
+    }
+    el.style.height = "auto";
+    el.style.overflowY = "hidden";
   }, [draft, storageKey]);
 
   const sendComposer = () => {
@@ -334,7 +336,14 @@ function Composer({
       setRestartConfirm(true);
       return;
     }
-    void submit(payload);
+    void submit(payload).then((result) => {
+      if (result === undefined) {
+        return;
+      }
+      setDraft("");
+      setMultiline(false);
+      sessionStorage.removeItem(storageKey);
+    });
   };
 
   const transferText: string | null = transferStatus === null
@@ -383,7 +392,14 @@ function Composer({
               const payload = draftFor(composerCommand, draft, project);
               setRestartConfirm(false);
               if (payload !== null) {
-                void submit(payload);
+                void submit(payload).then((result) => {
+                  if (result === undefined) {
+                    return;
+                  }
+                  setDraft("");
+                  setMultiline(false);
+                  sessionStorage.removeItem(storageKey);
+                });
               }
             }}
           >
@@ -405,7 +421,6 @@ function Composer({
       ) : null}
       <div
         className={multiline ? "composer-wrap is-multiline" : "composer-wrap"}
-        style={{ width: `min(${composerWidthRem(draft).toFixed(2)}rem, 100%)` }}
       >
         <input
           ref={fileInputRef}
@@ -544,6 +559,7 @@ export function ProjectWorkspace({
   projects,
   onExportMarkdown,
   onExportJson,
+  onLoadJournal,
   transferStatus = null,
   parseStatus = null,
   documents = [],
@@ -559,6 +575,7 @@ export function ProjectWorkspace({
   projects?: ProjectView[];
   onExportMarkdown?: () => Promise<void> | void;
   onExportJson?: () => Promise<void> | void;
+  onLoadJournal?: () => Promise<ResearchJournal>;
   transferStatus?: string | null;
   parseStatus?: string | null;
   documents?: UploadedDocumentView[];
@@ -572,6 +589,7 @@ export function ProjectWorkspace({
   const liveSubmit = api === undefined ? undefined : submit;
   const evidenceCount = project.visible_evidence?.length ?? 0;
   const prevEvidenceCount = useRef(0);
+  const autoCompleteKey = useRef<string | null>(null);
 
   // 检索证据从无到有时从右侧弹出；用户手动收起后不再自动弹出。
   useEffect(() => {
@@ -580,6 +598,35 @@ export function ProjectWorkspace({
     }
     prevEvidenceCount.current = evidenceCount;
   }, [evidenceCount]);
+
+  useEffect(() => {
+    if (api === undefined || busy || isRunActive(project)) {
+      return;
+    }
+    if (project.phase !== "completing") {
+      return;
+    }
+    if (!project.allowed_commands.includes("run_complete")) {
+      return;
+    }
+    const key = `${project.project_id}:${project.version}`;
+    if (autoCompleteKey.current === key) {
+      return;
+    }
+    const stored = sessionStorage.getItem(`rigora:auto-complete:${key}`);
+    if (stored === "1") {
+      autoCompleteKey.current = key;
+      return;
+    }
+    autoCompleteKey.current = key;
+    sessionStorage.setItem(`rigora:auto-complete:${key}`, "1");
+    void submit({ type: "run_complete", completion_status: true }).then((result) => {
+      if (result === undefined) {
+        sessionStorage.removeItem(`rigora:auto-complete:${key}`);
+        autoCompleteKey.current = null;
+      }
+    });
+  }, [api, busy, project, submit]);
 
   return (
     <AppShell
@@ -632,7 +679,11 @@ export function ProjectWorkspace({
           <CollapsibleRunTrace activity={project.recent_activity ?? []} />
         )}
         {project.phase === "completed" ? (
-          <ExportPanel onExportMarkdown={onExportMarkdown} onExportJson={onExportJson} />
+          <JournalView
+            onExportMarkdown={onExportMarkdown}
+            onExportJson={onExportJson}
+            onLoadJournal={onLoadJournal}
+          />
         ) : null}
       </div>
     </AppShell>

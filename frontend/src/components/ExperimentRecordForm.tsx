@@ -20,7 +20,7 @@ export function ExperimentRecordForm({
   const isValidation = task?.task_kind === "validation";
   const [objective, setObjective] = useState(planQuestion ?? task?.current_experiment ?? "");
   const [method, setMethod] = useState(task?.validation_task?.method ?? "");
-  const [expectedResult, setExpectedResult] = useState(task?.expected_result ?? task?.validation_task?.expected_result ?? "");
+  const [expectedResult, setExpectedResult] = useState("");
   const [executionStatus, setExecutionStatus] = useState<ExecutionChoice>("completed");
   const [impact, setImpact] = useState<ImpactChoice>("supports");
   const [actualResult, setActualResult] = useState("");

@@ -6,6 +6,7 @@ import type {
   CommandResponse,
   JsonValue,
   ProjectView,
+  ResearchJournal,
   UploadedDocumentView,
 } from "./types";
 
@@ -79,6 +80,10 @@ export function createClient(
 
     listDocuments(projectId: string) {
       return json<UploadedDocumentView[]>(`/projects/${encodeURIComponent(projectId)}/documents`);
+    },
+
+    getJournal(projectId: string) {
+      return json<ResearchJournal>(`/projects/${encodeURIComponent(projectId)}/journal.json`);
     },
 
     async deleteDocument(projectId: string, documentId: string) {

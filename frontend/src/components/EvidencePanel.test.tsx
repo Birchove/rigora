@@ -50,6 +50,25 @@ describe("EvidencePanel", () => {
     expect(screen.queryByText("Extra 11")).toBeNull();
   });
 
+  it("shows only the first sentence of a long evidence summary", () => {
+    render(
+      <EvidencePanel
+        evidence={[
+          {
+            title: "Long paper",
+            source_type: "paper",
+            url: null,
+            summary: "第一句到此为止。后面还有很多不应出现的摘要内容。",
+            selected: true,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("第一句到此为止。")).toBeVisible();
+    expect(screen.queryByText("后面还有很多不应出现的摘要内容。")).toBeNull();
+  });
+
   it("filters to adopted evidence", () => {
     render(<EvidencePanel evidence={ITEMS} />);
 

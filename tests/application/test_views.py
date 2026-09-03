@@ -136,6 +136,7 @@ def test_working_turns_expose_validated_reply() -> None:
                 "action": "answer",
                 "reason": "信息足够",
                 "reply": "先固定随机种子再比较显存。",
+                "question": "主实验第一步怎么卡死变量？",
             },
             occurred_at=occurred,
         ),
@@ -157,3 +158,4 @@ def test_working_turns_expose_validated_reply() -> None:
     assert turns[0].action == "answer"
     assert turns[0].reply == "先固定随机种子再比较显存。"
     assert turns[0].reason == "信息足够"
+    assert turns[0].question == "主实验第一步怎么卡死变量？"

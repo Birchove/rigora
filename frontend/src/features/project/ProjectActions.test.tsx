@@ -201,10 +201,31 @@ describe("ProjectActions", () => {
         result: expect.objectContaining({
           actual_result: "P95 下降 18%",
           conclusion: "主实验支持主张",
+          expected_result: null,
           execution_status: "completed",
         }),
       }),
     );
+  });
+
+  it("leaves expected result blank instead of copying the experiment design", () => {
+    render(
+      <ProjectWorkspace
+        project={project({
+          phase: "awaiting_result_record",
+          allowed_commands: ["record_main_result"],
+          current_task: {
+            task_id: "task-1",
+            task_kind: "main",
+            origin: "plan",
+            status: "in_progress",
+            current_experiment: "运行缓存基准",
+            expected_result: "延迟下降",
+          },
+        })}
+      />,
+    );
+    expect(screen.getByLabelText("预期结果")).toHaveValue("");
   });
 
   it("finishes working from the working panel without a composer draft", () => {

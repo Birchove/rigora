@@ -3,6 +3,13 @@ import { useState } from "react";
 import type { ValidationCandidate } from "../api/types";
 import type { CommandDraft } from "../hooks/useCommand";
 
+const PRIORITY_LABEL: Record<string, string> = {
+  critical: "关键",
+  high: "高",
+  medium: "中",
+  low: "低",
+};
+
 export function ValidationSelectionPanel({
   candidates = [],
   submit,
@@ -66,7 +73,7 @@ export function ValidationSelectionPanel({
     <section className="phase-card">
       <p className="card-kicker">Validation Queue</p>
       <h1>补充实验</h1>
-      <p>候选项按服务器提供的 ID 提交；未选择的验证不会进入执行队列。</p>
+      <p>勾选本轮要执行的验证。未选择的项目不会进入执行队列。</p>
       {candidates.length > 0 ? (
         <ul className="validation-candidates">
           {candidates.map((candidate) => (
@@ -79,42 +86,59 @@ export function ValidationSelectionPanel({
                   disabled={disabled || finishWithoutMore}
                   onChange={() => toggle(candidate.candidate_id)}
                 />
-                <span>{candidate.task.name}</span>
+                <span className="validation-candidate-body">
+                  <span className="validation-candidate-title">
+                    <strong>{candidate.task.name}</strong>
+                    <small>
+                      {PRIORITY_LABEL[candidate.priority] ?? candidate.priority}
+                      {candidate.rank ? ` · #${candidate.rank}` : ""}
+                    </small>
+                  </span>
+                  {candidate.task.purpose ? <span>{candidate.task.purpose}</span> : null}
+                  {candidate.rationale && candidate.rationale !== candidate.task.purpose ? (
+                    <span>{candidate.rationale}</span>
+                  ) : null}
+                  {candidate.task.method ? (
+                    <span className="validation-candidate-method">方法：{candidate.task.method}</span>
+                  ) : null}
+                </span>
               </label>
             </li>
           ))}
         </ul>
       ) : null}
-      <label className="structured-check">
-        <input
-          type="checkbox"
-          checked={finishWithoutMore}
-          disabled={disabled}
-          onChange={(event) => {
-            setFinishWithoutMore(event.target.checked);
-            if (event.target.checked) {
-              setSelected(new Set());
-            }
-          }}
-        />
-        本轮不再补充验证
-      </label>
-      {finishWithoutMore ? (
-        <label className="structured-field">
-          结束理由
-          <textarea
-            value={reason}
+      <div className="validation-footer">
+        <label className="structured-check">
+          <input
+            type="checkbox"
+            checked={finishWithoutMore}
             disabled={disabled}
-            onChange={(event) => setReason(event.target.value)}
+            onChange={(event) => {
+              setFinishWithoutMore(event.target.checked);
+              if (event.target.checked) {
+                setSelected(new Set());
+              }
+            }}
           />
+          本轮不再补充验证
         </label>
-      ) : null}
-      {error ? <p className="command-error" role="alert">{error}</p> : null}
-      {submit !== undefined ? (
-        <button type="button" onClick={confirm} disabled={disabled}>
-          确认选择
-        </button>
-      ) : null}
+        {finishWithoutMore ? (
+          <label className="structured-field">
+            结束理由
+            <textarea
+              value={reason}
+              disabled={disabled}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          </label>
+        ) : null}
+        {error ? <p className="command-error" role="alert">{error}</p> : null}
+        {submit !== undefined ? (
+          <button type="button" onClick={confirm} disabled={disabled}>
+            确认选择
+          </button>
+        ) : null}
+      </div>
     </section>
   );
 }

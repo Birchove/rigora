@@ -8,6 +8,15 @@ type EvidenceFilter = "all" | "adopted" | "discarded";
 
 const EVIDENCE_PANEL_VISIBLE_LIMIT = 12;
 
+function firstSentence(text: string): string {
+  const trimmed = text.trim();
+  if (trimmed === "") {
+    return "";
+  }
+  const match = trimmed.match(/^(.+?[。！？.!?])/u);
+  return match?.[1] ?? trimmed;
+}
+
 export function EvidencePanel({
   evidence = [],
   documents = [],
@@ -58,7 +67,7 @@ export function EvidencePanel({
           {visible.map((item) => {
             const title = stripHtml(item.title);
             const href = safeHttpUrl(item.url);
-            const detail = stripHtml(item.summary ?? item.support ?? "");
+            const detail = firstSentence(stripHtml(item.summary ?? item.support ?? ""));
             return (
               <li
                 key={`${item.title}:${item.url ?? ""}`}

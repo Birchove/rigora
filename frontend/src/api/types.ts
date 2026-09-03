@@ -332,6 +332,63 @@ export interface AgentCommandReceipt {
 
 export type CommandResponse = AgentCommandReceipt | ProjectView;
 
+export interface ResearchJournalProject {
+  project_id: string;
+  title: string;
+  domain: string;
+}
+
+export interface ResearchJournal {
+  project: ResearchJournalProject;
+  generated_at?: string;
+  initial_input?: {
+    original_idea?: string;
+    domain?: string;
+    time_limit?: string | null;
+    available_resources?: string[];
+    other_constraints?: string[];
+  } | null;
+  idea_review?: {
+    normalized_idea?: string;
+    reason?: string;
+    action?: string;
+    idea_type?: string;
+  } | null;
+  literature?: Array<{
+    title?: string;
+    summary?: string;
+    url?: string | null;
+    year?: number | null;
+    provider?: string | null;
+  }>;
+  plans?: Array<{
+    response_to_user?: string;
+    plan?: {
+      research_question?: string;
+      key_insight?: { title?: string; content?: string };
+    };
+  }>;
+  experiment_tasks?: Array<{
+    task_kind?: string;
+    experiment_info?: { current_experiment?: string | null };
+  }>;
+  main_result?: {
+    objective?: string;
+    method?: string;
+    expected_result?: string | null;
+    actual_result?: string;
+    conclusion?: string;
+    impact?: string;
+  } | null;
+  validation_results?: Array<{
+    actual_result?: string;
+    conclusion?: string;
+    is_success?: boolean;
+    task?: { name?: string };
+  }>;
+  writing_guidance?: WritingGuidance | null;
+}
+
 export interface ApiErrorDetail {
   code: string;
   message: string;

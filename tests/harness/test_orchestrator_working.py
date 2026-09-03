@@ -363,7 +363,10 @@ def test_working_replaces_snapshot_and_finish_working_proposes_completion(
     assert stored.phase is SessionPhase.WORKING
     assert stored.current_task is not None and stored.current_task.experiment_info == updated
     assert stored.current_task.experiment_info.expected_result is None
-    assert repository.list_events("s1")[-1].payload == answer.model_dump(mode="json")
+    assert repository.list_events("s1")[-1].payload == {
+        **answer.model_dump(mode="json"),
+        "question": "记录了什么？",
+    }
     first_payload = parse_latest_call(model, "working_qa", "working_qa_data")
     assert first_payload["idea"] == request_session.initial_input.model_dump(mode="json")
     assert first_payload["research_context"]["normalized_idea"] == request_session.idea_review.normalized_idea
@@ -407,7 +410,7 @@ def test_non_success_working_actions_stay_working_and_record_exact_event(
     assert event.event_type is SessionEventType.WORKING_TURN_COMPLETED
     assert event.phase_before is SessionPhase.WORKING
     assert event.phase_after is SessionPhase.WORKING
-    assert event.payload == output.model_dump(mode="json")
+    assert event.payload == {**output.model_dump(mode="json"), "question": "下一步是什么？"}
     if action == "clarify":
         assert stored.pending_working_clarification is not None
         assert stored.pending_working_clarification.original_question == "下一步是什么？"

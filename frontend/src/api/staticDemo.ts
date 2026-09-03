@@ -87,6 +87,7 @@ function workingProject(): ProjectView {
     },
     working_turns: [
       {
+        question: "主实验第一步怎么卡死变量？",
         action: "answer",
         reply: "先固定任务、模型和随机种子，再比较恢复正确率与漂移失败案例。",
         reason: "把主实验收成可核对的对照。",
@@ -237,6 +238,30 @@ export function createStaticDemoClient() {
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(url);
+    },
+
+    async getJournal(projectId: string) {
+      const project = await this.getProject(projectId);
+      return {
+        project: {
+          project_id: project.project_id,
+          title: project.title,
+          domain: project.domain,
+        },
+        initial_input: {
+          original_idea: project.stage_progress?.normalized_idea ?? project.title,
+        },
+        idea_review: {
+          normalized_idea: project.stage_progress?.normalized_idea ?? undefined,
+          reason: project.stage_progress?.idea_reason ?? undefined,
+        },
+        literature: (project.visible_evidence ?? []).map((item) => ({
+          title: item.title,
+          summary: item.summary ?? undefined,
+          url: item.url,
+        })),
+        writing_guidance: project.writing_guidance ?? null,
+      };
     },
 
     async uploadDocument(_projectId: string, _file: File): Promise<never> {

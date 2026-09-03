@@ -119,6 +119,11 @@ function LiveWorkspace({
     refreshDocuments(project.project_id);
   }, [project?.project_id, refreshDocuments]);
 
+  const loadJournal = useCallback(
+    () => client.getJournal(projectId),
+    [client, projectId],
+  );
+
   if (error !== null && project === null) {
     return (
       <BootNotice
@@ -160,6 +165,7 @@ function LiveWorkspace({
       onDeleteDocument={deleteDocument}
       onExportMarkdown={() => client.downloadJournal(project.project_id, "md")}
       onExportJson={() => client.downloadJournal(project.project_id, "json")}
+      onLoadJournal={loadJournal}
       onUpload={async (file) => {
         setTransferStatus("uploading");
         try {

@@ -136,7 +136,7 @@ class WorkingOrchestrator(OrchestratorBase):
             SessionEventType.WORKING_TURN_COMPLETED,
             phase_before,
             phase_after,
-            output.model_dump(mode="json"),
+            {**output.model_dump(mode="json"), "question": question},
         )
         self._commit(session, event)
         return output.model_copy(deep=True)

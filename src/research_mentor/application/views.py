@@ -364,8 +364,10 @@ def _working_turns(events: list[PersistedPublicEvent]) -> list[WorkingTurnView]:
         if not isinstance(reply, str) or not reply.strip():
             continue
         reason = event.payload.get("reason")
+        question = event.payload.get("question")
         items.append(
             WorkingTurnView(
+                question=question if isinstance(question, str) else "",
                 action=action,
                 reply=reply,
                 reason=reason if isinstance(reason, str) else "",

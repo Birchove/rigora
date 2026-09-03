@@ -2,8 +2,8 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CommandType, Phase, ProjectView } from "../../api/types";
 import { ProjectWorkspace } from "./ProjectWorkspace";
@@ -114,6 +114,7 @@ describe("ProjectWorkspace", () => {
         project={project("working", ["send_working_message", "finish_working"], {
           working_turns: [
             {
+              question: "主实验第一步怎么卡死变量？",
               action: "answer",
               reason: "信息足够",
               reply: "先固定随机种子再比较显存。",
@@ -123,6 +124,7 @@ describe("ProjectWorkspace", () => {
       />,
     );
 
+    expect(screen.getAllByText("主实验第一步怎么卡死变量？").length).toBeGreaterThan(0);
     expect(screen.getByText("先固定随机种子再比较显存。")).toBeVisible();
     expect(screen.getByText("回答")).toBeVisible();
   });
@@ -195,6 +197,38 @@ describe("ProjectWorkspace", () => {
     expect(dispatched).toEqual([
       expect.objectContaining({ type: "restart_research" }),
     ]);
+  });
+
+  it("clears the composer after a successful submit", async () => {
+    render(
+      <ProjectWorkspace
+        project={project("awaiting_idea", ["submit_idea"])}
+        api={{ dispatchCommand: async () => project("planning", ["run_plan"]) }}
+      />,
+    );
+    const box = screen.getByRole("textbox", { name: "研究消息" });
+    fireEvent.change(box, { target: { value: "评估分层状态压缩对长对话恢复的作用" } });
+    fireEvent.click(screen.getByRole("button", { name: "提交研究想法" }));
+    await waitFor(() => expect(box).toHaveValue(""));
+  });
+
+  it("starts complete guidance automatically without a second button", async () => {
+    const dispatchCommand = vi.fn().mockResolvedValue(
+      project("completing", ["run_complete"], { project_id: "auto-complete-1", version: 9 }),
+    );
+    render(
+      <ProjectWorkspace
+        project={project("completing", ["run_complete"], { project_id: "auto-complete-1", version: 9 })}
+        api={{ dispatchCommand }}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(dispatchCommand).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "run_complete" }),
+      ),
+    );
+    expect(screen.queryByRole("button", { name: "整理完成建议" })).toBeNull();
   });
 
   it("warns at the 16k tsundere line, not the 19999 hard cap", () => {
