@@ -401,12 +401,37 @@ def test_non_success_working_actions_stay_working_and_record_exact_event(
     result = orchestrator.run_working_qa("s1", "下一步是什么？")
 
     event = repository.list_events("s1")[-1]
+    stored = repository.get("s1")
     assert result == output
-    assert repository.get("s1").phase is SessionPhase.WORKING
+    assert stored.phase is SessionPhase.WORKING
     assert event.event_type is SessionEventType.WORKING_TURN_COMPLETED
     assert event.phase_before is SessionPhase.WORKING
     assert event.phase_after is SessionPhase.WORKING
     assert event.payload == output.model_dump(mode="json")
+    if action == "clarify":
+        assert stored.pending_working_clarification is not None
+        assert stored.pending_working_clarification.original_question == "下一步是什么？"
+        assert stored.pending_working_clarification.clarify_reply == reply
+    else:
+        assert stored.pending_working_clarification is None
+
+
+def test_finish_working_clears_pending_clarification(
+    bundle, initial_input, research_plan
+):
+    orchestrator, model, repository = enter_forward_context(bundle, initial_input)
+    orchestrator.start_working("s1", main_task(), plan=research_plan)
+    model.enqueue(
+        "working_qa",
+        WorkingQAOutput(action="clarify", reason="缺结果", reply="请补充 actual_result"),
+    )
+    orchestrator.run_working_qa("s1", "掉点是压缩还是实现 bug？")
+    assert repository.get("s1").pending_working_clarification is not None
+
+    orchestrator.finish_working("s1")
+
+    assert repository.get("s1").pending_working_clarification is None
+    assert repository.get("s1").phase is SessionPhase.AWAITING_RESULT_RECORD
 
 
 @pytest.mark.parametrize(

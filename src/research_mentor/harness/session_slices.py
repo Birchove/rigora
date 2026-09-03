@@ -58,9 +58,16 @@ class PlanCheckSlice(BaseModel):
     )
 
 
+class PendingWorkingClarification(BaseModel):
+    original_question: str
+    clarify_reply: str
+    clarify_reason: str = ""
+
+
 class WorkingSlice(BaseModel):
     current_task: ExperimentTaskContext | None = None
     pending_plan_issue_reason: str | None = None
+    pending_working_clarification: PendingWorkingClarification | None = None
 
 
 class CompletionSlice(BaseModel):

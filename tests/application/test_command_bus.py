@@ -146,6 +146,7 @@ def test_command_union_names_are_exact() -> None:
         "run_check",
         "decide_plan",
         "send_working_message",
+        "submit_working_clarification",
         "resume_working",
         "finish_working",
         "record_main_result",

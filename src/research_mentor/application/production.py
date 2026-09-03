@@ -5,6 +5,7 @@ from collections.abc import Callable
 from typing import Any
 from uuid import uuid4
 
+from datetime import datetime, timezone
 from research_mentor.application.commands import (
     AgentCommandReceipt,
     ArchiveProjectCommand,
@@ -28,6 +29,7 @@ from research_mentor.application.context_service import (
 from research_mentor.application.handlers import CancelRunHandler, RestartResearchHandler
 from research_mentor.application.orchestration import apply_orchestrator
 from research_mentor.config import Settings
+from research_mentor.domain.conversations import ConversationTurn
 from research_mentor.domain.evidence import EvidenceRef
 from research_mentor.domain.jobs import AgentRun
 from research_mentor.domain.projects import ResearchProject
@@ -40,6 +42,7 @@ from research_mentor.harness.retrieval_context import (
     IdentityLiteratureRanker,
     LiteratureBatchRetriever,
 )
+from research_mentor.harness.session_slices import PendingWorkingClarification
 from research_mentor.harness.state import ResearchSession
 from research_mentor.harness.task_factory import TaskFactory
 from research_mentor.hyperparameters import OPENALEX_DEFAULT_LIMIT
@@ -49,12 +52,27 @@ from research_mentor.ports.model import StructuredModelPort
 logger = logging.getLogger("research_mentor.runs")
 
 
+def resolve_working_query(
+    snapshot: dict[str, Any],
+    pending: PendingWorkingClarification | None,
+) -> tuple[str, str | None]:
+    clarification = snapshot.get("clarification")
+    clarification_text = clarification.strip() if isinstance(clarification, str) else ""
+    question = str(snapshot.get("question") or "").strip()
+    if clarification_text:
+        if pending is None or not pending.original_question.strip():
+            raise InvariantViolationError("working clarification requires a pending clarify turn")
+        return pending.original_question, clarification_text
+    return question, None
+
+
 _AGENT_BY_COMMAND = {
     "submit_idea": "idea_review",
     "submit_refinement": "idea_review",
     "run_plan": "plan_loop",
     "run_check": "key_insight_check",
     "send_working_message": "working_qa",
+    "submit_working_clarification": "working_qa",
     "run_complete": "complete",
 }
 
@@ -409,8 +427,14 @@ class AgentRunHandlers:
         self, run: AgentRun, snapshot: dict[str, Any], repair_errors: list[dict[str, Any]] | None
     ) -> None:
         del repair_errors
-        question = str(snapshot.get("question") or "")
-        context = await self._build_working_context(run.project_id, question)
+        pending = await self._pending_working_clarification(run.project_id)
+        question, clarification = resolve_working_query(snapshot, pending)
+        context = await self._build_working_context(
+            run.project_id,
+            question,
+            pending=pending,
+            clarification=clarification,
+        )
         await self._run(
             run,
             lambda orchestrator, session_id: orchestrator.run_working_qa(
@@ -444,7 +468,27 @@ class AgentRunHandlers:
                 update={"original_idea": str(snapshot.get("refinement") or "")}
             )
 
-    async def _build_working_context(self, project_id: str, question: str):
+    async def _pending_working_clarification(
+        self, project_id: str
+    ) -> PendingWorkingClarification | None:
+        async with self._uow_factory() as uow:
+            project = await uow.projects.get(project_id)
+            if project is None:
+                return None
+            session = await uow.sessions.get(project.session_id)
+        if session is None:
+            return None
+        pending = session.pending_working_clarification
+        return None if pending is None else pending.model_copy(deep=True)
+
+    async def _build_working_context(
+        self,
+        project_id: str,
+        question: str,
+        *,
+        pending: PendingWorkingClarification | None = None,
+        clarification: str | None = None,
+    ):
         async with self._uow_factory() as uow:
             project = await uow.projects.get(project_id)
             if project is None:
@@ -466,6 +510,31 @@ class AgentRunHandlers:
         facts = [item for item in observations if item.strip()]
         if actual and actual.strip():
             facts.append(actual)
+        conversation_turns = []
+        if clarification and pending is not None:
+            facts.append(f"澄清补充: {clarification}")
+            now = datetime.now(timezone.utc)
+            conversation_turns = [
+                ConversationTurn(
+                    turn_id="clarify-original",
+                    role="user",
+                    content=pending.original_question,
+                    created_at=now,
+                ),
+                ConversationTurn(
+                    turn_id="clarify-agent",
+                    role="assistant",
+                    content=pending.clarify_reply,
+                    created_at=now,
+                    agent_name="working_qa",
+                ),
+                ConversationTurn(
+                    turn_id="clarify-user",
+                    role="user",
+                    content=clarification,
+                    created_at=now,
+                ),
+            ]
         evidence_refs = [
             EvidenceRef(
                 source_id=record.record_id,
@@ -484,6 +553,7 @@ class AgentRunHandlers:
             WorkingContextSource(
                 research_context=session.research_context,
                 current_task=session.current_task,
+                conversation_turns=conversation_turns,
                 document_chunks=chunks,
                 evidence_refs=evidence_refs,
                 facts=facts,

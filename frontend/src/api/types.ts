@@ -96,6 +96,18 @@ export interface CurrentTaskView {
   validation_task?: ValidationTask | null;
 }
 
+export interface WorkingTurnView {
+  action: string;
+  reply: string;
+  reason?: string | null;
+}
+
+export interface PendingWorkingClarification {
+  original_question: string;
+  clarify_reply: string;
+  clarify_reason?: string | null;
+}
+
 export interface WritingGuidance {
   suggested_structure: string[];
   key_results_to_report: string[];
@@ -121,6 +133,8 @@ export interface ProjectView {
   current_task?: CurrentTaskView | null;
   writing_guidance?: WritingGuidance | null;
   revision_reason?: string | null;
+  working_turns?: WorkingTurnView[];
+  pending_clarification?: PendingWorkingClarification | null;
 }
 
 export interface InitialInput {
@@ -224,6 +238,11 @@ export interface SendWorkingMessageCommand extends CommandBase {
   question: string;
 }
 
+export interface SubmitWorkingClarificationCommand extends CommandBase {
+  type: "submit_working_clarification";
+  clarification: string;
+}
+
 export interface ResumeWorkingCommand extends CommandBase {
   type: "resume_working";
 }
@@ -280,6 +299,7 @@ export type Command =
   | RunCheckCommand
   | DecidePlanCommand
   | SendWorkingMessageCommand
+  | SubmitWorkingClarificationCommand
   | ResumeWorkingCommand
   | FinishWorkingCommand
   | RecordMainResultCommand

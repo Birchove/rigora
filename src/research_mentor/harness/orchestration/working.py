@@ -12,6 +12,7 @@ from research_mentor.errors import InvariantViolationError
 from research_mentor.harness.orchestration.base import OrchestratorBase
 from research_mentor.harness.routing import route_working_output
 from research_mentor.harness.state import ResearchSession, SessionEventType, SessionPhase
+from research_mentor.harness.session_slices import PendingWorkingClarification
 
 
 class WorkingOrchestrator(OrchestratorBase):
@@ -117,6 +118,17 @@ class WorkingOrchestrator(OrchestratorBase):
             raise InvariantViolationError("only a main task may report a plan issue")
         if output.action == "report_plan_issue":
             session.pending_plan_issue_reason = output.reason
+        if output.action == "clarify":
+            prior = session.pending_working_clarification
+            session.pending_working_clarification = PendingWorkingClarification(
+                original_question=(
+                    prior.original_question if prior is not None else question
+                ),
+                clarify_reply=output.reply,
+                clarify_reason=output.reason,
+            )
+        else:
+            session.pending_working_clarification = None
         phase_after = route_working_output(output)
         session.phase = phase_after
         event = self._event(
@@ -150,6 +162,7 @@ class WorkingOrchestrator(OrchestratorBase):
         if session.current_task is None or session.current_task.status != "in_progress":
             raise InvariantViolationError("finish_working requires an in-progress current task")
         phase_before = session.phase
+        session.pending_working_clarification = None
         session.phase = SessionPhase.AWAITING_RESULT_RECORD
         event = self._event(
             session_id,

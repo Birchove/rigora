@@ -233,6 +233,37 @@ describe("ProjectActions", () => {
     expect(screen.getAllByRole("button", { name: "实验已全部完成，进入下一步" })).toHaveLength(1);
   });
 
+  it("hides the working composer while a clarification panel is pending", () => {
+    render(
+      <ProjectWorkspace
+        project={project({
+          phase: "working",
+          allowed_commands: ["submit_working_clarification", "finish_working"],
+          pending_clarification: {
+            original_question: "掉点原因是什么？",
+            clarify_reply: "请补充 actual_result。",
+          },
+          working_turns: [
+            { action: "clarify", reason: "缺结果", reply: "请补充 actual_result。" },
+          ],
+          current_task: {
+            task_id: "task-1",
+            task_kind: "main",
+            origin: "plan",
+            status: "in_progress",
+            current_experiment: "运行缓存基准",
+          },
+        })}
+        api={fakeApi()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "发送实验问题" })).toBeNull();
+    expect(screen.getByRole("textbox", { name: "研究消息" })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "补充说明" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "提交补充说明" })).toBeEnabled();
+  });
+
   it("disables finish_working while a working run is active", () => {
     render(
       <ProjectWorkspace

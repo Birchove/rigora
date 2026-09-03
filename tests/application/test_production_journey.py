@@ -8,6 +8,7 @@ from research_mentor.application.commands import (
     DecidePlanCommand,
     RunCheckCommand,
     RunPlanCommand,
+    SendWorkingMessageCommand,
     SubmitIdeaCommand,
 )
 from research_mentor.application.views import ProjectViewService
@@ -91,6 +92,7 @@ async def test_production_handlers_cover_commands_and_agents(tmp_path):
             "run_check",
             "decide_plan",
             "send_working_message",
+            "submit_working_clarification",
             "resume_working",
             "finish_working",
             "record_main_result",
@@ -178,6 +180,23 @@ async def test_submit_idea_through_worker_reaches_working(tmp_path):
         assert working.phase is SessionPhase.WORKING
         assert working.active_run is None
         assert working.last_event_sequence > after_check.last_event_sequence
+        assert working.working_turns == []
+
+        await container.command_bus.dispatch(
+            SendWorkingMessageCommand(
+                project_id=project.project_id,
+                command_id=str(uuid4()),
+                expected_version=working.version,
+                question="主实验第一步怎么卡死变量？",
+            )
+        )
+        await _drain(container.worker)
+        after_qa = await views.get(project.project_id)
+        assert after_qa.phase is SessionPhase.WORKING
+        assert after_qa.active_run is None
+        assert len(after_qa.working_turns) == 1
+        assert after_qa.working_turns[0].action == "answer"
+        assert after_qa.working_turns[0].reply == "先固定任务集与随机种子，再比较恢复正确率。"
     finally:
         await container.close_provider()
         await container.engine.dispose()

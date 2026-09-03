@@ -117,6 +117,8 @@ async def test_create_project_and_fetch_view(monkeypatch, tmp_path):
             "current_task": None,
             "writing_guidance": None,
             "revision_reason": None,
+            "working_turns": [],
+            "pending_clarification": None,
         }
 
         fetched = await client.get(

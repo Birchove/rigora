@@ -98,6 +98,67 @@ describe("ProjectWorkspace", () => {
     expect(screen.queryByRole("button", { name: "确认修订方向" })).toBeNull();
   });
 
+  it("renders validated working replies on the working card", () => {
+    render(
+      <ProjectWorkspace
+        project={project("working", ["send_working_message", "finish_working"], {
+          working_turns: [
+            {
+              action: "answer",
+              reason: "信息足够",
+              reply: "先固定随机种子再比较显存。",
+            },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("先固定随机种子再比较显存。")).toBeVisible();
+    expect(screen.getByText("回答")).toBeVisible();
+  });
+
+  it("collects working clarification on the card instead of the composer", () => {
+    const dispatched: Array<{ type: string; clarification?: string }> = [];
+    render(
+      <ProjectWorkspace
+        project={project("working", ["submit_working_clarification", "finish_working"], {
+          pending_clarification: {
+            original_question: "如果恢复 exact-match 掉了 3 个点，是压缩还是实现 bug？",
+            clarify_reply: "请补充是否已有 actual_result。",
+            clarify_reason: "缺少会改变判断的结果",
+          },
+          working_turns: [
+            {
+              action: "clarify",
+              reason: "缺少会改变判断的结果",
+              reply: "请补充是否已有 actual_result。",
+            },
+          ],
+        })}
+        api={{
+          dispatchCommand: async (command) => {
+            dispatched.push(command);
+            return project("working", ["send_working_message", "finish_working"]);
+          },
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "发送实验问题" })).toBeNull();
+    expect(screen.getByRole("textbox", { name: "研究消息" })).toBeDisabled();
+    fireEvent.change(screen.getByRole("textbox", { name: "补充说明" }), {
+      target: { value: "目前还没跑完，没有 actual_result。" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "提交补充说明" }));
+
+    expect(dispatched).toEqual([
+      expect.objectContaining({
+        type: "submit_working_clarification",
+        clarification: "目前还没跑完，没有 actual_result。",
+      }),
+    ]);
+  });
+
   it("keeps demo data visibly marked in the workspace header", () => {
     render(
       <ProjectWorkspace

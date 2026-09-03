@@ -43,6 +43,7 @@ AGENT_COMMAND_TYPES = frozenset(
         "run_plan",
         "run_check",
         "send_working_message",
+        "submit_working_clarification",
         "run_complete",
         "restart_research",
     }

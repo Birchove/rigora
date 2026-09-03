@@ -54,6 +54,9 @@ function composerBlankMessage(draft: CommandDraft): string | null {
   if (draft.type === "send_working_message" && !draft.question.trim()) {
     return "请先填写要发送的问题，再提交。";
   }
+  if (draft.type === "submit_working_clarification" && !draft.clarification.trim()) {
+    return "请先填写补充说明，再提交。";
+  }
   if (draft.type === "restart_research" && !draft.idea.original_idea.trim()) {
     return "请先写下新的研究想法，再重新开始。";
   }

@@ -7,6 +7,7 @@ from research_mentor.application.allowed_commands import (
 from research_mentor.errors import IllegalTransitionError
 from research_mentor.harness.phase import SessionPhase
 from research_mentor.harness.state import ResearchSession
+from research_mentor.harness.session_slices import PendingWorkingClarification
 from research_mentor.domain.experiments import ExperimentTaskContext, ValidationTask
 
 
@@ -78,6 +79,24 @@ def test_phase_exposes_its_harness_entrypoint(
     assert "archive_project" in commands
     if phase is SessionPhase.WORKING:
         assert "finish_working" in commands
+
+
+def test_working_clarification_replaces_composer_command() -> None:
+    session = ResearchSession(
+        session_id="s1",
+        phase=SessionPhase.WORKING,
+        pending_working_clarification=PendingWorkingClarification(
+            original_question="exact-match 掉了 3 个点是什么原因？",
+            clarify_reply="请补充是否已有 actual_result。",
+        ),
+    )
+    commands = allowed_commands(session)
+
+    assert commands[0] == "submit_working_clarification"
+    assert "send_working_message" not in commands
+    assert "finish_working" in commands
+    with pytest.raises(IllegalTransitionError):
+        assert_allowed("send_working_message", session)
 
 
 def test_illegal_phase_is_rejected_by_server_authority() -> None:

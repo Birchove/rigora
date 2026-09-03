@@ -19,6 +19,7 @@ const actionLabels: Record<CommandType, string> = {
   run_check: "校验点睛之笔",
   decide_plan: "确认方案",
   send_working_message: "发送实验问题",
+  submit_working_clarification: "提交补充说明",
   finish_working: "实验已全部完成，进入下一步",
   resume_working: "继续实验问答",
   record_main_result: "记录主实验结果",
@@ -41,6 +42,7 @@ const composerCommands = new Set<CommandType>([
 const panelOwnedCommands = new Set<CommandType>([
   "decide_plan",
   "finish_working",
+  "submit_working_clarification",
   "record_main_result",
   "record_validation_result",
   "select_validations",
@@ -109,7 +111,10 @@ function phaseContent(
           phase={phase}
           task={project.current_task}
           planQuestion={project.stage_progress?.plan_question}
-          submit={allowedSubmit(project, submit, ["finish_working", "record_main_result", "record_validation_result"])}
+          turns={project.working_turns ?? []}
+          pendingClarification={project.pending_clarification ?? null}
+          projectId={project.project_id}
+          submit={allowedSubmit(project, submit, ["finish_working", "record_main_result", "record_validation_result", "submit_working_clarification"])}
           busy={busy || isRunActive(project)}
         />
       );
@@ -157,6 +162,8 @@ function draftFor(
       return { type: "submit_refinement", refinement: draft };
     case "send_working_message":
       return { type: "send_working_message", question: draft };
+    case "submit_working_clarification":
+      return { type: "submit_working_clarification", clarification: draft };
     case "run_plan":
       return { type: "run_plan", mode: "low" };
     case "run_check":

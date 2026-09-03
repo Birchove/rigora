@@ -282,6 +282,36 @@
   margin-top: 1.25rem;
 }
 
+.working-turns {
+  display: grid;
+  gap: 0.85rem;
+  margin: 1.25rem 0;
+}
+
+.working-message {
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--rule);
+  background: rgb(233 239 234 / 78%);
+}
+
+.working-message p {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-reading);
+  white-space: pre-wrap;
+  line-height: 1.8;
+}
+
+.working-message .card-kicker {
+  margin-bottom: 0.65rem;
+}
+
+.working-message-reason {
+  margin-top: 0.65rem;
+  color: var(--slate);
+  font-size: 0.85rem;
+}
+
 .structured-field {
   display: grid;
   gap: 0.35rem;

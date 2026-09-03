@@ -15,6 +15,7 @@ from research_mentor.domain.experiments import ExperimentTaskContext, Validation
 from research_mentor.domain.jobs import AgentRun
 from research_mentor.domain.projects import ResearchProject
 from research_mentor.harness.phase import SessionPhase
+from research_mentor.harness.session_slices import PendingWorkingClarification
 from research_mentor.harness.state import (
     ResearchSession,
     SessionEvent,
@@ -79,6 +80,12 @@ class CurrentTaskView(BaseModel):
     validation_task: ValidationTask | None = None
 
 
+class WorkingTurnView(BaseModel):
+    action: str
+    reply: str
+    reason: str = ""
+
+
 class ProjectView(BaseModel):
     project_id: str
     title: str
@@ -97,6 +104,8 @@ class ProjectView(BaseModel):
     current_task: CurrentTaskView | None = None
     writing_guidance: WritingGuidance | None = None
     revision_reason: str | None = None
+    working_turns: list[WorkingTurnView] = Field(default_factory=list)
+    pending_clarification: PendingWorkingClarification | None = None
 
 
 class ProjectNotFoundError(Exception):
@@ -262,6 +271,12 @@ class ProjectViewService:
                 else None
             ),
             revision_reason=_revision_reason(session),
+            working_turns=_working_turns(events),
+            pending_clarification=(
+                session.pending_working_clarification.model_copy(deep=True)
+                if session.pending_working_clarification is not None
+                else None
+            ),
         )
 
 
@@ -330,6 +345,28 @@ def _revision_reason(session: ResearchSession) -> str | None:
     if output is not None:
         return output.revision_reason
     return None
+
+
+def _working_turns(events: list[PersistedPublicEvent]) -> list[WorkingTurnView]:
+    items: list[WorkingTurnView] = []
+    for event in events:
+        if event.event_type != "working_turn_completed":
+            continue
+        action = event.payload.get("action")
+        reply = event.payload.get("reply")
+        if not isinstance(action, str) or not action.strip():
+            continue
+        if not isinstance(reply, str) or not reply.strip():
+            continue
+        reason = event.payload.get("reason")
+        items.append(
+            WorkingTurnView(
+                action=action,
+                reply=reply,
+                reason=reason if isinstance(reason, str) else "",
+            )
+        )
+    return items
 
 
 def _evidence_key(*, title: str, url: str | None, record_id: str | None = None) -> str:

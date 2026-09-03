@@ -249,7 +249,7 @@ async def test_openapi_exposes_command_discriminator_success_and_errors(
         operation = paths["/api/v1/projects/{project_id}/commands"]["post"]
         body_schema = operation["requestBody"]["content"]["application/json"]["schema"]
         assert body_schema["discriminator"]["propertyName"] == "type"
-        assert len(body_schema["oneOf"]) == 16
+        assert len(body_schema["oneOf"]) == 17
         assert {"200", "202", "404", "409", "422", "503"} <= set(
             operation["responses"]
         )

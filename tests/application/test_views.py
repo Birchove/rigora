@@ -1,5 +1,7 @@
+from datetime import datetime, timezone
+
 from research_mentor.agents.idea_review.contracts import IdeaReviewOutput
-from research_mentor.application.views import _visible_evidence
+from research_mentor.application.views import _visible_evidence, _working_turns
 from research_mentor.domain.checks import (
     DimensionScore,
     KeyInsightAssessment,
@@ -10,6 +12,7 @@ from research_mentor.domain.checks import (
 from research_mentor.domain.evidence import EvidenceRef, LiteratureRecord
 from research_mentor.harness.state import ResearchSession
 from research_mentor.hyperparameters import SCORING_RULE_VERSION
+from research_mentor.ports.events import PersistedPublicEvent
 
 
 def test_visible_evidence_distinguishes_retrieved_and_adopted() -> None:
@@ -107,3 +110,50 @@ def test_visible_evidence_marks_check_citations_as_adopted() -> None:
 
     assert items[0].title == "Check citation"
     assert items[0].selected is True
+
+
+def test_working_turns_expose_validated_reply() -> None:
+    occurred = datetime(2026, 9, 3, tzinfo=timezone.utc)
+    events = [
+        PersistedPublicEvent(
+            project_id="p1",
+            sequence=6,
+            event_type="plan_decided",
+            topic="agent.stage",
+            phase_before="awaiting_plan_decision",
+            phase_after="working",
+            payload={"decision": "accept"},
+            occurred_at=occurred,
+        ),
+        PersistedPublicEvent(
+            project_id="p1",
+            sequence=7,
+            event_type="working_turn_completed",
+            topic="agent.stage",
+            phase_before="working",
+            phase_after="working",
+            payload={
+                "action": "answer",
+                "reason": "信息足够",
+                "reply": "先固定随机种子再比较显存。",
+            },
+            occurred_at=occurred,
+        ),
+        PersistedPublicEvent(
+            project_id="p1",
+            sequence=8,
+            event_type="working_turn_completed",
+            topic="agent.stage",
+            phase_before="working",
+            phase_after="working",
+            payload={"action": "answer", "reason": "空回复", "reply": "   "},
+            occurred_at=occurred,
+        ),
+    ]
+
+    turns = _working_turns(events)
+
+    assert len(turns) == 1
+    assert turns[0].action == "answer"
+    assert turns[0].reply == "先固定随机种子再比较显存。"
+    assert turns[0].reason == "信息足够"

@@ -65,6 +65,11 @@ class SendWorkingMessageCommand(CommandBase):
     question: str = Field(min_length=1)
 
 
+class SubmitWorkingClarificationCommand(CommandBase):
+    type: Literal["submit_working_clarification"] = "submit_working_clarification"
+    clarification: str = Field(min_length=1)
+
+
 class ResumeWorkingCommand(CommandBase):
     type: Literal["resume_working"] = "resume_working"
 
@@ -121,6 +126,7 @@ Command: TypeAlias = Annotated[
     | RunCheckCommand
     | DecidePlanCommand
     | SendWorkingMessageCommand
+    | SubmitWorkingClarificationCommand
     | ResumeWorkingCommand
     | FinishWorkingCommand
     | RecordMainResultCommand

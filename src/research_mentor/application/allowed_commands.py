@@ -40,6 +40,13 @@ def allowed_commands(session: ResearchSession) -> tuple[str, ...]:
             )
         primary = (record_command,) if record_command is not None else ()
         return (*primary, "resume_working", *_CONTROLS)
+    if session.phase is SessionPhase.WORKING:
+        primary = (
+            "submit_working_clarification"
+            if session.pending_working_clarification is not None
+            else "send_working_message"
+        )
+        return (primary, "finish_working", *_CONTROLS)
     return _PHASE_COMMANDS[session.phase]
 
 

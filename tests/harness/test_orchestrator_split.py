@@ -40,6 +40,7 @@ SESSION_PAYLOAD_KEYS = {
     "writing_guidance",
     "plan_revision_records",
     "pending_plan_issue_reason",
+    "pending_working_clarification",
 }
 
 
