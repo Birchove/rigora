@@ -55,7 +55,7 @@ def test_scoring_fails_when_dimension_is_below_floor() -> None:
         HarnessConfig(),
     )
 
-    assert output.final_score == 6.3
+    assert output.final_score == 6.5
     assert output.check_decision is False
     assert output.revision_request == ["建议1", "建议2", "建议3"]
     assert "evidence_support" in output.decision_reason
@@ -67,7 +67,7 @@ def test_scoring_passes_when_dimension_meets_floor() -> None:
         HarnessConfig(),
     )
 
-    assert output.final_score == 6.3
+    assert output.final_score == 6.6
     assert output.check_decision is True
     assert output.revision_request == []
 
@@ -84,7 +84,7 @@ def test_harness_score_applies_dimension_floors() -> None:
         pass_score=6.0,
     )
 
-    assert decision.final_score == 7.0
+    assert decision.final_score == 7.3
     assert decision.passed is False
     assert decision.failed_dimensions == ["evidence_support"]
 

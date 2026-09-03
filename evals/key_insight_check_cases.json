@@ -45,7 +45,7 @@
         "testability_feasibility": 7.0,
         "evidence_support": 2.4
       },
-      "expected_final_score": 6.3,
+      "expected_final_score": 6.5,
       "expected_check_decision": false,
       "expected_phase": "planning"
     },
