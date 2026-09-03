@@ -58,6 +58,7 @@ def test_readme_covers_v1_operator_topics():
         "/api/v1",
         "Last-Event-ID",
         "不替写代码/论文正文、不解决无关细碎问题",
+        "https://birchove.github.io/rigora/",
     ):
         assert needle in readme
 

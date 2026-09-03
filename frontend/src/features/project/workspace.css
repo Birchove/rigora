@@ -96,6 +96,15 @@
   background: var(--panel);
 }
 
+.static-demo-banner {
+  margin: 0;
+  padding: 0.65rem 1.5rem;
+  border-bottom: 1px solid var(--rule);
+  background: rgb(255 244 229);
+  color: var(--ink);
+  font-size: 0.85rem;
+}
+
 .demo-badge {
   padding: 0.3rem 0.45rem;
   border: 1px solid var(--mentor-orange);

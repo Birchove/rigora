@@ -46,9 +46,14 @@ export function AppShell({
   }, [panelOpen]);
   return (
     <div className="workspace-shell">
+      {import.meta.env.VITE_STATIC_DEMO === "true" ? (
+        <p className="static-demo-banner" role="status">
+          GitHub Pages 只读演示：可切换三个 Demo 项目查看各阶段界面。提交命令与模型推理请本地运行完整服务。
+        </p>
+      ) : null}
       <header className="workspace-header">
         <button className="mobile-panel-toggle sidebar-toggle" type="button" aria-controls="project-drawer" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen((open) => !open)}>项目</button>
-        <a className="brand" href="/" aria-label="Rigora 首页">
+        <a className="brand" href={import.meta.env.BASE_URL} aria-label="Rigora 首页">
           <span className="brand-mark" aria-hidden="true">R</span>
           <span>
             <strong>Rigora</strong>

@@ -2,6 +2,10 @@
 
 耐心严谨的个性化科研探索导师。**核心理念是用更严格、更具体的用户输入，换更优质、可核对的系统输出。** 面向 computer science 科研场景：审查研究想法、生成并修订方案、辅导实验过程、记录结果、选择补充验证，并整理写作方向。不代写论文、不替用户做实验。
 
+**在线演示（GitHub Pages，只读）**：[https://birchove.github.io/rigora/](https://birchove.github.io/rigora/)
+
+Pages 站点展示三个 seeded Demo 项目的界面，不跑 FastAPI / 真实模型。完整交互请按下方本地启动。
+
 当前版本为 **v1**：full-stack Agent-oriented modular monolith。五个 Agent 只做一次结构化推理；Harness 独占状态流转、评分和用户确认 gate。前端通过 typed command、`ProjectView` 与 SSE 操作项目，不复制后端路由表。
 
 产品截图（桌面三栏与窄屏 drawer/sheet）保存在 `frontend/tests/e2e/visual.spec.ts-snapshots/`。设计叙事图见 `docs/design/AI+ 创新大赛 -_ Rigora/`。

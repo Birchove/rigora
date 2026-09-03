@@ -1,3 +1,5 @@
+import { ApiError } from "./errors";
+import { createStaticDemoClient, isStaticDemo } from "./staticDemo";
 import type {
   ApiErrorEnvelope,
   Command,
@@ -6,29 +8,14 @@ import type {
   ProjectView,
 } from "./types";
 
+export { ApiError };
+
 export type Fetcher = (
   input: RequestInfo | URL,
   init?: RequestInit,
 ) => Promise<Response>;
 
-export class ApiError extends Error {
-  readonly status: number;
-  readonly code: string;
-  readonly retryable: boolean;
-  readonly details: Record<string, JsonValue>;
-
-  constructor(
-    status: number,
-    detail: ApiErrorEnvelope["error"],
-  ) {
-    super(detail.message);
-    this.name = "ApiError";
-    this.status = status;
-    this.code = detail.code;
-    this.retryable = detail.retryable;
-    this.details = detail.details;
-  }
-}
+const defaultFetcher: Fetcher = globalThis.fetch.bind(globalThis);
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (response.ok) {
@@ -48,8 +35,11 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 export function createClient(
-  fetcher: Fetcher = globalThis.fetch.bind(globalThis),
+  fetcher: Fetcher = defaultFetcher,
 ) {
+  if (isStaticDemo() && fetcher === defaultFetcher) {
+    return createStaticDemoClient();
+  }
   const json = <T>(path: string, init?: RequestInit) =>
     fetcher(`/api/v1${path}`, {
       ...init,
