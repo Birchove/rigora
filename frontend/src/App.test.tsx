@@ -10,7 +10,7 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      screen.getByRole("heading", { name: "科研判断与推进工作台" }),
+      screen.getByRole("heading", { name: "Rigora" }),
     ).toBeTruthy();
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
     expect(screen.queryByText("AI 聊天助手")).toBeNull();

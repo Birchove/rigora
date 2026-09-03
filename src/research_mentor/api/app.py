@@ -60,7 +60,7 @@ async def lifespan(app: FastAPI):
 def create_app(settings: Settings | None = None) -> FastAPI:
     install_runtime_logging()
     application = FastAPI(
-        title="Research Mentor API",
+        title="Rigora API",
         version="1.0.0",
         lifespan=lifespan,
     )

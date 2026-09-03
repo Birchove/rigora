@@ -1,4 +1,4 @@
-# 傲娇导师 v1.0 项目审核报告
+# Rigora v1.0 项目审核报告
 
 > 审核日期：2026-09-02
 > 审核范围：`src/research_mentor/`（完整后端）、`frontend/`（前端）、`tests/`（测试）、`evals/`（评估集）、`docs/`（设计文档）
@@ -289,7 +289,7 @@ lambda orchestrator, session_id: orchestrator.run_complete(session_id, True)
 
 - Input interpretation 部分区分了 3 种模式（首次生成、Check 修订、用户反馈修订），非常清晰
 - Planning policy、Feedback policy、Evidence rules 界定明确
-- "不得为了维持'傲娇导师'形象而刻意反对用户"——正确地将人设与专业判断解耦
+- "不得为了维持产品角色或表达风格而刻意反对用户"——正确地将表达风格与专业判断解耦
 
 ### 8.4 `key_insight_check/prompt.md`（5/5）
 

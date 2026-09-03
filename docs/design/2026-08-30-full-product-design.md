@@ -1,4 +1,4 @@
-# 傲娇导师完整产品设计规格
+# Rigora 完整产品设计规格
 
 - 状态：已于 2026-08-30 获用户确认，并于 2026-09-01 按新版《AI+ 创新大赛》完成增量裁决。
 - 日期：2026-08-30。
@@ -15,7 +15,7 @@
 1. 本文明确写出的 v1.0 裁决；
 2. `docs/design/命名架构具体版.md` 的结构化 Schema 与非流程图正文；
 3. `docs/design/prompt仓库.md` 的固定 Prompt 与组合规则；
-4. `docs/design/AI+ 创新大赛.md` 的产品和前端要求；
+4. `docs/design/AI+ 创新大赛 -_ Rigora/AI+ 创新大赛 -_ Rigora.md` 的产品和前端要求；
 5. 历史流程图与图片。
 
 冲突时使用更高优先级规则。不得以旧流程图覆盖本文状态机。
@@ -50,7 +50,7 @@
 - 多租户账号、计费和组织权限；
 - 分布式微服务和消息队列。
 
-不得为多候选路径新增 Agent 职责类型。`mid/high` 是现有 `plan_loop` 与 `key_insight_check` 的独立 run 组合，由 Harness 管理路径、轮次和用户选择。上下文压缩由 Harness application service 完成；“傲娇”只属于 UI microcopy。
+不得为多候选路径新增 Agent 职责类型。`mid/high` 是现有 `plan_loop` 与 `key_insight_check` 的独立 run 组合，由 Harness 管理路径、轮次和用户选择。上下文压缩由 Harness application service 完成；触及产品边界时的界面提示保持柔缓中性，不建立语气 Agent。
 
 v1.0 产品能力和 Eval 限定在 computer science。`InitialInput.domain` 仍保留字符串以支持未来扩展，但 application 层只能接受配置中声明的 CS domain/alias；其他领域返回明确的 unsupported-domain refinement，不假装具备专科能力。
 
@@ -773,7 +773,7 @@ Pydantic input error、illegal phase、stale version、provider unavailable、ra
 - server state 与 draft UI state 分离；
 - frontend 不保存 provider secret，不运行 Harness 规则。
 
-产品定位是“管理科研判断与推进的导师工作台”，不是通用 LLM 替代品。它帮助用户聚焦选题、形成和审查方案、处理研究过程问题、记录结果并组织验证；不替用户写代码或论文正文，也不承诺解决“所有科研问题”。与当前研究无关的细碎通用问题应明确引导至通用 Agent 或搜索工具。v1 的专业能力与 Eval 仍限 computer science。
+产品定位是 Rigora：耐心严谨的个性化科研探索导师，不是通用 LLM 替代品。它帮助用户聚焦选题、形成和审查方案、处理研究过程问题、记录结果并组织验证；不替用户写代码或论文正文，也不承诺解决“所有科研问题”。与当前研究无关的细碎通用问题应明确引导至通用 Agent 或搜索工具。v1 的专业能力与 Eval 仍限 computer science。
 
 ### 10.2 桌面布局
 
@@ -836,15 +836,15 @@ Pydantic input error、illegal phase、stale version、provider unavailable、ra
 - 气质：严谨的研究工作台，温暖纸张色与墨色为主，单一暖橙作为导师强调色；
 - typography：中文正文优先可读性，代码/指标使用等宽字体；
 - 卡片边界轻、阴影克制；不用大面积渐变、玻璃拟态和无意义 dashboard 指标；
-- “傲娇” microcopy 只出现在非实质提示，例如超长输入、遗漏选择、等待状态；
-- 禁止 emoji 表情包，可使用少量文字颜文字；
+- 触及产品边界时的界面提示保持柔缓中性，例如超长输入、遗漏选择、等待状态；
+- 禁止 emoji 表情包；
 - 科研评价、拒绝理由和风险说明保持中性严谨。
 
 示例：
 
-- 超长输入：`这么多内容我可不会假装一眼看完。请拆分或上传文件。`
-- 未选 validation：`至少先决定这一轮做什么。空着可不算选择。`
-- run 中：`正在核对证据，先别急着催。`
+- 超长输入：`内容过长，请拆分后提交，或改为上传文件。`
+- 未选 validation：`请先勾选至少一项补充实验，或选择本轮不再补充验证。`
+- run 中：`正在核对证据，请稍候。`
 
 ### 10.7 Accessibility
 
@@ -1029,7 +1029,7 @@ v1.0 只有在以下场景均有自动或人工可复核证据时才能宣称完
 | 多项目、三栏 UI、顶部进度、文献卡片 | §10 |
 | 运行中禁用输入和弹出 panel | §5.5、§10.4 |
 | 检索/Agent 状态流式展示 | §8.3、§10.5 |
-| 克制傲娇、不影响判断 | §1.2、§10.6 |
+| 边界提示不影响判断 | §1.2、§10.6 |
 | 输入最大 19999 字 | 保留现有 contract、§10.4 |
 | 可导出研究日志 | §4.9、§9.4 |
 | OpenAlex、Anydoc、FlagEmbedding | §7.2–7.4 |

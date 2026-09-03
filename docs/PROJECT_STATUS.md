@@ -1,4 +1,4 @@
-# 傲娇导师项目状态与开发交接
+# Rigora 项目状态与开发交接
 
 > 本文是持续维护的项目状态文档，供后续开发者快速理解设计、现状、缺口和继续开发顺序。
 
@@ -28,7 +28,7 @@ main / origin/main（Task 1–26 实现基线为 661c0c6，另含最新交接文
 1. `docs/design/2026-08-30-full-product-design.md`：已确认的 v1.0 完整产品规格；
 2. `docs/design/命名架构具体版.md`：结构化 Schema 与非流程图正文；
 3. `docs/design/prompt仓库.md`：公共 Mentor Prompt、五 Agent 固定 Prompt 与组合规则；
-4. `docs/design/AI+ 创新大赛.md`：产品背景和前端要求；
+4. `docs/design/AI+ 创新大赛 -_ Rigora/AI+ 创新大赛 -_ Rigora.md`：产品背景和前端要求；
 5. 历史流程图与图片。
 
 实施时使用 `docs/superpowers/plans/2026-08-30-full-product-implementation.md`。该计划包含 7 个 Milestone、32 个按 TDD 编排的 Task，以及 34 项产品验收场景映射。
@@ -37,7 +37,7 @@ main / origin/main（Task 1–26 实现基线为 661c0c6，另含最新交接文
 
 同日用户确认《Working RAG 与用户控制增量设计》：v1 取消低分硬拒，Working query 必须带研究/阶段/任务上下文；Working→Complete 仅由用户 `finish_working` 触发，Agent 不再输出 `success`；forward 正式允许 `plan=None`；等待状态的新 idea 使用显式 restart。Task 19 先修正已完成 Task 16 中与新裁决冲突的低分短路，再继续 completion loop。
 
-2026-09-02 已将外部最新版 `design_document/AI+ 创新大赛.md` 的全部内容同步到 `docs/design/AI+ 创新大赛.md`（仓库副本仅规范行尾空白），并完成前端差异审阅。Task 27–29 计划已显式补充：证据检索/采用状态与筛选、受限证据列表、自然语言与结构化内容分流式呈现、project/phase draft 恢复、Markdown 清理与安全外链、panel/composer 互斥及背景滚动锁定。该设计同步本身不计作 Task；Task 27 的完成证据见 5.6。
+2026-09-03 产品更名为 **Rigora**，定位为耐心严谨的个性化科研探索导师；最新大赛文档为 `docs/design/AI+ 创新大赛 -_ Rigora/AI+ 创新大赛 -_ Rigora.md`。2026-09-02 曾将外部 `design_document/AI+ 创新大赛.md` 同步到 `docs/design/AI+ 创新大赛.md`。
 
 2026-09-02 审计跟进：大赛文档历史流程图（含 `Error`、Agent3 `success`、单一 `opinion_fail`）不能覆盖当前 14 个 `SessionPhase`。`reject` 是 Idea 终态。`CHECK_LOOP_EXHAUSTED` 与 `AWAITING_PLAN_REVISION_DECISION` 分别承接原流程图的 Error 回滚/继续。high 模式在 plan/check slot 不足 2 个时记录警告并允许同模型自审。
 
@@ -45,7 +45,7 @@ main / origin/main（Task 1–26 实现基线为 661c0c6，另含最新交接文
 
 ### 3.1 产品目标
 
-“傲娇导师”面向 computer science 科研场景，帮助用户完成 Idea 审查、研究方案生成与修订、实验过程问答、结果记录、补充验证选择和写作方向整理。产品不替用户执行实验，不编造结果，也不自动生成完整论文正文。
+Rigora 面向 computer science 科研场景，帮助用户完成 Idea 审查、研究方案生成与修订、实验过程问答、结果记录、补充验证选择和写作方向整理。产品不替用户执行实验，不编造结果，也不自动生成完整论文正文。定位是耐心严谨的个性化科研探索导师：用更严格、更具体的用户输入，换更优质、可核对的系统输出。
 
 v1 采用 full-stack Agent-oriented modular monolith：
 
@@ -129,7 +129,7 @@ final_score =
 - 多租户账号、计费和组织权限；
 - 分布式微服务和消息队列。
 
-v1 产品能力和 Eval 限定在 computer science。v1 必须包含上下文压缩和克制的“傲娇”语气，但不为它们新增独立 Agent：上下文压缩由 Harness application service 完成；“傲娇”只用于非实质性的 UI microcopy，不能改写 Agent 输出，也不能驱动 Agent 为维持人设而刻意反对用户。是否在 post-v1 将任一能力 Agent 化只是可选评估项，当前不承诺目标版本。
+v1 产品能力和 Eval 限定在 computer science。v1 必须包含上下文压缩，但不为压缩或界面语气新增独立 Agent：压缩由 Harness application service 完成；触及产品边界时的提示保持柔缓中性，不能改写 Agent 输出，也不能驱动 Agent 为维持人设而刻意反对用户。是否在 post-v1 将任一能力 Agent 化只是可选评估项，当前不承诺目标版本。
 
 新增统一规则：`low/mid/high` 是 Harness 对现有 Plan/Check runner 的 1/2/3 路隔离编排，不新增 Agent 类型；用户按 candidate ID 单选。必要条件 gate 因未定义而不参与评分。Working `success` 必须经用户结果记录确认；所谓 `error` 映射为既有 plan issue 或显式 validation result，不使用含义不清的 `validationResult` boolean。Context Assembler 按 Agent 投影，`sys_input` 只进入 instructions，不重复进入动态 payload。
 
@@ -306,7 +306,7 @@ Task 26 已完成 Milestone E：`demo_mode` 启动时通过 SQL UoW 幂等预置
 
 Task 27 已完成：建立 React 19/Vite/TypeScript 工程、npm lockfile、Vitest、typed command union、project/command API client、稳定 `ApiError`、SSE cursor/去重 client、基础视觉 tokens 和最小科研工作台 shell。当前 frontend 验证为 3 个 test files、4 tests，production build 通过。
 
-Task 28 已完成：实现 desktop 三栏、14 个精确 phase 结构化卡片、五阶段 timeline、窄屏 project drawer/evidence sheet、证据 adopted/discarded filter、run trace、document/export panel、19999 字 composer 计数、仅由 server `allowed_commands` 产生的 action dock、持续 Demo 标识、visible focus/reduced-motion，以及 panel 背景滚动锁定和 Escape 关闭。固定“傲娇” microcopy 只有超长输入、遗漏选择和等待三项，不改写科研判断。验证基线更新为 5 个 test files、27 tests，production build 通过。
+Task 28 已完成：实现 desktop 三栏、14 个精确 phase 结构化卡片、五阶段 timeline、窄屏 project drawer/evidence sheet、证据 adopted/discarded filter、run trace、document/export panel、19999 字 composer 计数、仅由 server `allowed_commands` 产生的 action dock、持续 Demo 标识、visible focus/reduced-motion，以及 panel 背景滚动锁定和 Escape 关闭。界面边界提示保持中性，不改写科研判断。验证基线更新为 5 个 test files、27 tests，production build 通过。
 
 Task 27 types 以当前真实 HTTP contract 为准。后端 `ProjectView` 目前没有 implementation plan 草案中列出的 `active_run` 和 `last_event_sequence`；Task 29 在实现 run lock、SSE refresh/reconnect 之前必须先扩展并测试该 view，前端不得自行推断。
 
@@ -371,7 +371,7 @@ Task 27 types 以当前真实 HTTP contract 为准。后端 `ProjectView` 目前
 13. 只做当前 Task 要求的最少变更，不提前实现后续 Milestone。
 14. Python 环境和依赖统一使用 `uv`。
 15. v1 的上下文压缩由 Harness application service 完成，不建立压缩 Agent；压缩结果必须保留 source turn IDs，不能创造或改写事实。
-16. v1 的“傲娇”语气只由 UI microcopy 表达，不建立语气 Agent；不得改写 Agent 的 action、评分、事实、证据、拒绝理由或风险说明。
+16. 触及产品边界时的界面提示保持柔缓中性，不建立语气 Agent；不得改写 Agent 的 action、评分、事实、证据、拒绝理由或风险说明。
 
 ## 8. 开发环境与验证
 

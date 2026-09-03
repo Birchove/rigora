@@ -48,11 +48,11 @@ export function AppShell({
     <div className="workspace-shell">
       <header className="workspace-header">
         <button className="mobile-panel-toggle sidebar-toggle" type="button" aria-controls="project-drawer" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen((open) => !open)}>项目</button>
-        <a className="brand" href="/" aria-label="傲娇导师首页">
-          <span className="brand-mark" aria-hidden="true">研</span>
+        <a className="brand" href="/" aria-label="Rigora 首页">
+          <span className="brand-mark" aria-hidden="true">R</span>
           <span>
-            <strong>傲娇导师</strong>
-            <small>Research Mentor</small>
+            <strong>Rigora</strong>
+            <small>个性化科研探索导师</small>
           </span>
         </a>
         <PhaseTimeline phase={project.phase} />

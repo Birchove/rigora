@@ -13,6 +13,7 @@
 - 当前 Python 全量测试基线：`438 passed`。
 - 当前 Alembic head：`20260901_0005`。
 - 当前已有 `frontend/` React 19/Vite/TypeScript 科研工作台；Task 28 frontend baseline 为 5 个 test files、27 tests，production build 通过。
+- 2026-09-03 产品更名为 Rigora；最新大赛文档为 `docs/design/AI+ 创新大赛 -_ Rigora/AI+ 创新大赛 -_ Rigora.md`。
 - 2026-09-02 已审阅并同步外部最新版 `design_document/AI+ 创新大赛.md`；仓库副本保留全部内容，仅规范了行尾空白。Task 27–29 计划已补入新版前端约束。
 
 开始工作前执行：
@@ -37,7 +38,7 @@ uv run pytest -q -p no:cacheprovider
 2. `docs/superpowers/specs/2026-09-01-working-rag-and-control-design.md`：Working RAG、结果确认和用户控制增量裁决；
 3. `docs/design/命名架构具体版.md`：结构化 Schema 与非流程图正文；
 4. `docs/design/prompt仓库.md`：公共 Mentor Prompt 与五 Agent 固定 Prompt；
-5. `docs/design/AI+ 创新大赛.md`：产品背景与前端要求；
+5. `docs/design/AI+ 创新大赛 -_ Rigora/AI+ 创新大赛 -_ Rigora.md`：产品背景与前端要求；
 6. `docs/superpowers/plans/2026-08-30-full-product-implementation.md`：Task 1–32 执行计划；
 7. `docs/PROJECT_STATUS.md`：详细实现历史与当前缺口。
 
@@ -96,7 +97,7 @@ Working 检索必须遵守已经确认的规则：
 
 已建立 React 19/Vite/TypeScript、npm lockfile、Vitest、typed command union、`/api/v1` project/command client、稳定 `ApiError`、SSE public event cursor/去重 client，以及符合已确认视觉 tokens 的最小科研工作台 shell。`.gitignore` 已排除 `node_modules`、build 和 TypeScript 增量产物。
 
-Task 28 已实现 desktop 三栏、14 个精确 phase 的结构化视图、五阶段 timeline、窄屏 project drawer/evidence sheet、证据 adopted/discarded filter、run trace、document/export panel、19999 字 composer 计数、server `allowed_commands` action dock、持续 Demo 标识、visible focus/reduced-motion，以及 panel 背景滚动锁定和 Escape 关闭。“傲娇”文案只存在于三项固定非实质 microcopy。当前卡片内容仍为 typed/static presentation；真实 project data、上传、SSE 和 command submit 属于 Task 29。
+Task 28 已实现 desktop 三栏、14 个精确 phase 的结构化视图、五阶段 timeline、窄屏 project drawer/evidence sheet、证据 adopted/discarded filter、run trace、document/export panel、19999 字 composer 计数、server `allowed_commands` action dock、持续 Demo 标识、visible focus/reduced-motion，以及 panel 背景滚动锁定和 Escape 关闭。界面边界提示保持中性，不改写科研判断。当前卡片内容仍为 typed/static presentation；真实 project data、上传、SSE 和 command submit 属于 Task 29。
 
 当前 backend `ProjectView` 只返回 project/title/domain/version/phase/is_demo/allowed_commands，尚未返回计划草案中设想的 `active_run` 与 `last_event_sequence`。Task 27 frontend types 忠实匹配当前 API；Task 29 接 run lock/SSE 恢复前必须先扩展后端 view contract 和测试，不能让前端猜测。
 
@@ -163,7 +164,7 @@ RESEARCH_MENTOR_MODEL_API_KEY=<未设置>
 
 前端规格已经确认，不需要重新发起设计讨论：
 
-- 定位：严谨的科研判断与推进工作台，不是通用聊天工具；
+- 定位：Rigora，耐心严谨的个性化科研探索导师，不是通用聊天工具；
 - desktop 三栏：projects / structured research timeline / evidence；
 - narrow screen：左栏 drawer、右栏 evidence sheet；
 - palette：paper `#F7F3E8`、ink `#1F2A2A`、slate `#52605D`、mentor orange `#C65A2E`、rule `#D8D1C1`、evidence tint `#E9EFEA`；

@@ -2,7 +2,6 @@ import { useState } from "react";
 
 import type { ValidationCandidate } from "../api/types";
 import type { CommandDraft } from "../hooks/useCommand";
-import { MENTOR_MICROCOPY } from "../ui/mentorMicrocopy";
 
 export function ValidationSelectionPanel({
   candidates = [],
@@ -40,7 +39,7 @@ export function ValidationSelectionPanel({
       .filter((candidate) => selected.has(candidate.candidate_id))
       .map((candidate) => candidate.candidate_id);
     if (!finishWithoutMore && selectedIds.length === 0) {
-      setError(MENTOR_MICROCOPY.validationRequired);
+      setError("请先勾选至少一项补充实验，或选择本轮不再补充验证。");
       return;
     }
     if (finishWithoutMore && !reason.trim()) {

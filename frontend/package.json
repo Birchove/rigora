@@ -1,7 +1,7 @@
 {
   "name": "research-mentor-frontend",
   "version": "1.0.0",
-  "description": "傲娇导师科研判断与推进工作台",
+  "description": "Rigora：个性化科研探索导师",
   "private": true,
   "scripts": {
     "dev": "vite",

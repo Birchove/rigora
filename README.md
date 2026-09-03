@@ -1,10 +1,10 @@
-# 傲娇导师（Research Mentor）
+# Rigora
 
-面向 computer science 科研场景的判断与推进工作台：审查研究想法、生成并修订方案、辅导实验过程、记录结果、选择补充验证，并整理写作方向。
+耐心严谨的个性化科研探索导师。**核心理念是用更严格、更具体的用户输入，换更优质、可核对的系统输出。** 面向 computer science 科研场景：审查研究想法、生成并修订方案、辅导实验过程、记录结果、选择补充验证，并整理写作方向。不代写论文、不替用户做实验。
 
 当前版本为 **v1**：full-stack Agent-oriented modular monolith。五个 Agent 只做一次结构化推理；Harness 独占状态流转、评分和用户确认 gate。前端通过 typed command、`ProjectView` 与 SSE 操作项目，不复制后端路由表。
 
-产品截图（桌面三栏与窄屏 drawer/sheet）保存在 `frontend/tests/e2e/visual.spec.ts-snapshots/`。设计叙事图见 `docs/design/AI+ 创新大赛/图片和附件/`。
+产品截图（桌面三栏与窄屏 drawer/sheet）保存在 `frontend/tests/e2e/visual.spec.ts-snapshots/`。设计叙事图见 `docs/design/AI+ 创新大赛 -_ Rigora/`。
 
 ## 核心架构
 
@@ -79,7 +79,7 @@ v1 明确范围：
 
 - 只辅导 computer science；非 CS 返回 `unsupported-domain`，不进入 Agent pipeline；
 - 不自动生成完整论文正文；
-- 不为上下文压缩或“傲娇”语气新增独立 Agent；
+- 不为上下文压缩或界面语气新增独立 Agent；边界提示保持中性，不改写评审结论；
 - 无多租户账号、计费和组织权限；
 - 非分布式微服务。
 

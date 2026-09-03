@@ -1,7 +1,7 @@
 [project]
 name = "research-mentor-core"
 version = "0.1.0"
-description = "Deterministic multi-agent research mentor core"
+description = "Rigora: deterministic multi-agent research mentor"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [

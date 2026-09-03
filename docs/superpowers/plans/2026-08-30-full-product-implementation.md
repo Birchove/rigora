@@ -1,4 +1,6 @@
-# 傲娇导师 v1.0 完整产品 Implementation Plan
+# Rigora v1.0 完整产品 Implementation Plan
+
+> 产品现名 **Rigora**。下文部分 Task（尤其 Task 28）仍记录当时实现的界面 microcopy 模块；该模块及傲娇文案已删除，边界提示改为中性说明。
 
 > **2026-09-01 增量说明：** Task 2–15 的已完成历史保持不变。新版《AI+ 创新大赛》与已确认《Working RAG 与用户控制增量设计》调整 Task 16、18、19、20、28、30、31、32：加入 Context Assembler 投影、`low/mid/high` 候选路径、上下文化 Working 检索、无低分硬拒、完成确认、Working error 兼容路由和产品定位验收。必要条件 gate 因规则未定义而不实现。
 

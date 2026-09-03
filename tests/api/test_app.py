@@ -80,7 +80,7 @@ async def test_health_uses_injected_settings_and_lifecycle_order(monkeypatch, tm
     monkeypatch.setattr(app_module, "build_container", fake_build_container)
     application = app_module.create_app(settings)
 
-    assert application.title == "Research Mentor API"
+    assert application.title == "Rigora API"
     assert application.version == "1.0.0"
     assert application.state.settings is settings
     async with application.router.lifespan_context(application):

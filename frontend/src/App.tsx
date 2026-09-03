@@ -150,7 +150,7 @@ export default function App() {
 
   return (
     <>
-      <h1 className="visually-hidden">科研判断与推进工作台</h1>
+      <h1 className="visually-hidden">Rigora</h1>
       {liveId ? (
         <LiveWorkspace
           projectId={liveId}
