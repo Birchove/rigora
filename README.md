@@ -171,13 +171,13 @@ npm run dev
 - `plan_loop` 与 `key_insight_check` 可以同时写在多家下面。`high/mid/low` 按 ChatGPT → ChatGPT 第二槽 → 千问 → GLM（缺的跳过）取 3/2/1 路，每路「一家提、下一家审」。
 - 同一把 ChatGPT key 的第二个模型用 `CHATGPT_2_*`；其 key / `BASE_URL` / `API_STYLE` 留空则继承主槽。
 
-一家包办五个 Agent 的最小例子：
+选择建议如下, 可据此对比同能力模型进行替换
 
-```bash
-# 在 .env 里写，不要 export 到 shell 后提交
-RESEARCH_MENTOR_QWEN_API_KEY=你的key
-RESEARCH_MENTOR_QWEN_AGENTS=idea_review,plan_loop,key_insight_check,working_qa,complete
-```
+agent模型选择
+1. Agent1 -> ds-多模态
+2. Agent2 -> key_insight gpt-sol; check使用Qwen3.8或GLM-5.3
+3. Agent3 -> gpt-luna
+4. Agent4 -> ds-多模态
 
 `DEMO_MODE` 可以继续为 `true`（保留三个 Demo 项目）。改完 `.env` 后重启 uvicorn。有凭据的真实 provider smoke 只在发布环境执行并记录 request id，结果不得提交进仓库。
 
