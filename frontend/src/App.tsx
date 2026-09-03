@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { createClient } from "./api/client";
-import type { ProjectView } from "./api/types";
+import { ApiError, createClient } from "./api/client";
+import type { ProjectView, UploadedDocumentView } from "./api/types";
 import { ProjectWorkspace } from "./features/project/ProjectWorkspace";
 import { useProject } from "./hooks/useProject";
 
@@ -36,6 +36,41 @@ function LiveWorkspace({
   const { project, refresh } = useProject(projectId, projectApi);
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
   const [parseStatus, setParseStatus] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<UploadedDocumentView[]>([]);
+  const [documentNotice, setDocumentNotice] = useState<string | null>(null);
+
+  const deleteDocument = (documentId: string) => {
+    if (project === null) {
+      return;
+    }
+    void client
+      .deleteDocument(project.project_id, documentId)
+      .then(() => {
+        setDocuments((prev) =>
+          prev.filter((item) => item.document_id !== documentId),
+        );
+        setDocumentNotice(null);
+      })
+      .catch((error: unknown) => {
+        setDocumentNotice(
+          error instanceof ApiError
+            ? error.message
+            : "删除失败，请稍后重试。",
+        );
+        window.setTimeout(() => setDocumentNotice(null), 5000);
+      });
+  };
+
+  useEffect(() => {
+    if (project === null) {
+      return;
+    }
+    const targetId = project.project_id;
+    void client
+      .listDocuments(targetId)
+      .then((listed) => setDocuments(listed))
+      .catch(() => undefined);
+  }, [client, project?.project_id]);
 
   if (project === null) {
     return (
@@ -64,6 +99,9 @@ function LiveWorkspace({
       }}
       transferStatus={transferStatus}
       parseStatus={parseStatus}
+      documents={documents}
+      documentNotice={documentNotice}
+      onDeleteDocument={deleteDocument}
       onExportMarkdown={() => client.downloadJournal(project.project_id, "md")}
       onExportJson={() => client.downloadJournal(project.project_id, "json")}
       onUpload={async (file) => {
@@ -80,14 +118,14 @@ function LiveWorkspace({
             return;
           }
           const deadline = Date.now() + 120_000;
+          let finalStatus = "failed";
           while (Date.now() < deadline) {
-            const documents = (await client.listDocuments(project.project_id)) as Array<{
-              document_id?: string;
-              status?: string;
-            }>;
-            const current = documents.find((item) => item.document_id === documentId);
+            const listed = await client.listDocuments(project.project_id);
+            setDocuments(listed);
+            const current = listed.find((item) => item.document_id === documentId);
             if (current?.status !== undefined) {
               setParseStatus(current.status);
+              finalStatus = current.status;
               if (current.status === "ready" || current.status === "failed") {
                 break;
               }
@@ -95,6 +133,12 @@ function LiveWorkspace({
             await new Promise((resolve) => {
               window.setTimeout(resolve, 400);
             });
+          }
+          if (finalStatus === "ready") {
+            window.setTimeout(() => {
+              setTransferStatus(null);
+              setParseStatus(null);
+            }, 4000);
           }
         } catch {
           setTransferStatus("failed");

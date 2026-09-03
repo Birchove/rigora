@@ -1,14 +1,52 @@
 :root {
-  --paper: #f7f3e8;
-  --panel: #fffdf7;
-  --ink: #1f2a2a;
-  --slate: #52605d;
-  --mentor-orange: #c65a2e;
-  --rule: #d8d1c1;
-  --evidence-tint: #e9efea;
-  --font-reading: "Noto Serif SC", "Source Han Serif SC", STSong, serif;
-  --font-ui: "IBM Plex Sans", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-  --font-data: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
-  --focus-ring: 0 0 0 3px rgb(198 90 46 / 28%);
-  --content-width: 72rem;
+  /* 表面与文字：macOS 浅色桌面 + 白卡片 + 两级灰阶 */
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --surface-2: #f5f5f7;
+  --fill-quiet: rgb(120 120 128 / 12%);
+  --text-1: #1d1d1f;
+  --text-2: #6e6e73;
+  --text-3: #aeaeb2;
+  --separator: rgb(0 0 0 / 8%);
+  --separator-strong: rgb(0 0 0 / 16%);
+
+  /* 品牌：保留傲娇橙作为唯一强调色 */
+  --accent: #c65a2e;
+  --accent-strong: #a84a24;
+  --accent-tint: rgb(198 90 46 / 10%);
+  --adopted: #34c759;
+  --danger: #ff3b30;
+
+  /* 语义别名：旧 token 名统一映射到新值，避免散落引用漂移 */
+  --paper: var(--bg);
+  --panel: var(--surface);
+  --ink: var(--text-1);
+  --slate: var(--text-2);
+  --rule: var(--separator);
+  --evidence-tint: var(--fill-quiet);
+  --mentor-orange: var(--accent);
+
+  /* 字体：单一系统字族 + 等宽数据字体 */
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei UI", "Microsoft YaHei",
+    sans-serif;
+  --font-data: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono",
+    Consolas, monospace;
+  --font-reading: var(--font-ui);
+
+  /* 圆角 */
+  --radius-card: 16px;
+  --radius-input: 12px;
+  --radius-small: 9px;
+  --radius-pill: 999px;
+
+  /* 阴影：双层柔光，静止一层、悬浮/浮动一层 */
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 4%), 0 4px 16px rgb(0 0 0 / 4%);
+  --shadow-2: 0 2px 8px rgb(0 0 0 / 6%), 0 16px 40px rgb(0 0 0 / 10%);
+
+  /* 动效：macOS 缓动曲线 */
+  --ease-mac: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --focus-ring: 0 0 0 4px rgb(198 90 46 / 30%);
+  --content-width: 92rem;
 }

@@ -1,5 +1,5 @@
 import type { WritingGuidance } from "../api/types";
-import { stripHtml } from "../ui/safeDisplay";
+import { MarkdownView } from "../ui/markdown";
 
 function GuidanceList({ heading, items }: { heading: string; items: string[] }) {
   if (items.length === 0) {
@@ -10,7 +10,9 @@ function GuidanceList({ heading, items }: { heading: string; items: string[] }) 
       <h2>{heading}</h2>
       <ul>
         {items.map((item) => (
-          <li key={item}>{stripHtml(item)}</li>
+          <li key={item}>
+            <MarkdownView text={item} />
+          </li>
         ))}
       </ul>
     </>

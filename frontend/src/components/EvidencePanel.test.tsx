@@ -3,7 +3,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EvidencePanel } from "./EvidencePanel";
 
@@ -56,5 +56,58 @@ describe("EvidencePanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "本轮采用" }));
     expect(screen.getByText("Adopted paper")).toBeVisible();
     expect(screen.queryByText("Retrieved paper")).toBeNull();
+  });
+
+  it("renders the uploaded document list with status labels", () => {
+    render(
+      <EvidencePanel
+        documents={[
+          { document_id: "d1", original_name: "survey.md", size_bytes: 2048, status: "ready" },
+          {
+            document_id: "d2",
+            original_name: "broken.pdf",
+            size_bytes: 1024 * 1024 + 5,
+            status: "failed",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("survey.md")).toBeVisible();
+    expect(screen.getByText("2 KB")).toBeVisible();
+    expect(screen.getByText("完成")).toBeVisible();
+    expect(screen.getByText("broken.pdf")).toBeVisible();
+    expect(screen.getByText("1.0 MB")).toBeVisible();
+    expect(screen.getByText("解析失败")).toBeVisible();
+  });
+
+  it("deletes a document through the row remove button", () => {
+    const onDeleteDocument = vi.fn();
+    render(
+      <EvidencePanel
+        documents={[
+          { document_id: "d1", original_name: "survey.md", size_bytes: 2048, status: "ready" },
+        ]}
+        onDeleteDocument={onDeleteDocument}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "删除 survey.md" }));
+    expect(onDeleteDocument).toHaveBeenCalledWith("d1");
+  });
+
+  it("shows a delete failure notice", () => {
+    render(
+      <EvidencePanel
+        documents={[
+          { document_id: "d1", original_name: "survey.md", size_bytes: 2048, status: "ready" },
+        ]}
+        documentNotice="文档已被实验结果引用，不能删除。"
+      />,
+    );
+
+    expect(
+      screen.getByText("文档已被实验结果引用，不能删除。"),
+    ).toBeVisible();
   });
 });

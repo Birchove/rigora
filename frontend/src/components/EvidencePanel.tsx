@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { VisibleEvidenceItem } from "../api/types";
+import type { UploadedDocumentView, VisibleEvidenceItem } from "../api/types";
 import { safeHttpUrl, stripHtml } from "../ui/safeDisplay";
 import { DocumentPanel } from "./DocumentPanel";
 
@@ -10,14 +10,16 @@ const EVIDENCE_PANEL_VISIBLE_LIMIT = 12;
 
 export function EvidencePanel({
   evidence = [],
-  transferStatus = null,
-  parseStatus = null,
-  onUpload,
+  documents = [],
+  documentNotice = null,
+  onDeleteDocument,
+  onClose,
 }: {
   evidence?: VisibleEvidenceItem[];
-  transferStatus?: string | null;
-  parseStatus?: string | null;
-  onUpload?: (file: File) => Promise<void>;
+  documents?: UploadedDocumentView[];
+  documentNotice?: string | null;
+  onDeleteDocument?: (documentId: string) => void;
+  onClose?: () => void;
 }) {
   const [filter, setFilter] = useState<EvidenceFilter>("all");
   const visible = evidence.filter((item) => {
@@ -28,8 +30,18 @@ export function EvidencePanel({
   return (
     <aside className="evidence-panel" aria-label="证据">
       <div className="panel-heading">
-        <span>Evidence</span>
-        <strong>本轮证据</strong>
+        <div className="panel-title">
+          <span>Evidence</span>
+          <strong>本轮证据</strong>
+        </div>
+        {onClose ? (
+          <button type="button" className="panel-close" aria-label="收起证据栏" onClick={onClose}>
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M6 6l12 12" />
+              <path d="M18 6L6 18" />
+            </svg>
+          </button>
+        ) : null}
       </div>
       <div className="evidence-filters" aria-label="证据筛选">
         <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>全部</button>
@@ -65,9 +77,9 @@ export function EvidencePanel({
         </ul>
       )}
       <DocumentPanel
-        transferStatus={transferStatus}
-        parseStatus={parseStatus}
-        onUpload={onUpload}
+        documents={documents}
+        notice={documentNotice}
+        onDeleteDocument={onDeleteDocument}
       />
     </aside>
   );

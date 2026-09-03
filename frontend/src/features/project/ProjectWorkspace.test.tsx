@@ -51,14 +51,24 @@ describe("ProjectWorkspace", () => {
 
   it.each([
     ["awaiting_idea", "submit_idea", "提交研究想法"],
-    ["awaiting_plan_decision", "decide_plan", "确认方案"],
+    ["awaiting_plan_decision", "decide_plan", "确认此方案"],
     ["working", "finish_working", "实验已全部完成，进入下一步"],
     ["awaiting_result_record", "record_main_result", "记录主实验结果"],
     ["awaiting_validation_selection", "select_validations", "确认选择"],
   ] as const)("renders the server-allowed %s primary action", (phase, command, label) => {
     render(
       <ProjectWorkspace
-        project={project(phase, [command])}
+        project={project(phase, [command], {
+          // 决策面板以候选卡片为操作单元，需提供候选才能渲染确认按钮
+          plan_candidates: [
+            {
+              candidate_id: "candidate-1",
+              disposition: "ready",
+              focus_hint: "稳健性",
+              check_round: 1,
+            },
+          ],
+        })}
         api={{ dispatchCommand: async () => project(phase, [command]) }}
       />,
     );
@@ -69,7 +79,7 @@ describe("ProjectWorkspace", () => {
   it("does not infer an action from phase when the server disallows it", () => {
     render(<ProjectWorkspace project={project("awaiting_plan_decision", [])} />);
 
-    expect(screen.queryByRole("button", { name: "确认方案" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "确认此方案" })).toBeNull();
   });
 
   it("does not infer finish_working from the working phase", () => {
@@ -179,7 +189,7 @@ describe("ProjectWorkspace", () => {
 
   it("locks background scroll while a narrow-screen panel is open and closes on Escape", () => {
     render(<ProjectWorkspace project={project("working", [])} />);
-    const toggle = screen.getByRole("button", { name: "证据" });
+    const toggle = screen.getByRole("button", { name: "Evidence" });
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");

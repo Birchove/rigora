@@ -50,6 +50,6 @@ test("narrow layout exposes drawer and respects reduced motion", async ({ page }
   await page.getByRole("button", { name: "项目", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "研究项目" })).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "证据", exact: true }).click();
+  await page.getByRole("button", { name: "Evidence", exact: true }).click();
   await expect(page.getByRole("complementary", { name: "证据" })).toBeVisible();
 });

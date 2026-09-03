@@ -242,5 +242,9 @@ export function createStaticDemoClient() {
     async uploadDocument(_projectId: string, _file: File): Promise<never> {
       return readonly();
     },
+
+    async deleteDocument(_projectId: string, _documentId: string): Promise<never> {
+      return readonly();
+    },
   };
 }

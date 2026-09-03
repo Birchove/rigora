@@ -18,7 +18,7 @@ export function KeyInsightScoreCard({
       <p className="card-kicker">Key Insight Check</p>
       <h1>{heading}</h1>
       {checkRound !== undefined && maxCheckRounds !== undefined ? (
-        <p>校验轮次 {checkRound}/{maxCheckRounds}</p>
+        <p>已完成 {checkRound}/{maxCheckRounds} 轮校验</p>
       ) : null}
       {score != null ? (
         <p>Harness 总分 {score.toFixed(1)}{passed == null ? "" : passed ? " · 通过" : " · 未通过"}</p>

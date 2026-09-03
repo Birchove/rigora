@@ -79,11 +79,23 @@ export interface PublicActivityItem {
   summary: string;
 }
 
+export interface UploadedDocumentView {
+  document_id: string;
+  original_name: string;
+  media_type?: string;
+  size_bytes: number;
+  status: string;
+  error_message?: string | null;
+}
+
 export interface PlanCandidateView {
   candidate_id: string;
   disposition: string;
   focus_hint?: string;
   check_round?: number;
+  research_question?: string | null;
+  key_insight_title?: string | null;
+  key_insight_content?: string | null;
 }
 
 export interface CurrentTaskView {
@@ -97,9 +109,11 @@ export interface CurrentTaskView {
 }
 
 export interface WorkingTurnView {
+  question?: string;
   action: string;
   reply: string;
   reason?: string | null;
+  occurred_at?: string | null;
 }
 
 export interface PendingWorkingClarification {

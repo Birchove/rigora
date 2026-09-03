@@ -52,7 +52,11 @@ export function WorkingView({
       {turns.length > 0 ? (
         <div className="working-turns">
           {turns.map((turn, index) => (
-            <WorkingMessage key={`${turn.action}-${index}`} turn={turn} />
+            <WorkingMessage
+              key={`${turn.action}-${index}`}
+              turn={turn}
+              defaultOpen={index === turns.length - 1}
+            />
           ))}
         </div>
       ) : null}

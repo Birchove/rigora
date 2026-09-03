@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { MarkdownView } from "../ui/markdown";
 import type { CommandDraft } from "../hooks/useCommand";
 
 export function PlanRevisionPanel({
@@ -29,7 +30,9 @@ export function PlanRevisionPanel({
     <section className="phase-card">
       <p className="card-kicker">Complete</p>
       <h1>方案修订</h1>
-      <p>{revisionReason ?? "系统将根据用户亲录结果，决定补充验证、方案修订或写作规划。"}</p>
+      <MarkdownView
+        text={revisionReason ?? "系统将根据用户亲录结果，决定补充验证、方案修订或写作规划。"}
+      />
       <label className="structured-field">
         你的理由
         <textarea

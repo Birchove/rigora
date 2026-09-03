@@ -68,6 +68,9 @@ class PlanCandidateView(BaseModel):
     disposition: str
     focus_hint: str = ""
     check_round: int = 0
+    research_question: str | None = None
+    key_insight_title: str | None = None
+    key_insight_content: str | None = None
 
 
 class CurrentTaskView(BaseModel):
@@ -81,9 +84,11 @@ class CurrentTaskView(BaseModel):
 
 
 class WorkingTurnView(BaseModel):
+    question: str = ""
     action: str
     reply: str
     reason: str = ""
+    occurred_at: str | None = None
 
 
 class ProjectView(BaseModel):
@@ -307,15 +312,21 @@ _PHASE_HEADLINES = {
 
 
 def _plan_candidates(session: ResearchSession) -> list[PlanCandidateView]:
-    return [
-        PlanCandidateView(
-            candidate_id=item.candidate_id,
-            disposition=item.disposition,
-            focus_hint=item.focus_hint,
-            check_round=item.check_round,
+    views: list[PlanCandidateView] = []
+    for item in session.plan_candidates:
+        plan = item.plan
+        views.append(
+            PlanCandidateView(
+                candidate_id=item.candidate_id,
+                disposition=item.disposition,
+                focus_hint=item.focus_hint,
+                check_round=item.check_round,
+                research_question=plan.research_question if plan is not None else None,
+                key_insight_title=plan.key_insight.title if plan is not None else None,
+                key_insight_content=plan.key_insight.content if plan is not None else None,
+            )
         )
-        for item in session.plan_candidates
-    ]
+    return views
 
 
 def _current_task_view(
@@ -364,6 +375,9 @@ def _working_turns(events: list[PersistedPublicEvent]) -> list[WorkingTurnView]:
                 action=action,
                 reply=reply,
                 reason=reason if isinstance(reason, str) else "",
+                occurred_at=event.occurred_at.isoformat()
+                if event.occurred_at is not None
+                else None,
             )
         )
     return items

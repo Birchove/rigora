@@ -14,6 +14,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "dependencies": {
+    "markdown-it": "^15.0.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
@@ -22,6 +23,7 @@
     "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
+    "@types/markdown-it": "^14.2.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^6.1.1",

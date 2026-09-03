@@ -11,6 +11,7 @@ export function PlanView({
   progress,
   running = false,
   candidates = [],
+  allowedCommands = [],
   submit,
   busy = false,
 }: {
@@ -18,6 +19,7 @@ export function PlanView({
   progress?: StageProgress | null;
   running?: boolean;
   candidates?: PlanCandidateView[];
+  allowedCommands?: string[];
   submit?: (draft: CommandDraft) => Promise<unknown>;
   busy?: boolean;
 }) {
@@ -33,18 +35,28 @@ export function PlanView({
     ?? (running
       ? "当前 Agent 正在运行，步骤会显示在下方公开运行轨迹中。"
       : "研究问题、里程碑与知识准备会在后端确认后作为结构化内容整块呈现。");
+  // Harness 语义：session 已有候选时 run_plan 一律走修订（mode 被忽略），
+  // 因此仅在没有候选的初次生成时展示低/中/高，修订场景只给一个入口。
   const modeButtons = phase === "planning" && submit !== undefined && !running ? (
-    <div className="structured-actions plan-mode-row">
-      <button type="button" disabled={busy} onClick={() => void submit({ type: "run_plan", mode: "low" })}>
-        低配生成
-      </button>
-      <button type="button" disabled={busy} onClick={() => void submit({ type: "run_plan", mode: "mid" })}>
-        中配生成
-      </button>
-      <button type="button" disabled={busy} onClick={() => void submit({ type: "run_plan", mode: "high" })}>
-        高配生成
-      </button>
-    </div>
+    candidates.length > 0 ? (
+      <div className="structured-actions plan-mode-row">
+        <button type="button" disabled={busy} onClick={() => void submit({ type: "run_plan", mode: "low" })}>
+          按你的反馈修订方案
+        </button>
+      </div>
+    ) : (
+      <div className="structured-actions plan-mode-row">
+        <button type="button" disabled={busy} onClick={() => void submit({ type: "run_plan", mode: "low" })}>
+          低配生成
+        </button>
+        <button type="button" disabled={busy} onClick={() => void submit({ type: "run_plan", mode: "mid" })}>
+          中配生成
+        </button>
+        <button type="button" disabled={busy} onClick={() => void submit({ type: "run_plan", mode: "high" })}>
+          高配生成
+        </button>
+      </div>
+    )
   ) : null;
 
   if (phase === "planning") {
@@ -63,14 +75,25 @@ export function PlanView({
   }
   if (phase === "checking_key_insight") {
     return (
-      <KeyInsightScoreCard
-        heading={heading}
-        body={body}
-        checkRound={progress?.check_round}
-        maxCheckRounds={progress?.max_check_rounds}
-        score={progress?.last_check_score}
-        passed={progress?.last_check_passed}
-      />
+      <>
+        <KeyInsightScoreCard
+          heading={heading}
+          body={body}
+          checkRound={progress?.check_round}
+          maxCheckRounds={progress?.max_check_rounds}
+          score={progress?.last_check_score}
+          passed={progress?.last_check_passed}
+        />
+        {candidates.length > 0 ? (
+          <PlanDecisionPanel
+            phase={phase}
+            candidates={candidates}
+            allowedCommands={allowedCommands}
+            submit={submit}
+            busy={busy || running}
+          />
+        ) : null}
+      </>
     );
   }
   if (phase === "check_loop_exhausted") {
@@ -84,7 +107,13 @@ export function PlanView({
           score={progress?.last_check_score}
           passed={progress?.last_check_passed}
         />
-        <PlanDecisionPanel phase={phase} candidates={candidates} submit={submit} busy={busy} />
+        <PlanDecisionPanel
+          phase={phase}
+          candidates={candidates}
+          allowedCommands={allowedCommands}
+          submit={submit}
+          busy={busy}
+        />
       </>
     );
   }
@@ -97,7 +126,13 @@ export function PlanView({
         keyInsightTitle={progress?.key_insight_title}
         ideaReason={progress?.idea_reason}
       />
-      <PlanDecisionPanel phase={phase} candidates={candidates} submit={submit} busy={busy} />
+      <PlanDecisionPanel
+        phase={phase}
+        candidates={candidates}
+        allowedCommands={allowedCommands}
+        submit={submit}
+        busy={busy}
+      />
     </>
   );
 }

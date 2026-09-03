@@ -300,7 +300,7 @@ describe("ProjectActions", () => {
         api={api}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "确认方案" }));
+    fireEvent.click(screen.getByRole("button", { name: "确认此方案" }));
     expect(api.dispatchCommand).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "decide_plan",

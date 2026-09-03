@@ -59,11 +59,14 @@ test("plan confirmation action is the server-allowed gate", async ({ page }) => 
     projectView({
       phase: "awaiting_plan_decision",
       allowed_commands: ["decide_plan"],
+      plan_candidates: [
+        { candidate_id: "candidate-1", disposition: "ready", focus_hint: "稳健性" },
+      ],
     }),
   );
   await page.goto("/?project=e2e-project");
   await expect(page.getByRole("heading", { name: "研究方案" })).toBeVisible();
-  await page.getByRole("button", { name: "确认方案" }).click();
+  await page.getByRole("button", { name: "确认此方案" }).click();
 });
 
 test("range refinement stays at clarification until resubmitted", async ({ page }) => {

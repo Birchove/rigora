@@ -1,11 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import type { CommandType, Phase, ProjectView } from "../../api/types";
+import type { CommandType, Phase, ProjectView, UploadedDocumentView } from "../../api/types";
+import { UPLOAD_PARSE_LABELS, UPLOAD_TRANSFER_LABELS } from "../../ui/uploadLabels";
+import { AgentRunLive } from "../../components/AgentRunLive";
 import { AppShell } from "../../components/AppShell";
 import { CollapsibleRunTrace } from "../../components/CollapsibleRunTrace";
 import { EvidencePanel } from "../../components/EvidencePanel";
 import { ExportPanel } from "../../components/ExportPanel";
-import { useCommand, type CommandApi, type CommandDraft } from "../../hooks/useCommand";
+import {
+  useCommand,
+  type CommandApi,
+  type CommandDraft,
+  type CommandError,
+} from "../../hooks/useCommand";
 import { CompletionView } from "../completion/CompletionView";
 import { IdeaView } from "../idea/IdeaView";
 import { PlanView } from "../plan/PlanView";
@@ -46,10 +53,30 @@ const panelOwnedCommands = new Set<CommandType>([
   "record_main_result",
   "record_validation_result",
   "select_validations",
+  // run_plan 与 run_check 由候选卡片内的按钮承载，dock 不再重复
+  "run_plan",
+  "run_check",
   "decide_plan_revision",
 ]);
 
 const activeRunStatuses = new Set(["queued", "running"]);
+
+const TSUNDERE_LENGTH_LIMIT = 16000;
+
+// 输入框宽度随内容平滑增长（GPT 风格）：CJK/全角按 2 倍视觉宽度估算，触顶后不再增加
+const COMPOSER_WIDTH_MIN_REM = 34;
+const COMPOSER_WIDTH_MAX_REM = 56;
+const COMPOSER_GROW_VISUAL_LENGTH = 120;
+
+function composerWidthRem(draft: string): number {
+  let visualLength = 0;
+  for (const ch of draft) {
+    visualLength += (ch.codePointAt(0) ?? 0) > 0x2e7f ? 2 : 1;
+  }
+  const ratio = Math.min(1, visualLength / COMPOSER_GROW_VISUAL_LENGTH);
+  return COMPOSER_WIDTH_MIN_REM
+    + (COMPOSER_WIDTH_MAX_REM - COMPOSER_WIDTH_MIN_REM) * ratio;
+}
 
 function isRunActive(project: ProjectView): boolean {
   return Boolean(
@@ -99,6 +126,7 @@ function phaseContent(
           progress={project.stage_progress}
           running={isRunActive(project)}
           candidates={project.plan_candidates ?? []}
+          allowedCommands={project.allowed_commands}
           submit={allowedSubmit(project, submit, ["run_plan", "run_check", "decide_plan"])}
           busy={busy}
         />
@@ -222,43 +250,158 @@ function isRunLocked(project: ProjectView): boolean {
 }
 
 function visibleCommands(project: ProjectView): CommandType[] {
-  const allowed = isRunLocked(project)
-    ? project.allowed_commands.filter((command) => command === "cancel_run")
-    : project.allowed_commands;
-  return allowed.filter((command) => !panelOwnedCommands.has(command));
+  if (isRunLocked(project)) {
+    return project.allowed_commands.filter((command) => command === "cancel_run");
+  }
+  return project.allowed_commands.filter(
+    (command) =>
+      !panelOwnedCommands.has(command)
+      // 后端恒允许 cancel_run，但没有活动 run 时点击必然报错，空闲时不渲染
+      && command !== "cancel_run"
+      // archive_project 后端目前是 no-op 占位（不落库），前端不渲染；
+      // 后端真实现后由 allowed_commands 恢复。
+      && command !== "archive_project",
+  );
 }
 
-function ActionDock({
+type SubmitFn = (draft: CommandDraft) => Promise<unknown>;
+
+/** 底部输入区：单输入框，左侧“+”上传文档，右侧圆形发送按钮。 */
+function Composer({
   project,
-  api,
-  submit,
-  retry,
-  error,
+  apiAttached,
+  onUpload,
   busy,
+  error,
+  retry,
+  submit,
+  transferStatus = null,
+  parseStatus = null,
 }: {
   project: ProjectView;
-  api?: CommandApi;
-  submit: (draft: CommandDraft) => Promise<unknown>;
-  retry: () => Promise<unknown>;
-  error: { code: string; message: string; retryable: boolean } | null;
+  apiAttached: boolean;
+  onUpload?: (file: File) => Promise<void>;
   busy: boolean;
+  error: CommandError | null;
+  retry: () => Promise<unknown>;
+  submit: SubmitFn;
+  transferStatus?: string | null;
+  parseStatus?: string | null;
 }) {
-  const allowedCommands = visibleCommands(project);
   const locked = isRunLocked(project);
-  const composerAllowed = allowedCommands.some((command) => composerCommands.has(command));
-  const composerEnabled = composerAllowed && !locked && api !== undefined;
+  const composerCommand = visibleCommands(project).find((command) =>
+    composerCommands.has(command),
+  );
+  const composerEnabled = composerCommand !== undefined && !locked && apiAttached;
   const storageKey = draftKey(project.project_id, project.phase);
   const [draft, setDraft] = useState(() => sessionStorage.getItem(storageKey) ?? "");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [multiline, setMultiline] = useState(false);
+  const overTsundere = draft.length > TSUNDERE_LENGTH_LIMIT;
 
   useEffect(() => {
     setDraft(sessionStorage.getItem(storageKey) ?? "");
   }, [storageKey]);
 
+  // 自动增高并探测是否超过一行：超过后“+”/发送按钮平滑移到左下/右下角。
+  // 阈值带迟滞（>48 开启、<40 关闭）：两种布局的换行宽度不同，
+  // 单一阈值会在 1↔2 行边界来回振荡。
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (el === null) {
+      return;
+    }
+    el.style.height = "0px";
+    const content = el.scrollHeight;
+    el.style.height = `${Math.min(content, 160)}px`;
+    setMultiline((prev) => (content > 48 ? true : content < 40 ? false : prev));
+  }, [draft, storageKey]);
+
+  const sendComposer = () => {
+    if (composerCommand === undefined || busy || !apiAttached) {
+      return;
+    }
+    const payload = draftFor(composerCommand, draft, project);
+    if (payload === null) {
+      return;
+    }
+    if (composerCommand === "restart_research" && draft.trim()) {
+      if (!window.confirm("确认封存当前研究轮次，并用这条新想法重新开始？")) {
+        return;
+      }
+    }
+    void submit(payload);
+  };
+
+  const transferText: string | null = transferStatus === null
+    ? null
+    : (UPLOAD_TRANSFER_LABELS[transferStatus] ?? transferStatus);
+  const parseText: string | null = parseStatus === null
+    ? null
+    : (UPLOAD_PARSE_LABELS[parseStatus] ?? parseStatus);
+  const uploadFailed = transferStatus === "failed" || parseStatus === "failed";
+
   return (
     <footer className="action-dock">
-      <div className="composer-wrap">
-        <label htmlFor="research-message">研究消息</label>
+      {transferText !== null || parseText !== null ? (
+        <p
+          className={uploadFailed ? "composer-note is-error" : "composer-note"}
+          role="status"
+        >
+          {[
+            transferText !== null ? `传输：${transferText}` : null,
+            parseText !== null ? `解析：${parseText}` : null,
+          ]
+            .filter((part) => part !== null)
+            .join("　")}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="command-error" role="alert">
+          <strong>{error.code}</strong>
+          <span>{error.message}</span>
+          {error.retryable ? (
+            <button type="button" onClick={() => void retry()} disabled={busy}>
+              重试
+            </button>
+          ) : null}
+        </p>
+      ) : null}
+      {overTsundere ? (
+        <p className="composer-note" role="status">
+          内容较长，建议精简后分多次发送　{draft.length}/19999
+        </p>
+      ) : null}
+      <div
+        className={multiline ? "composer-wrap is-multiline" : "composer-wrap"}
+        style={{ width: `min(${composerWidthRem(draft).toFixed(2)}rem, 100%)` }}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".txt,.md,.markdown,.pdf"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file !== undefined && onUpload !== undefined) {
+              void onUpload(file);
+            }
+          }}
+        />
+        <button
+          type="button"
+          className="composer-attach"
+          aria-label="上传文档"
+          disabled={onUpload === undefined || busy}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          +
+        </button>
+        <label className="visually-hidden" htmlFor="research-message">研究消息</label>
         <textarea
+          ref={textareaRef}
           id="research-message"
           value={draft}
           maxLength={19999}
@@ -268,56 +411,95 @@ function ActionDock({
             setDraft(value);
             sessionStorage.setItem(storageKey, value);
           }}
-          placeholder={composerEnabled ? "写下当前阶段需要提交的内容" : "当前阶段请使用页面中的表单或右侧操作"}
-        />
-        <span className="character-count">{draft.length}/19999</span>
-        {error ? (
-          <p className="command-error" role="alert">
-            <strong>{error.code}</strong>
-            <span>{error.message}</span>
-            {error.retryable ? (
-              <button type="button" onClick={() => void retry()} disabled={busy}>
-                重试
-              </button>
-            ) : null}
-          </p>
-        ) : null}
-      </div>
-      <div className="allowed-actions" aria-label="当前可执行操作">
-        {allowedCommands.map((command) => (
-          <button
-            key={command}
-            type="button"
-            className={command === "cancel_run" || command === "archive_project" ? "secondary-action" : undefined}
-            disabled={
-              api === undefined
-              || (command !== "cancel_run" && (busy || locked))
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) {
+              return;
             }
-            onClick={() => {
-              if (api === undefined) {
-                return;
-              }
-              const payload = draftFor(command, draft, project);
-              if (payload === null) {
-                return;
-              }
-              if (command === "restart_research") {
-                if (!draft.trim()) {
-                  void submit(payload);
-                  return;
-                }
-                if (!window.confirm("确认封存当前研究轮次，并用这条新想法重新开始？")) {
-                  return;
-                }
-              }
-              void submit(payload);
-            }}
+            event.preventDefault();
+            sendComposer();
+          }}
+          placeholder={composerEnabled
+            ? "输入研究消息（Enter 发送，Shift+Enter 换行）"
+            : "当前阶段请在内容区选择操作"}
+        />
+        <button
+          type="button"
+          className="composer-send"
+          aria-label={composerCommand === undefined ? "发送" : actionLabels[composerCommand]}
+          disabled={!composerEnabled || busy}
+          onClick={sendComposer}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            aria-hidden="true"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            {actionLabels[command]}
-          </button>
-        ))}
+            <path d="M12 19V5" />
+            <path d="M5 12l7-7 7 7" />
+          </svg>
+        </button>
       </div>
     </footer>
+  );
+}
+
+/** 内容区下方操作行：非输入类、非 panel 类的 allowed_commands 药丸按钮。 */
+function StreamActions({
+  project,
+  api,
+  busy,
+  submit,
+}: {
+  project: ProjectView;
+  api?: CommandApi;
+  busy: boolean;
+  submit: SubmitFn;
+}) {
+  const locked = isRunLocked(project);
+  const composerCommand = visibleCommands(project).find((command) =>
+    composerCommands.has(command),
+  );
+  const commands = visibleCommands(project).filter((command) => {
+    if (command === "restart_research") {
+      return composerCommand !== "restart_research";
+    }
+    return !composerCommands.has(command);
+  });
+  if (commands.length === 0) {
+    return null;
+  }
+  return (
+    <div className="stream-actions" role="group" aria-label="当前可执行操作">
+      {commands.map((command) => (
+        <button
+          key={command}
+          type="button"
+          className={
+            command === "cancel_run" || command === "archive_project"
+              ? "action-pill secondary-action"
+              : "action-pill"
+          }
+          disabled={busy || (locked && command !== "cancel_run")}
+          onClick={() => {
+            if (api === undefined) {
+              return;
+            }
+            const payload = draftFor(command, "", project);
+            if (payload !== null) {
+              void submit(payload);
+            }
+          }}
+        >
+          {actionLabels[command]}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -327,26 +509,46 @@ export function ProjectWorkspace({
   onUpload,
   onCreateProject,
   onSelectProject,
+  onDeleteProject,
   projects,
   onExportMarkdown,
   onExportJson,
   transferStatus = null,
   parseStatus = null,
+  documents = [],
+  documentNotice = null,
+  onDeleteDocument,
 }: {
   project: ProjectView;
   api?: CommandApi;
   onUpload?: (file: File) => Promise<void>;
   onCreateProject?: () => void;
   onSelectProject?: (projectId: string) => void;
+  onDeleteProject?: (projectId: string) => void;
   projects?: ProjectView[];
   onExportMarkdown?: () => Promise<void> | void;
   onExportJson?: () => Promise<void> | void;
   transferStatus?: string | null;
   parseStatus?: string | null;
+  documents?: UploadedDocumentView[];
+  documentNotice?: string | null;
+  onDeleteDocument?: (documentId: string) => void;
 }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
   const commandApi = api ?? { dispatchCommand: async () => project };
   const { submit, retry, error, busy } = useCommand(project, commandApi);
   const liveSubmit = api === undefined ? undefined : submit;
+  const evidenceCount = project.visible_evidence?.length ?? 0;
+  const prevEvidenceCount = useRef(0);
+
+  // 检索证据从无到有时从右侧弹出；用户手动收起后不再自动弹出。
+  useEffect(() => {
+    if (evidenceCount > 0 && prevEvidenceCount.current === 0) {
+      setEvidenceOpen(true);
+    }
+    prevEvidenceCount.current = evidenceCount;
+  }, [evidenceCount]);
 
   return (
     <AppShell
@@ -354,22 +556,31 @@ export function ProjectWorkspace({
       projects={projects}
       onCreateProject={onCreateProject}
       onSelectProject={onSelectProject}
+      onDeleteProject={onDeleteProject}
+      sidebarOpen={sidebarOpen}
+      onSidebarOpenChange={setSidebarOpen}
+      evidenceOpen={evidenceOpen}
+      onEvidenceOpenChange={setEvidenceOpen}
       evidence={
         <EvidencePanel
           evidence={project.visible_evidence ?? []}
-          transferStatus={transferStatus}
-          parseStatus={parseStatus}
-          onUpload={onUpload}
+          documents={documents}
+          documentNotice={documentNotice}
+          onDeleteDocument={onDeleteDocument}
+          onClose={() => setEvidenceOpen(false)}
         />
       }
       actionDock={
-        <ActionDock
+        <Composer
           project={project}
-          api={api}
-          submit={submit}
-          retry={retry}
-          error={error}
+          apiAttached={api !== undefined}
+          onUpload={onUpload}
           busy={busy}
+          error={error}
+          retry={retry}
+          submit={submit}
+          transferStatus={transferStatus}
+          parseStatus={parseStatus}
         />
       }
     >
@@ -378,8 +589,17 @@ export function ProjectWorkspace({
           <span>{project.domain}</span>
           <span>version {project.version}</span>
         </div>
+        {isRunActive(project) ? <AgentRunLive project={project} /> : null}
         {phaseContent(project, liveSubmit, busy)}
-        <CollapsibleRunTrace activity={project.recent_activity ?? []} />
+        <StreamActions
+          project={project}
+          api={api}
+          busy={busy}
+          submit={submit}
+        />
+        {isRunActive(project) ? null : (
+          <CollapsibleRunTrace activity={project.recent_activity ?? []} />
+        )}
         {project.phase === "completed" ? (
           <ExportPanel onExportMarkdown={onExportMarkdown} onExportJson={onExportJson} />
         ) : null}

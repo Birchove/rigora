@@ -6,6 +6,7 @@ import type {
   CommandResponse,
   JsonValue,
   ProjectView,
+  UploadedDocumentView,
 } from "./types";
 
 export { ApiError };
@@ -77,7 +78,27 @@ export function createClient(
     },
 
     listDocuments(projectId: string) {
-      return json<JsonValue[]>(`/projects/${encodeURIComponent(projectId)}/documents`);
+      return json<UploadedDocumentView[]>(`/projects/${encodeURIComponent(projectId)}/documents`);
+    },
+
+    async deleteDocument(projectId: string, documentId: string) {
+      const response = await fetcher(
+        `/api/v1/projects/${encodeURIComponent(projectId)}/documents/${encodeURIComponent(documentId)}`,
+        { method: "DELETE" },
+      );
+      if (response.ok || response.status === 204) {
+        return;
+      }
+      const fallback: ApiErrorEnvelope = {
+        error: {
+          code: "unexpected_response",
+          message: "服务器返回了无法识别的错误。",
+          retryable: response.status >= 500,
+          details: {},
+        },
+      };
+      const envelope = (await response.json().catch(() => fallback)) as ApiErrorEnvelope;
+      throw new ApiError(response.status, envelope.error ?? fallback.error);
     },
 
     async downloadJournal(projectId: string, format: "md" | "json") {
