@@ -25,6 +25,8 @@ def test_env_example_has_no_secret_values():
         "RESEARCH_MENTOR_CHATGPT_API_KEY=",
         "RESEARCH_MENTOR_GLM_API_KEY=",
         "RESEARCH_MENTOR_OPENALEX_API_KEY=",
+        "RESEARCH_MENTOR_HF_ENDPOINT=",
+        "RESEARCH_MENTOR_HF_TOKEN=",
     ):
         assert name in text
     assert "sk-" not in text
@@ -47,6 +49,10 @@ def test_readme_covers_v1_operator_topics():
         "mailto",
         "Anydoc",
         "FlagEmbedding",
+        "download_reranker",
+        "--mirror",
+        "hf-mirror.com",
+        "modelscope.cn",
         "SQLite",
         "PostgreSQL",
         "/api/v1",
@@ -84,7 +90,7 @@ def test_dev_and_check_scripts_cover_runtime_gates():
 
 def test_gitignore_excludes_runtime_artifacts_not_source():
     text = Path(".gitignore").read_text(encoding="utf-8")
-    for needle in (".env", "data/", "*.db", "test-results/", "playwright-report/"):
+    for needle in (".env", "data/", "data/models/", "*.db", "test-results/", "playwright-report/"):
         assert needle in text
     ignored = {
         line.strip()

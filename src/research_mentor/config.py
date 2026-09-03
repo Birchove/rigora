@@ -12,6 +12,7 @@ from pydantic import Field, HttpUrl, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 from research_mentor.domain.jobs import AgentName
+from research_mentor.adapters.embeddings.huggingface_hub_env import resolve_hf_endpoint
 from research_mentor.hyperparameters import (
     CHECK_DIMENSION_FLOORS,
     CHECK_PASS_SCORE,
@@ -32,10 +33,13 @@ from research_mentor.hyperparameters import (
     UPLOAD_MAX_FILE_BYTES,
     UPLOAD_MAX_PROJECT_BYTES,
     WORKING_CONTEXT_CHARACTER_BUDGET,
+    DEFAULT_RERANKER_CACHE_DIR,
+    DEFAULT_RERANKER_MODEL,
 )
 
 
 VendorName = Literal["qwen", "deepseek", "chatgpt", "glm"]
+RerankerBackend = Literal["auto", "flagembedding", "lexical", "unavailable"]
 SlotName = Literal["qwen", "deepseek", "chatgpt", "chatgpt_2", "glm"]
 VendorApiStyle = Literal["chat_completions", "responses"]
 VENDORS: tuple[VendorName, ...] = ("qwen", "deepseek", "chatgpt", "glm")
@@ -139,6 +143,11 @@ class Settings(BaseSettings):
     working_context_character_budget: int = Field(
         default=WORKING_CONTEXT_CHARACTER_BUDGET, ge=1000
     )
+    reranker_backend: RerankerBackend = "auto"
+    reranker_model: str = DEFAULT_RERANKER_MODEL
+    reranker_cache_dir: Path = Path(DEFAULT_RERANKER_CACHE_DIR)
+    hf_endpoint: str | None = None
+    hf_token: SecretStr | None = None
     run_lease_seconds: float = Field(default=RUN_LEASE_SECONDS, gt=0.0)
     run_lease_renewal_seconds: float = Field(default=RUN_LEASE_RENEWAL_SECONDS, gt=0.0)
     run_timeout_seconds: float = Field(default=RUN_TIMEOUT_SECONDS, gt=0.0)
@@ -179,6 +188,13 @@ class Settings(BaseSettings):
                 unique.append(part)
         return unique
 
+    @field_validator("hf_endpoint", mode="before")
+    @classmethod
+    def normalize_hf_endpoint(cls, value: object) -> object:
+        if value is None or value == "":
+            return None
+        return resolve_hf_endpoint(str(value))
+
     @model_validator(mode="after")
     def apply_placeholder_keys_and_vendor_slots(self) -> Self:
         for field_name in (
@@ -189,6 +205,7 @@ class Settings(BaseSettings):
             "chatgpt_2_api_key",
             "glm_api_key",
             "openalex_api_key",
+            "hf_token",
         ):
             secret = getattr(self, field_name)
             if secret is None:
@@ -217,6 +234,11 @@ class Settings(BaseSettings):
                     )
                 claimed[agent] = slot
         return self
+
+    def huggingface_hub_token(self) -> str | None:
+        if self.hf_token is not None:
+            return self.hf_token.get_secret_value()
+        return os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
 
     def slot_api_key(self, slot: SlotName) -> SecretStr | None:
         secret = getattr(self, f"{slot}_api_key")

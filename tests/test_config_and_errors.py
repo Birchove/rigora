@@ -54,6 +54,11 @@ def clear_settings_environment(monkeypatch):
         "RESEARCH_MENTOR_DEMO_MODE",
         "RESEARCH_MENTOR_MAX_CHECK_ROUNDS",
         "RESEARCH_MENTOR_CHECK_PASS_SCORE",
+        "RESEARCH_MENTOR_RERANKER_BACKEND",
+        "RESEARCH_MENTOR_RERANKER_MODEL",
+        "RESEARCH_MENTOR_RERANKER_CACHE_DIR",
+        "RESEARCH_MENTOR_HF_ENDPOINT",
+        "RESEARCH_MENTOR_HF_TOKEN",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -107,6 +112,11 @@ def test_settings_defaults_to_demo_and_sqlite():
     assert settings.demo_mode is True
     assert settings.max_check_rounds == 5
     assert settings.check_pass_score == 6.0
+    assert settings.reranker_backend == "auto"
+    assert settings.reranker_model == "BAAI/bge-reranker-v2-m3"
+    assert settings.reranker_cache_dir == Path("./data/models")
+    assert settings.hf_endpoint is None
+    assert settings.hf_token is None
 
 
 @pytest.mark.parametrize("provider", ("demo", "openai", "openai_compatible"))
@@ -119,11 +129,21 @@ def test_settings_accepts_supported_providers(monkeypatch, provider):
 def test_settings_placeholder_api_key_is_ignored(monkeypatch):
     monkeypatch.setenv("RESEARCH_MENTOR_MODEL_API_KEY", "xxxx")
     monkeypatch.setenv("RESEARCH_MENTOR_QWEN_API_KEY", "xxxx")
+    monkeypatch.setenv("RESEARCH_MENTOR_HF_TOKEN", "xxxx")
 
     settings = Settings()
 
     assert settings.model_api_key is None
     assert settings.qwen_api_key is None
+    assert settings.hf_token is None
+
+
+def test_settings_resolves_hf_mirror_alias(monkeypatch):
+    monkeypatch.setenv("RESEARCH_MENTOR_HF_ENDPOINT", "mirror")
+
+    settings = Settings()
+
+    assert settings.hf_endpoint == "https://www.modelscope.cn"
 
 
 def test_settings_vendor_agents_are_multi_select(monkeypatch):

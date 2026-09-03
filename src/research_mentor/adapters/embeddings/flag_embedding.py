@@ -1,20 +1,38 @@
 """Optional FlagEmbedding reranker adapter."""
 
 from collections.abc import Sequence
+from pathlib import Path
 import math
+import os
 from typing import Any
 
 from research_mentor.domain.documents import DocumentChunk
 from research_mentor.ports.retrieval import RankedChunk, RankResult
 
 
-class FlagEmbeddingRanker:
-    def __init__(self, model_name: str, *, model: Any | None = None) -> None:
-        if model is None:
-            from FlagEmbedding import FlagReranker
+def local_reranker_dir(model_name: str, cache_dir: Path) -> Path:
+    return cache_dir / model_name.replace("/", "--")
 
-            model = FlagReranker(model_name, use_fp16=True)
+
+class FlagEmbeddingRanker:
+    def __init__(
+        self,
+        model_name: str,
+        *,
+        model: Any | None = None,
+        cache_dir: Path | None = None,
+    ) -> None:
+        self._model_name = model_name
+        self._cache_dir = Path(cache_dir) if cache_dir is not None else None
         self._model = model
+        self._load_error: str | None = None
+
+    def model_path(self) -> str:
+        if self._cache_dir is not None:
+            local = local_reranker_dir(self._model_name, self._cache_dir)
+            if (local / "config.json").is_file():
+                return str(local)
+        return self._model_name
 
     def rank(
         self,
@@ -25,11 +43,17 @@ class FlagEmbeddingRanker:
     ) -> RankResult:
         if limit <= 0 or not chunks:
             return RankResult(status="ok")
+        model = self._ensure_model()
+        if model is None:
+            return RankResult(
+                status="unavailable",
+                limitation=self._load_error or "FlagEmbedding 不可用",
+            )
         pairs = [
             [query, "\n".join([*chunk.heading_path, chunk.markdown])]
             for chunk in chunks
         ]
-        raw_scores = self._model.compute_score(pairs, normalize=True)
+        raw_scores = model.compute_score(pairs, normalize=True)
         if isinstance(raw_scores, (int, float)):
             raw_scores = [raw_scores]
         ranked = sorted(
@@ -46,6 +70,25 @@ class FlagEmbeddingRanker:
                 for score, chunk in ranked[:limit]
             ],
         )
+
+    def _ensure_model(self) -> Any | None:
+        if self._model is not None or self._load_error is not None:
+            return self._model
+        try:
+            if self._cache_dir is not None:
+                self._cache_dir.mkdir(parents=True, exist_ok=True)
+                os.environ.setdefault("HF_HOME", str(self._cache_dir.resolve()))
+            from FlagEmbedding import FlagReranker
+
+            path = self.model_path()
+            try:
+                self._model = FlagReranker(path, use_fp16=True)
+            except Exception:
+                self._model = FlagReranker(path, use_fp16=False)
+        except Exception as exc:
+            self._load_error = f"FlagEmbedding 权重不可用: {exc}"
+            self._model = None
+        return self._model
 
     @staticmethod
     def _normalize(score: float) -> float:

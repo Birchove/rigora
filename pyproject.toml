@@ -23,6 +23,7 @@ dependencies = [
 [project.optional-dependencies]
 local-ranking = [
     "flagembedding>=1.4.2",
+    "huggingface-hub>=0.24",
 ]
 
 [dependency-groups]
@@ -31,6 +32,9 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "respx>=0.23.1",
 ]
+
+[project.scripts]
+rigora-download-reranker = "research_mentor.cli.download_reranker:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -54,7 +54,8 @@ def test_real_mode_uses_unavailable_ranker_without_optional_dependency(
     assert isinstance(ranker, UnavailableRanker)
     assert result.status == "unavailable"
     assert result.items == []
-    assert result.limitation == "FlagEmbedding 未安装"
+    assert result.limitation is not None
+    assert "FlagEmbedding 未安装" in result.limitation
 
 
 def test_ranker_port_has_one_result_contract() -> None:
@@ -85,3 +86,11 @@ def test_flag_embedding_adapter_uses_same_rank_result_contract() -> None:
 
     assert [item.chunk.chunk_id for item in result.items] == ["c2", "c1"]
     assert [item.score for item in result.items] == [0.9, 0.2]
+
+
+def test_flag_embedding_prefers_local_snapshot(tmp_path) -> None:
+    local = tmp_path / "BAAI--bge-reranker-v2-m3"
+    local.mkdir()
+    (local / "config.json").write_text("{}", encoding="utf-8")
+    ranker = FlagEmbeddingRanker("BAAI/bge-reranker-v2-m3", cache_dir=tmp_path)
+    assert ranker.model_path() == str(local)

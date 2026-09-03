@@ -22,6 +22,7 @@ frontend/playwright/.cache/
 
 # Local data and SQLite
 data/
+data/models/
 *.db
 *.db-wal
 *.db-shm
@@ -44,7 +45,12 @@ Thumbs.db
 .cursor/
 
 
+# HuggingFace / FlagEmbedding weights (downloaded locally, never commit)
+*.safetensors
+*.gguf
+
 # Local secrets
 .env
 .env.*
 !.env.example
+

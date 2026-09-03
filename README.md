@@ -138,7 +138,20 @@ $env:RESEARCH_MENTOR_DEMO_MODE = "false"
 
 - **OpenAlex**：真实文献检索走 `/works`。免费账户 API key 用 `RESEARCH_MENTOR_OPENALEX_API_KEY`（查询参数 `api_key` 与 `Authorization: Bearer`）；礼貌池可另设 `RESEARCH_MENTOR_OPENALEX_MAILTO`。未设置 key / mailto 仍可请求，但额度与限流更严。
 - **Anydoc**：`firecrawl-anydoc` 已在默认依赖中。纯文本 / Markdown 走 `PlainTextParser`；PDF 等在线程池中转为规范 Markdown。
-- **FlagEmbedding**：可选本地 rerank。默认安装不下载大模型；需要时执行 `uv sync --extra local-ranking`。未安装时 ranker 返回显式不可用，不伪造分数。
+- **FlagEmbedding**：项目上传文档的 Working RAG rerank，使用 [BAAI/bge-reranker-v2-m3](https://huggingface.co/BAAI/bge-reranker-v2-m3)（[FlagEmbedding](https://github.com/FlagOpen/FlagEmbedding)）。权重约 1GB，下载到 `./data/models`（已 gitignore）。国内请走 [ModelScope](https://www.modelscope.cn/models/BAAI/bge-reranker-v2-m3)：Hugging Face token 只能提高官网限额，不能加速国内链路；`hf-mirror.com` 在 `huggingface_hub` 1.29 上会因跨域 308 报 `FileMetadataError`。
+
+```bash
+uv sync --extra local-ranking
+uv run --extra local-ranking python -m research_mentor.cli.download_reranker --mirror
+```
+
+官网下载可登录（[创建 token](https://huggingface.co/settings/tokens)）：
+
+```bash
+uv run --extra local-ranking python -m research_mentor.cli.download_reranker --login --official
+```
+
+也可在 `.env` 写 `RESEARCH_MENTOR_HF_ENDPOINT=mirror`。未安装或权重缺失时 ranker 返回显式 `unavailable`，不伪造分数，Working 仍可回答。pytest 默认不加载权重。
 
 ## 数据库
 

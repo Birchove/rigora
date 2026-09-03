@@ -15,11 +15,11 @@ SCORING_RULE_VERSION: Final = "v1.1"
 CHECK_PASS_SCORE: Final = 6.0
 MAX_CHECK_ROUNDS: Final = 5
 SCORE_WEIGHTS: Final[dict[str, float]] = {
-    "research_fit": 0.20,
-    "novelty": 0.25,
+    "research_fit": 0.30,
+    "novelty": 0.30,
     "research_value": 0.20,
-    "testability_feasibility": 0.20,
-    "evidence_support": 0.15,
+    "testability_feasibility": 0.10,
+    "evidence_support": 0.10,
 }
 CHECK_DIMENSION_FLOORS: Final[dict[str, float]] = {
     "research_fit": 3.5,
@@ -55,6 +55,14 @@ WORKING_CONTEXT_CHARACTER_BUDGET: Final = 12000
 COMPACT_SUMMARY_MAX_CHARS: Final = 2000
 COMPACT_SUMMARY_BUDGET_DENOMINATOR: Final = 4
 EVIDENCE_PANEL_VISIBLE_LIMIT: Final = 12
+DEFAULT_RERANKER_MODEL: Final = "BAAI/bge-reranker-v2-m3"
+DEFAULT_RERANKER_CACHE_DIR: Final = "./data/models"
+HF_OFFICIAL_ENDPOINT: Final = "https://huggingface.co"
+HF_MIRROR_ENDPOINT: Final = "https://hf-mirror.com"
+MODELSCOPE_ENDPOINT: Final = "https://www.modelscope.cn"
+MODELSCOPE_RERANKER_URL: Final = "https://www.modelscope.cn/models/BAAI/bge-reranker-v2-m3"
+RERANKER_MODEL_HUB_URL: Final = "https://huggingface.co/BAAI/bge-reranker-v2-m3"
+FLAGEMBEDDING_REPO_URL: Final = "https://github.com/FlagOpen/FlagEmbedding"
 
 # --- Text / upload limits ---
 IDEA_TEXT_MAX_LENGTH: Final = 19999

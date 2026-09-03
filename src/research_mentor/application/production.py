@@ -21,7 +21,8 @@ from research_mentor.application.commands import (
     FinishWorkingCommand,
     SelectValidationsCommand,
 )
-from research_mentor.adapters.embeddings.lexical import LexicalRanker
+from research_mentor.application.document_ranker import document_ranker_for
+from research_mentor.config import Settings
 from research_mentor.application.context_service import (
     WorkingContextBuilder,
     WorkingContextSource,
@@ -351,6 +352,7 @@ class AgentRunHandlers:
         self._uow_factory = uow_factory
         self._model = model
         self._settings = settings
+        self._document_ranker = document_ranker_for(settings)
         self._pipeline = None
         if retriever is not None:
             self._pipeline = IdeaReviewRetrievalPipeline(
@@ -548,7 +550,7 @@ class AgentRunHandlers:
             )
             for record in records
         ]
-        builder = WorkingContextBuilder(self._settings, LexicalRanker())
+        builder = WorkingContextBuilder(self._settings, self._document_ranker)
         return await builder.build(
             WorkingContextSource(
                 research_context=session.research_context,
