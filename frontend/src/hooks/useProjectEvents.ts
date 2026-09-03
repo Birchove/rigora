@@ -31,8 +31,7 @@ function initialSequence(source: string | ProjectView): number {
 
 function shouldRefresh(type: string): boolean {
   return (
-    type === "phase.changed"
-    || type === "session.phase_changed"
+    type === "session.phase_changed"
     || type === "agent.stage"
     || type === "run.started"
     || type === "run.completed"

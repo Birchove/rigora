@@ -46,6 +46,7 @@ const composerCommands = new Set<CommandType>([
   "restart_research",
 ]);
 
+/** Dock vs panel vs composer is layout ownership of allowed_commands, not a second phase machine. */
 const panelOwnedCommands = new Set<CommandType>([
   "decide_plan",
   "finish_working",
@@ -62,6 +63,7 @@ const panelOwnedCommands = new Set<CommandType>([
 const activeRunStatuses = new Set(["queued", "running"]);
 
 const TSUNDERE_LENGTH_LIMIT = 16000;
+const COMPOSER_HARD_LIMIT = 19999;
 
 // 输入框宽度随内容平滑增长（GPT 风格）：CJK/全角按 2 倍视觉宽度估算，触顶后不再增加
 const COMPOSER_WIDTH_MIN_REM = 34;
@@ -298,10 +300,12 @@ function Composer({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [multiline, setMultiline] = useState(false);
+  const [restartConfirm, setRestartConfirm] = useState(false);
   const overTsundere = draft.length > TSUNDERE_LENGTH_LIMIT;
 
   useEffect(() => {
     setDraft(sessionStorage.getItem(storageKey) ?? "");
+    setRestartConfirm(false);
   }, [storageKey]);
 
   // 自动增高并探测是否超过一行：超过后“+”/发送按钮平滑移到左下/右下角。
@@ -327,9 +331,8 @@ function Composer({
       return;
     }
     if (composerCommand === "restart_research" && draft.trim()) {
-      if (!window.confirm("确认封存当前研究轮次，并用这条新想法重新开始？")) {
-        return;
-      }
+      setRestartConfirm(true);
+      return;
     }
     void submit(payload);
   };
@@ -368,9 +371,36 @@ function Composer({
           ) : null}
         </p>
       ) : null}
+      {restartConfirm ? (
+        <p className="composer-note composer-confirm" role="alertdialog">
+          <span>确认封存当前研究轮次，并用这条新想法重新开始？</span>
+          <button
+            type="button"
+            onClick={() => {
+              if (composerCommand === undefined) {
+                return;
+              }
+              const payload = draftFor(composerCommand, draft, project);
+              setRestartConfirm(false);
+              if (payload !== null) {
+                void submit(payload);
+              }
+            }}
+          >
+            确认重开
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setRestartConfirm(false)}
+          >
+            取消
+          </button>
+        </p>
+      ) : null}
       {overTsundere ? (
         <p className="composer-note" role="status">
-          内容较长，建议精简后分多次发送　{draft.length}/19999
+          内容较长，建议精简后分多次发送　{draft.length}/{TSUNDERE_LENGTH_LIMIT}
         </p>
       ) : null}
       <div
@@ -404,11 +434,12 @@ function Composer({
           ref={textareaRef}
           id="research-message"
           value={draft}
-          maxLength={19999}
+          maxLength={COMPOSER_HARD_LIMIT}
           disabled={!composerEnabled}
           onChange={(event) => {
             const value = event.target.value;
             setDraft(value);
+            setRestartConfirm(false);
             sessionStorage.setItem(storageKey, value);
           }}
           onKeyDown={(event) => {

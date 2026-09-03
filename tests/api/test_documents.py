@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import pytest
@@ -112,6 +112,38 @@ async def test_parse_worker_drains_queued_markdown_to_ready(monkeypatch, tmp_pat
         document = await container.document_service.get("p1", body["document_id"])
         assert document.status == "ready"
         assert await worker.drain_once() is None
+        async with container.uow_factory() as uow:
+            events = await uow.events.list_for_project_after("p1", after=0)
+        payloads = [event.payload for event in events if event.topic == "document.parsing_progress"]
+        assert [item["status"] for item in payloads] == ["parsing", "ready"]
+
+
+@pytest.mark.anyio
+async def test_stale_running_parse_job_is_requeued(monkeypatch, tmp_path):
+    async with _client(monkeypatch, tmp_path) as (client, container):
+        body = (await client.post(
+            "/api/v1/projects/p1/documents",
+            files={"file": ("notes.md", b"# Experiment", "text/markdown")},
+        )).json()
+        stale_started = datetime.now(timezone.utc) - timedelta(minutes=20)
+        async with container.uow_factory() as uow:
+            job = await uow.document_parse_jobs.latest_for_document(body["document_id"])
+            assert job is not None
+            await uow.document_parse_jobs.save(job.model_copy(update={
+                "status": "running",
+                "started_at": stale_started,
+            }))
+            await uow.documents.set_status(
+                body["document_id"], project_id="p1", status="parsing"
+            )
+        worker = DocumentParseWorker(
+            container.uow_factory,
+            container.document_service,
+            stale_after_seconds=60,
+        )
+        assert await worker.drain_once() == job.job_id
+        document = await container.document_service.get("p1", body["document_id"])
+        assert document.status == "ready"
 
 
 @pytest.mark.anyio

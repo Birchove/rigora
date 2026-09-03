@@ -29,6 +29,12 @@ class SnapshotSessionRepository:
         self.session = session.model_copy(deep=True)
         self.events: list[SessionEvent] = []
 
+    def add(self, session: ResearchSession, event: SessionEvent) -> None:
+        if event.session_id != session.session_id:
+            raise SessionNotFoundError(session.session_id)
+        self.session = session.model_copy(deep=True)
+        self.events.append(event.model_copy(deep=True))
+
     def get(self, session_id: str) -> ResearchSession:
         if session_id != self.session.session_id:
             raise SessionNotFoundError(f"Session not found: {session_id}")
@@ -39,6 +45,11 @@ class SnapshotSessionRepository:
             raise SessionNotFoundError(session.session_id)
         self.session = session.model_copy(deep=True)
         self.events.append(event.model_copy(deep=True))
+
+    def list_events(self, session_id: str) -> list[SessionEvent]:
+        if session_id != self.session.session_id:
+            raise SessionNotFoundError(f"Session not found: {session_id}")
+        return [event.model_copy(deep=True) for event in self.events]
 
 
 def harness_config(settings: Settings) -> HarnessConfig:
@@ -109,6 +120,8 @@ async def apply_orchestrator(
 ) -> ResearchSession:
     occurred_at = now or datetime.now(timezone.utc)
     make_id = new_id or (lambda: str(uuid4()))
+    # OCC: read the version in this UoW before mutate; concurrent commands that
+    # observed the same version lose on save via ConcurrencyConflict.
     expected_version = await uow.sessions.row_version(session.session_id)
     repository = SnapshotSessionRepository(session)
     orchestrator = build_orchestrator(

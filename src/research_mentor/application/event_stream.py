@@ -49,6 +49,7 @@ _INTERNAL_TYPE_MAP = {
     "validations_selected": "agent.stage",
     "plan_revision_decided": "agent.stage",
     "run_failed": "run.failed",
+    "document_parsing_progress": "document.parsing_progress",
 }
 
 _PAYLOAD_FIELDS = {

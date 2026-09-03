@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { ApiError } from "../api/errors";
 import { connectProjectEvents } from "../api/events";
 import type { ProjectView } from "../api/types";
 import { useProjectEvents, type ProjectEventNotice, type ProjectEventsApi } from "./useProjectEvents";
@@ -12,17 +13,24 @@ export type ProjectApi = {
 
 export function useProject(projectId: string, api: ProjectApi) {
   const [project, setProject] = useState<ProjectView | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const apiRef = useRef(api);
   apiRef.current = api;
 
   const refresh = useCallback(async () => {
-    const next = await apiRef.current.getProject(projectId);
-    setProject(next);
-    return next;
+    try {
+      const next = await apiRef.current.getProject(projectId);
+      setProject(next);
+      setError(null);
+      return next;
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "无法加载项目。");
+      throw caught;
+    }
   }, [projectId]);
 
   useEffect(() => {
-    void refresh();
+    void refresh().catch(() => undefined);
   }, [refresh]);
 
   const eventsApi = useMemo<ProjectEventsApi>(
@@ -69,5 +77,5 @@ export function useProject(projectId: string, api: ProjectApi) {
   );
 
   useProjectEvents(project ?? projectId, eventsApi);
-  return { project, refresh };
+  return { project, refresh, error };
 }

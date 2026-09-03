@@ -1442,6 +1442,28 @@
   color: var(--danger);
 }
 
+.composer-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem 0.7rem;
+}
+
+.composer-confirm button {
+  padding: 0.2rem 0.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.composer-confirm button.secondary {
+  background: var(--fill-quiet);
+  color: var(--text-1);
+}
+
 .command-error {
   width: min(44rem, 100%);
   margin: 0;

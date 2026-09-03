@@ -269,8 +269,8 @@ class DemoService:
                             occurred_at=_NOW.isoformat(),
                         )
                     )
-                    for record in await self._retrieval.search("state compression", limit=2):
-                        await uow.literature.add_for_project(project_id, record, selected=True)
+                    records = await self._retrieval.search("state compression", limit=2)
+                    await uow.literature.add_many(project_id, records, selected=True)
         return await self._snapshots()
 
     async def _snapshots(self) -> list[DemoProject]:

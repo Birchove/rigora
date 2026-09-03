@@ -169,6 +169,50 @@ describe("ProjectWorkspace", () => {
     ]);
   });
 
+  it("asks for in-ui confirmation before restart_research", () => {
+    const dispatched: Array<{ type: string }> = [];
+    render(
+      <ProjectWorkspace
+        project={project("rejected", ["restart_research"])}
+        api={{
+          dispatchCommand: async (command) => {
+            dispatched.push(command);
+            return project("rejected", ["restart_research"]);
+          },
+        }}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole("textbox", { name: "研究消息" }), {
+      target: { value: "换一个更窄的研究问题" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "重新审查新想法" }));
+
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("确认封存当前研究轮次");
+    expect(dispatched).toEqual([]);
+
+    fireEvent.click(screen.getByRole("button", { name: "确认重开" }));
+    expect(dispatched).toEqual([
+      expect.objectContaining({ type: "restart_research" }),
+    ]);
+  });
+
+  it("warns at the 16k tsundere line, not the 19999 hard cap", () => {
+    render(
+      <ProjectWorkspace
+        project={project("awaiting_idea", ["submit_idea"])}
+        api={{ dispatchCommand: async () => project("awaiting_idea", ["submit_idea"]) }}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole("textbox", { name: "研究消息" }), {
+      target: { value: "研".repeat(16001) },
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent("16001/16000");
+    expect(screen.queryByText(/19999/)).toBeNull();
+  });
+
   it("keeps demo data visibly marked in the workspace header", () => {
     render(
       <ProjectWorkspace

@@ -1,22 +1,18 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import App from "./App";
 
 describe("App", () => {
-  it("presents the product as a research workspace with five main stages", () => {
+  it("does not fall back to a fake preview project when the API is down", async () => {
     render(<App />);
 
-    expect(
-      screen.getByRole("heading", { name: "Rigora" }),
-    ).toBeTruthy();
-    expect(screen.getAllByRole("listitem")).toHaveLength(5);
-    expect(screen.getByRole("link", { name: "Rigora 首页" })).toBeTruthy();
-    expect(document.querySelector(".brand-lockup")?.getAttribute("src")).toContain(
-      "rigora-lockup-light.svg",
-    );
+    expect(screen.getByRole("heading", { name: "Rigora" })).toBeTruthy();
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "无法连接研究服务" })).toBeTruthy();
+    expect(screen.queryByText("稳健代码检索研究")).toBeNull();
     expect(screen.queryByText("AI 聊天助手")).toBeNull();
   });
 });

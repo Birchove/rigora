@@ -45,6 +45,7 @@ class SessionEventType(StrEnum):
     VALIDATIONS_SELECTED = "validations_selected"
     PLAN_REVISION_DECIDED = "plan_revision_decided"
     RUN_FAILED = "run_failed"
+    DOCUMENT_PARSING_PROGRESS = "document_parsing_progress"
 
 
 class SessionEvent(BaseModel):

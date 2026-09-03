@@ -57,11 +57,19 @@ function fakeApi() {
 }
 
 describe("useProjectEvents", () => {
-  it("refreshes view after phase.changed", async () => {
+  it("refreshes view after session.phase_changed", async () => {
+    const api = fakeApi();
+    renderHook(() => useProjectEvents("p1", api));
+    fakeEvents.emit({ id: "4", type: "session.phase_changed", data: { phase: "working" } });
+    await waitFor(() => expect(api.getProject).toHaveBeenCalledWith("p1"));
+  });
+
+  it("does not treat the obsolete phase.changed alias as a real event type", async () => {
     const api = fakeApi();
     renderHook(() => useProjectEvents("p1", api));
     fakeEvents.emit({ id: "4", type: "phase.changed", data: { phase: "working" } });
-    await waitFor(() => expect(api.getProject).toHaveBeenCalledWith("p1"));
+    await waitFor(() => expect(api.applyEvent).toHaveBeenCalledTimes(1));
+    expect(api.getProject).not.toHaveBeenCalled();
   });
 
   it("drops replayed sequences and reconnects with after", async () => {

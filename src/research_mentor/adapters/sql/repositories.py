@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from research_mentor.adapters.sql.mappers import (
@@ -35,6 +36,10 @@ from research_mentor.domain.documents import DocumentChunk, DocumentParseJob, Up
 from research_mentor.domain.evidence import LiteratureRecord
 from research_mentor.domain.projects import ResearchProject
 from research_mentor.harness.state import ResearchSession, SessionEvent
+from research_mentor.hyperparameters import (
+    CLAIM_NEXT_CANDIDATE_LIMIT,
+    EVENT_SEQUENCE_RETRY_LIMIT,
+)
 from research_mentor.ports.events import OutboxEvent, PersistedPublicEvent
 from research_mentor.ports.repository import AgentOutputRecord, ProcessedCommand
 
@@ -310,6 +315,37 @@ class SqlDocumentParseJobRepository:
             DocumentParseJobRow.job_id == job.job_id
         ).values(**job.model_dump(mode="python", exclude={"job_id"})))
 
+    async def requeue_stale_running(
+        self, *, now: datetime, stale_after_seconds: float
+    ) -> tuple[str, ...]:
+        cutoff = now - timedelta(seconds=stale_after_seconds)
+        rows = (
+            await self._db.scalars(
+                select(DocumentParseJobRow).where(
+                    DocumentParseJobRow.status == "running",
+                    DocumentParseJobRow.started_at.is_not(None),
+                    DocumentParseJobRow.started_at <= cutoff,
+                )
+            )
+        ).all()
+        requeued: list[str] = []
+        for row in rows:
+            await self._db.execute(
+                update(DocumentParseJobRow)
+                .where(DocumentParseJobRow.job_id == row.job_id)
+                .values(status="queued", started_at=None, error_message=None)
+            )
+            await self._db.execute(
+                update(DocumentRow)
+                .where(
+                    DocumentRow.document_id == row.document_id,
+                    DocumentRow.project_id == row.project_id,
+                )
+                .values(status="uploaded", error_message=None)
+            )
+            requeued.append(row.job_id)
+        return tuple(requeued)
+
 
 class SqlLiteratureRepository:
     def __init__(self, db: AsyncSession) -> None:
@@ -321,7 +357,20 @@ class SqlLiteratureRepository:
         ).where(ProjectLiteratureRow.project_id == project_id).order_by(LiteratureRecordRow.record_id))).all()
         return [LiteratureRecord.model_validate(row.payload) for row in rows]
 
-    async def add_for_project(
+    async def add_many(
+        self,
+        project_id: str,
+        records: list[LiteratureRecord],
+        *,
+        selected: bool = False,
+    ) -> None:
+        for record in records:
+            try:
+                await self._add_one(project_id, record, selected=selected)
+            except ValueError:
+                continue
+
+    async def _add_one(
         self,
         project_id: str,
         record: LiteratureRecord,
@@ -418,6 +467,7 @@ class SqlAgentRunRepository:
                     (AgentRunRow.available_at.is_(None) | (AgentRunRow.available_at <= now)),
                 )
                 .order_by(AgentRunRow.available_at, AgentRunRow.run_id)
+                .limit(CLAIM_NEXT_CANDIDATE_LIMIT)
             )
         ).all()
         for run_id in run_ids:
@@ -637,18 +687,28 @@ class SqlSessionEventRepository:
         )
         if project_id is None:
             raise SessionNotFoundError(f"Session not found: {event.session_id}")
-        latest_sequence = await self._db.scalar(
-            select(func.max(SessionEventRow.sequence)).where(
-                SessionEventRow.project_id == project_id
+        last_error: IntegrityError | None = None
+        for _ in range(EVENT_SEQUENCE_RETRY_LIMIT):
+            latest_sequence = await self._db.scalar(
+                select(func.max(SessionEventRow.sequence)).where(
+                    SessionEventRow.project_id == project_id
+                )
             )
-        )
-        self._db.add(
-            event_to_row(
-                event,
-                project_id=project_id,
-                sequence=(latest_sequence or 0) + 1,
-            )
-        )
+            try:
+                async with self._db.begin_nested():
+                    self._db.add(
+                        event_to_row(
+                            event,
+                            project_id=project_id,
+                            sequence=(latest_sequence or 0) + 1,
+                        )
+                    )
+                    await self._db.flush()
+                return
+            except IntegrityError as exc:
+                last_error = exc
+        if last_error is not None:
+            raise last_error
 
     async def list_for_project_after(
         self, project_id: str, *, after: int

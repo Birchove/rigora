@@ -212,22 +212,16 @@ class ProjectViewService:
                 session = await uow.sessions.get(project.session_id)
                 if session is None:
                     continue
-                active_run = await uow.runs.find_active_for_project(project.project_id)
-                last_event_sequence = await uow.events.latest_sequence(
-                    project.project_id
-                )
-                literature = await uow.literature.list_for_project(project.project_id)
-                events = await uow.events.list_for_project_after(
-                    project.project_id, after=0
-                )
+                # Sidebar projection: title/phase/normalized_idea live on the
+                # session. Skip per-project run/literature/event scans.
                 views.append(
                     self._to_view(
                         project,
                         session,
-                        active_run=active_run,
-                        last_event_sequence=last_event_sequence,
-                        literature=literature,
-                        events=events,
+                        active_run=None,
+                        last_event_sequence=0,
+                        literature=[],
+                        events=[],
                     )
                 )
         return views

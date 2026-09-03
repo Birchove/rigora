@@ -12,6 +12,9 @@ from research_mentor.adapters.documents.anydoc import AnydocParser
 from research_mentor.adapters.documents.chunking import MarkdownChunker
 from research_mentor.adapters.documents.plain_text import PlainTextParser, SUPPORTED_MEDIA_TYPES
 from research_mentor.domain.documents import DocumentParseJob, UploadedDocument
+from research_mentor.harness.state import SessionEvent, SessionEventType
+from research_mentor.hyperparameters import DOCUMENT_PARSE_STALE_SECONDS
+from research_mentor.ports.events import OutboxEvent
 from research_mentor.ports.files import FileStorePort, StoredFile
 
 
@@ -172,6 +175,50 @@ class DocumentService:
                 size_bytes=document.size_bytes, sha256=document.sha256,
             ))
 
+    async def _emit_parse_progress(
+        self,
+        uow,
+        *,
+        job: DocumentParseJob,
+        status: str,
+        progress: float,
+    ) -> None:
+        project = await uow.projects.get(job.project_id)
+        if project is None:
+            return
+        session = await uow.sessions.get(project.session_id)
+        if session is None:
+            return
+        event_id = self._new_id()
+        occurred_at = self._now()
+        payload = {
+            "document_id": job.document_id,
+            "job_id": job.job_id,
+            "status": status,
+            "progress": progress,
+        }
+        await uow.events.append(
+            SessionEvent(
+                event_id=event_id,
+                session_id=session.session_id,
+                event_type=SessionEventType.DOCUMENT_PARSING_PROGRESS,
+                phase_before=session.phase,
+                phase_after=session.phase,
+                payload=payload,
+                occurred_at=occurred_at.isoformat(),
+            )
+        )
+        await uow.outbox.append(
+            OutboxEvent(
+                outbox_id=self._new_id(),
+                session_event_id=event_id,
+                project_id=job.project_id,
+                topic="document.parsing_progress",
+                payload=payload,
+                created_at=occurred_at,
+            )
+        )
+
     async def process(self, job_id: str) -> DocumentParseJob:
         async with self._uow_factory() as uow:
             job = await uow.document_parse_jobs.get(job_id)
@@ -185,6 +232,7 @@ class DocumentService:
             job = job.model_copy(update={"status": "running", "started_at": started})
             await uow.document_parse_jobs.save(job)
             await uow.documents.set_status(job.document_id, project_id=job.project_id, status="parsing")
+            await self._emit_parse_progress(uow, job=job, status="parsing", progress=0)
         stored = StoredFile(project_id=job.project_id, document_id=job.document_id,
                             path=Path(storage_path), size_bytes=document.size_bytes, sha256=document.sha256)
         parser = PlainTextParser() if document.media_type in SUPPORTED_MEDIA_TYPES else AnydocParser()
@@ -199,6 +247,7 @@ class DocumentService:
                 await uow.document_parse_jobs.save(failed)
                 await uow.documents.set_status(document.document_id, project_id=document.project_id,
                                                status="failed", error_message="document parsing failed")
+                await self._emit_parse_progress(uow, job=failed, status="failed", progress=1)
             return failed
         finished = self._now()
         succeeded = job.model_copy(update={"status": "succeeded", "finished_at": finished})
@@ -207,6 +256,7 @@ class DocumentService:
             await uow.document_parse_jobs.save(succeeded)
             await uow.documents.set_status(document.document_id, project_id=document.project_id,
                                            status="ready", error_message=None)
+            await self._emit_parse_progress(uow, job=succeeded, status="ready", progress=1)
         return succeeded
 
 
@@ -217,12 +267,18 @@ class DocumentParseWorker:
         document_service: DocumentService,
         *,
         poll_interval: float = 0.25,
+        stale_after_seconds: float = DOCUMENT_PARSE_STALE_SECONDS,
+        now: Callable[[], datetime] | None = None,
     ) -> None:
         if poll_interval <= 0:
             raise ValueError("poll_interval must be positive")
+        if stale_after_seconds <= 0:
+            raise ValueError("stale_after_seconds must be positive")
         self._uow_factory = uow_factory
         self._document_service = document_service
         self._poll_interval = poll_interval
+        self._stale_after_seconds = stale_after_seconds
+        self._now = now or (lambda: datetime.now(timezone.utc))
         self._polling_task: asyncio.Task[None] | None = None
 
     @property
@@ -247,6 +303,10 @@ class DocumentParseWorker:
 
     async def drain_once(self) -> str | None:
         async with self._uow_factory() as uow:
+            await uow.document_parse_jobs.requeue_stale_running(
+                now=self._now(),
+                stale_after_seconds=self._stale_after_seconds,
+            )
             job = await uow.document_parse_jobs.next_queued()
         if job is None:
             return None

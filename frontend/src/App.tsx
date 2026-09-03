@@ -4,17 +4,32 @@ import { ApiError, createClient } from "./api/client";
 import type { ProjectView, UploadedDocumentView } from "./api/types";
 import { ProjectWorkspace } from "./features/project/ProjectWorkspace";
 import { useProject } from "./hooks/useProject";
+import type { ProjectEventNotice } from "./hooks/useProjectEvents";
 import { ThemeProvider } from "./theme/ThemeProvider";
 
-const previewProject: ProjectView = {
-  project_id: "preview-project",
-  title: "稳健代码检索研究",
-  domain: "computer_science",
-  version: 1,
-  phase: "awaiting_idea",
-  is_demo: true,
-  allowed_commands: ["submit_idea"],
-};
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof ApiError ? error.message : fallback;
+}
+
+function BootNotice({
+  title,
+  message,
+  onRetry,
+}: {
+  title: string;
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="connection-notice" role="alert">
+      <h2>{title}</h2>
+      <p>{message}</p>
+      <button type="button" onClick={onRetry}>
+        重试
+      </button>
+    </div>
+  );
+}
 
 function LiveWorkspace({
   projectId,
@@ -30,15 +45,54 @@ function LiveWorkspace({
   onProjectsChanged: () => void;
 }) {
   const client = useMemo(() => createClient(), []);
-  const projectApi = useMemo(
-    () => ({ getProject: (id: string) => client.getProject(id) }),
-    [client],
-  );
-  const { project, refresh } = useProject(projectId, projectApi);
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
   const [parseStatus, setParseStatus] = useState<string | null>(null);
   const [documents, setDocuments] = useState<UploadedDocumentView[]>([]);
   const [documentNotice, setDocumentNotice] = useState<string | null>(null);
+
+  const refreshDocuments = useCallback(
+    (targetId: string) => {
+      void client
+        .listDocuments(targetId)
+        .then(setDocuments)
+        .catch((error: unknown) => {
+          setDocumentNotice(
+            errorMessage(error, "无法刷新文档列表，请稍后重试。"),
+          );
+          window.setTimeout(() => setDocumentNotice(null), 5000);
+        });
+    },
+    [client],
+  );
+
+  const applyEvent = useCallback(
+    (event: ProjectEventNotice) => {
+      if (event.type !== "document.parsing_progress") {
+        return;
+      }
+      const status = event.data.status;
+      if (typeof status === "string") {
+        setParseStatus(status);
+        if (status === "ready") {
+          window.setTimeout(() => {
+            setTransferStatus(null);
+            setParseStatus(null);
+          }, 4000);
+        }
+      }
+      refreshDocuments(projectId);
+    },
+    [projectId, refreshDocuments],
+  );
+
+  const projectApi = useMemo(
+    () => ({
+      getProject: (id: string) => client.getProject(id),
+      applyEvent,
+    }),
+    [applyEvent, client],
+  );
+  const { project, refresh, error } = useProject(projectId, projectApi);
 
   const deleteDocument = (documentId: string) => {
     if (project === null) {
@@ -53,11 +107,7 @@ function LiveWorkspace({
         setDocumentNotice(null);
       })
       .catch((error: unknown) => {
-        setDocumentNotice(
-          error instanceof ApiError
-            ? error.message
-            : "删除失败，请稍后重试。",
-        );
+        setDocumentNotice(errorMessage(error, "删除失败，请稍后重试。"));
         window.setTimeout(() => setDocumentNotice(null), 5000);
       });
   };
@@ -66,21 +116,26 @@ function LiveWorkspace({
     if (project === null) {
       return;
     }
-    const targetId = project.project_id;
-    void client
-      .listDocuments(targetId)
-      .then((listed) => setDocuments(listed))
-      .catch(() => undefined);
-  }, [client, project?.project_id]);
+    refreshDocuments(project.project_id);
+  }, [project?.project_id, refreshDocuments]);
+
+  if (error !== null && project === null) {
+    return (
+      <BootNotice
+        title="项目加载失败"
+        message={error}
+        onRetry={() => {
+          void refresh().catch(() => undefined);
+        }}
+      />
+    );
+  }
 
   if (project === null) {
     return (
-      <ProjectWorkspace
-        project={previewProject}
-        projects={projects}
-        onCreateProject={onCreateProject}
-        onSelectProject={onSelectProject}
-      />
+      <p className="boot-loading" role="status">
+        正在加载研究工作区…
+      </p>
     );
   }
 
@@ -114,32 +169,9 @@ function LiveWorkspace({
           };
           setTransferStatus("complete");
           setParseStatus(uploaded.status ?? "uploaded");
-          const documentId = uploaded.document_id;
-          if (typeof documentId !== "string") {
+          refreshDocuments(project.project_id);
+          if (typeof uploaded.document_id !== "string") {
             return;
-          }
-          const deadline = Date.now() + 120_000;
-          let finalStatus = "failed";
-          while (Date.now() < deadline) {
-            const listed = await client.listDocuments(project.project_id);
-            setDocuments(listed);
-            const current = listed.find((item) => item.document_id === documentId);
-            if (current?.status !== undefined) {
-              setParseStatus(current.status);
-              finalStatus = current.status;
-              if (current.status === "ready" || current.status === "failed") {
-                break;
-              }
-            }
-            await new Promise((resolve) => {
-              window.setTimeout(resolve, 400);
-            });
-          }
-          if (finalStatus === "ready") {
-            window.setTimeout(() => {
-              setTransferStatus(null);
-              setParseStatus(null);
-            }, 4000);
           }
         } catch {
           setTransferStatus("failed");
@@ -153,6 +185,8 @@ export default function App() {
   const client = useMemo(() => createClient(), []);
   const [liveId, setLiveId] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
+  const [bootError, setBootError] = useState<string | null>(null);
+  const [bootNonce, setBootNonce] = useState(0);
 
   const refreshProjects = useCallback(() => {
     void client.listProjects().then(setProjects).catch(() => undefined);
@@ -162,6 +196,7 @@ export default function App() {
     const url = new URL(window.location.href);
     url.searchParams.set("project", projectId);
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    setBootError(null);
     setLiveId(projectId);
     refreshProjects();
   };
@@ -172,7 +207,10 @@ export default function App() {
         title: "新研究",
         domain: "computer_science",
       })
-      .then((created) => selectProject(created.project_id));
+      .then((created) => selectProject(created.project_id))
+      .catch((error: unknown) => {
+        setBootError(errorMessage(error, "无法创建项目。"));
+      });
   };
 
   useEffect(() => {
@@ -190,13 +228,25 @@ export default function App() {
           });
           return created.project_id;
         });
-    void boot.then(selectProject).catch(() => undefined);
-  }, [client]);
+    void boot.then(selectProject).catch((error: unknown) => {
+      setLiveId(null);
+      setBootError(errorMessage(error, "无法连接研究服务。请确认后端已启动后重试。"));
+    });
+  }, [client, bootNonce]);
 
   return (
     <ThemeProvider>
       <h1 className="visually-hidden">Rigora</h1>
-      {liveId ? (
+      {bootError && liveId === null ? (
+        <BootNotice
+          title="无法连接研究服务"
+          message={bootError}
+          onRetry={() => {
+            setBootError(null);
+            setBootNonce((value) => value + 1);
+          }}
+        />
+      ) : liveId ? (
         <LiveWorkspace
           projectId={liveId}
           projects={projects}
@@ -205,12 +255,9 @@ export default function App() {
           onProjectsChanged={refreshProjects}
         />
       ) : (
-        <ProjectWorkspace
-          project={previewProject}
-          projects={projects}
-          onCreateProject={createProject}
-          onSelectProject={selectProject}
-        />
+        <p className="boot-loading" role="status">
+          正在连接研究服务…
+        </p>
       )}
     </ThemeProvider>
   );

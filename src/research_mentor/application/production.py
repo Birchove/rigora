@@ -569,14 +569,14 @@ class AgentRunHandlers:
     ) -> None:
         if not records:
             return
+        persistable: list[Any] = []
+        for record in records:
+            if getattr(record, "record_id", None) and getattr(record, "provider", None):
+                persistable.append(record)
+        if not persistable:
+            return
         async with self._uow_factory() as uow:
-            for record in records:
-                try:
-                    await uow.literature.add_for_project(
-                        project_id, record, selected=False
-                    )
-                except ValueError:
-                    continue
+            await uow.literature.add_many(project_id, persistable)
 
     async def _run(
         self,
@@ -598,23 +598,6 @@ class AgentRunHandlers:
                 settings=self._settings,
                 mutate=mutate,
             )
-
-    @staticmethod
-    def _review_idea(
-        orchestrator: ResearchMentorOrchestrator,
-        session_id: str,
-        snapshot: dict[str, Any],
-    ) -> None:
-        if "idea" in snapshot:
-            idea = InitialInput.model_validate(snapshot["idea"])
-        else:
-            current = orchestrator._repository.get(session_id)
-            if current.initial_input is None:
-                raise InvariantViolationError("idea_review requires initial_input")
-            idea = current.initial_input.model_copy(
-                update={"original_idea": str(snapshot.get("refinement") or "")}
-            )
-        orchestrator.review_idea(session_id, idea)
 
 
 def build_command_handlers(

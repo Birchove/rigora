@@ -110,6 +110,7 @@ def test_session_phase_and_event_type_values_are_exact() -> None:
         "validations_selected",
         "plan_revision_decided",
         "run_failed",
+        "document_parsing_progress",
     }
 
 

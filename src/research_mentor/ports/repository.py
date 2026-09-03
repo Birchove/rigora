@@ -124,7 +124,11 @@ class DocumentRepository(Protocol):
 
 class LiteratureRepository(Protocol):
     async def add_many(
-        self, project_id: str, records: list[LiteratureRecord]
+        self,
+        project_id: str,
+        records: list[LiteratureRecord],
+        *,
+        selected: bool = False,
     ) -> None: ...
 
     async def list_for_project(self, project_id: str) -> list[LiteratureRecord]: ...
