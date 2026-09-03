@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   test: {
+    pool: "threads",
     exclude: ["**/node_modules/**", "**/dist/**", "**/tests/e2e/**"],
   },
 }));
