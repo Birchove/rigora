@@ -13,6 +13,10 @@ describe("App", () => {
       screen.getByRole("heading", { name: "Rigora" }),
     ).toBeTruthy();
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
+    expect(screen.getByRole("link", { name: "Rigora 首页" })).toBeTruthy();
+    expect(document.querySelector(".brand-lockup")?.getAttribute("src")).toContain(
+      "rigora-lockup-light.svg",
+    );
     expect(screen.queryByText("AI 聊天助手")).toBeNull();
   });
 });

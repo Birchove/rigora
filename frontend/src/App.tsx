@@ -4,6 +4,7 @@ import { ApiError, createClient } from "./api/client";
 import type { ProjectView, UploadedDocumentView } from "./api/types";
 import { ProjectWorkspace } from "./features/project/ProjectWorkspace";
 import { useProject } from "./hooks/useProject";
+import { ThemeProvider } from "./theme/ThemeProvider";
 
 const previewProject: ProjectView = {
   project_id: "preview-project",
@@ -193,7 +194,7 @@ export default function App() {
   }, [client]);
 
   return (
-    <>
+    <ThemeProvider>
       <h1 className="visually-hidden">Rigora</h1>
       {liveId ? (
         <LiveWorkspace
@@ -211,6 +212,6 @@ export default function App() {
           onSelectProject={selectProject}
         />
       )}
-    </>
+    </ThemeProvider>
   );
 }

@@ -1,9 +1,11 @@
 import { useEffect, type ReactNode } from "react";
 
 import type { ProjectView } from "../api/types";
+import { BrandMark } from "./BrandMark";
 import { PhaseTimeline } from "./PhaseTimeline";
 import { ProjectSidebar } from "./ProjectSidebar";
 import { RunStatus } from "./RunStatus";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface AppShellProps {
   project: ProjectView;
@@ -62,16 +64,13 @@ export function AppShell({
       <header className="workspace-header">
         <button className="mobile-panel-toggle sidebar-toggle" type="button" aria-controls="project-drawer" aria-expanded={sidebarOpen} onClick={() => onSidebarOpenChange(!sidebarOpen)}>项目</button>
         <a className="brand" href={import.meta.env.BASE_URL} aria-label="Rigora 首页">
-          <span className="brand-mark" aria-hidden="true">R</span>
-          <span>
-            <strong>Rigora</strong>
-            <small>个性化科研探索导师</small>
-          </span>
+          <BrandMark />
         </a>
         <PhaseTimeline phase={project.phase} />
         <div className="workspace-status-cluster">
           <RunStatus project={project} />
           {project.is_demo ? <strong className="demo-badge">DEMO DATA</strong> : null}
+          <ThemeToggle />
           <button className="evidence-toggle" type="button" aria-controls="evidence-sheet" aria-expanded={evidenceOpen} onClick={() => onEvidenceOpenChange(!evidenceOpen)}>Evidence</button>
         </div>
       </header>

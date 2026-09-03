@@ -7,7 +7,28 @@
       name="description"
       content="Rigora：耐心严谨的个性化科研探索导师"
     />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta name="theme-color" content="#f5f5f7" />
     <title>Rigora · 科研探索导师</title>
+    <script>
+      (function () {
+        var key = "rigora-theme";
+        var pref = "system";
+        try {
+          pref = localStorage.getItem(key) || "system";
+        } catch (e) {}
+        var dark =
+          pref === "dark" ||
+          (pref !== "light" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+        document.querySelector('meta[name="theme-color"]').setAttribute(
+          "content",
+          dark ? "#10211a" : "#f5f5f7",
+        );
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

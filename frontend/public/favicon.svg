@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Rigora favicon</title>
+  <desc id="desc">Compact Rigora review mark optimized for small sizes.</desc>
+  <rect width="512" height="512" fill="#1B4332"/>
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M256 52 460 256 256 460 52 256Z" stroke-width="32"/>
+    <path d="M188 356V155H263C308 155 334 181 334 220S308 285 263 285H188M250 285 322 357" stroke-width="42"/>
+  </g>
+  <circle cx="188" cy="285" r="16" fill="#D4A574"/>
+</svg>

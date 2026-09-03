@@ -8,7 +8,7 @@
   margin: 0;
   padding: 0.65rem 1.25rem;
   border-bottom: 1px solid var(--separator);
-  background: rgb(255 244 229);
+  background: var(--banner-bg);
   color: var(--text-1);
   font-size: 0.85rem;
 }
@@ -24,7 +24,7 @@
   min-height: var(--header-h);
   padding: 0 1.25rem;
   border-bottom: 1px solid var(--separator);
-  background: rgb(255 255 255 / 72%);
+  background: var(--header-bg);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
 }
@@ -172,8 +172,24 @@
   transition: background 160ms var(--ease-mac), color 160ms var(--ease-mac);
 }
 
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--fill-quiet);
+  color: var(--text-1);
+  transition: background 160ms var(--ease-mac), color 160ms var(--ease-mac);
+}
+
+.theme-toggle:hover {
+  background: var(--fill-hover);
+}
+
 .evidence-toggle:hover {
-  background: rgb(120 120 128 / 20%);
+  background: var(--fill-hover);
 }
 
 .evidence-toggle[aria-expanded="true"] {
@@ -803,7 +819,7 @@
 .structured-field input:focus-visible,
 .structured-field textarea:focus-visible,
 .structured-field select:focus-visible {
-  border-color: rgb(198 90 46 / 45%);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .structured-field textarea {
@@ -916,7 +932,7 @@
   padding: 0.4rem 1rem;
   border-radius: var(--radius-pill);
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 0.8125rem;
   font-weight: 500;
   transition: background 160ms var(--ease-mac), transform 160ms var(--ease-mac);
@@ -948,7 +964,7 @@
 }
 
 .structured-actions .secondary-action:hover:not(:disabled) {
-  background: rgb(120 120 128 / 20%);
+  background: var(--fill-hover);
 }
 
 .validation-candidates {
@@ -1066,7 +1082,7 @@
 }
 
 .panel-close:hover {
-  background: rgb(120 120 128 / 20%);
+  background: var(--fill-hover);
 }
 
 .evidence-filters {
@@ -1301,7 +1317,7 @@
   padding: 0.5rem;
   border: 1px solid var(--separator);
   border-radius: 1.5rem;
-  background: rgb(255 255 255 / 92%);
+  background: var(--composer-bg);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
   box-shadow: var(--shadow-2);
@@ -1314,8 +1330,8 @@
 }
 
 .composer-wrap:focus-within {
-  border-color: rgb(198 90 46 / 45%);
-  box-shadow: var(--shadow-2), 0 0 0 4px rgb(198 90 46 / 14%);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: var(--shadow-2), 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 /* 单行/空输入：两侧按钮与输入行垂直居中；超过一行：平滑移到左下/右下角 */
@@ -1342,7 +1358,7 @@
 }
 
 .composer-attach:hover:not(:disabled) {
-  background: rgb(120 120 128 / 20%);
+  background: var(--fill-hover);
 }
 
 .composer-wrap.is-multiline {
@@ -1385,7 +1401,7 @@
 .composer-send {
   right: 0.5rem;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   transition:
     top 200ms var(--ease-mac),
     background 160ms var(--ease-mac),
@@ -1413,7 +1429,7 @@
   padding: 0.45rem 0.9rem;
   border: 1px solid var(--separator);
   border-radius: var(--radius-pill);
-  background: rgb(255 255 255 / 94%);
+  background: var(--composer-bg);
   box-shadow: var(--shadow-1);
   color: var(--text-2);
   font-size: 0.8125rem;
@@ -1430,9 +1446,9 @@
   width: min(44rem, 100%);
   margin: 0;
   padding: 0.6rem 0.9rem;
-  border: 1px solid rgb(255 59 48 / 35%);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
   border-radius: var(--radius-input);
-  background: rgb(255 255 255 / 94%);
+  background: var(--composer-bg);
   box-shadow: var(--shadow-1);
   color: var(--text-1);
   font-size: 0.8125rem;
@@ -1476,7 +1492,16 @@
   }
 
   .workspace-header .brand {
+    gap: 0;
+  }
+
+  .brand-lockup,
+  .brand-tagline {
     display: none;
+  }
+
+  .brand-icon {
+    display: block;
   }
 
   .phase-timeline {
@@ -1570,7 +1595,7 @@
     display: block;
     width: 100%;
     border: 0;
-    background: rgb(0 0 0 / 35%);
+    background: var(--scrim);
   }
 
   .research-main {

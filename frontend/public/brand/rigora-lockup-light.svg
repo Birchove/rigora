@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="512" viewBox="0 0 1320 512" role="img" aria-labelledby="title desc">
+  <title id="title">Rigora logo — light</title>
+  <desc id="desc">Rigora wordmark with the geometric review mark.</desc>
+  <g fill="none" stroke="#1B4332" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M256 52 460 256 256 460 52 256Z" stroke-width="24"/>
+    <path d="M176 374V143H265C319 143 350 175 350 220S319 297 265 297H176M252 297 332 377" stroke-width="30"/>
+  </g>
+  <circle cx="176" cy="297" r="13" fill="#D4A574"/>
+  <text x="610" y="317" fill="#1B4332" font-family="Noto Sans, Arial, sans-serif" font-size="172" font-weight="700" letter-spacing="-7">Rigora</text>
+</svg>
