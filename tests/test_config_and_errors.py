@@ -188,7 +188,7 @@ def test_settings_all_alias_assigns_every_agent(monkeypatch):
         "working_qa",
         "complete",
     }
-    assert settings.agent_models()["complete"] == "glm-5.3-flash"
+    assert settings.agent_models()["complete"] == "glm-5.3"
 
 
 def test_settings_rejects_unknown_agent_mode(monkeypatch):
@@ -281,6 +281,17 @@ def test_one_explicit_pair_leaves_only_the_single_path_mode(monkeypatch):
 
     assert settings.plan_check_pairs() == (("qwen-plan", "glm-check"),)
     assert HarnessConfig(plan_check_pairs=settings.plan_check_pairs()).max_plan_candidates() == 1
+
+
+def test_two_pairs_without_cross_stay_at_two_paths(monkeypatch):
+    _pairing_env(monkeypatch, "qwen>glm,deepseek>chatgpt", cross="off")
+
+    settings = Settings()
+
+    assert settings.plan_check_pairs() == (
+        ("qwen-plan", "glm-check"),
+        ("ds-plan", "gpt-check"),
+    )
 
 
 @pytest.mark.parametrize(

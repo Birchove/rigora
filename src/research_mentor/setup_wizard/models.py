@@ -90,7 +90,7 @@ class SaveRequest(BaseModel):
     # 只覆盖独占 Agent；plan_loop 与 key_insight_check 由 pairs 决定。
     assignments: dict[AgentName, list[SlotName]]
     pairs: list[PlanCheckPair] = Field(min_length=1, max_length=PLAN_CHECK_PAIR_MAX)
-    high_cross: Literal["ad", "bc"] = "ad"
+    high_cross: Literal["off", "ad", "bc"] = "off"
     optional: OptionalConfig = Field(default_factory=OptionalConfig)
 
     @model_validator(mode="after")
@@ -149,7 +149,9 @@ class SaveRequest(BaseModel):
 
     def parallel_path_count(self) -> int:
         """Paths available at runtime; mirrors `Settings.plan_check_pairs()`."""
-        return 3 if len(self.pairs) == 2 else len(self.pairs)
+        if len(self.pairs) == 2 and self.high_cross in {"ad", "bc"}:
+            return 3
+        return len(self.pairs)
 
     def available_modes(self) -> list[str]:
         paths = self.parallel_path_count()

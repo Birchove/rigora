@@ -39,19 +39,101 @@ from research_mentor.hyperparameters import (
 )
 
 
-VendorName = Literal["qwen", "deepseek", "chatgpt", "glm"]
+VendorName = Literal[
+    "qwen",
+    "deepseek",
+    "chatgpt",
+    "claude",
+    "gemini",
+    "glm",
+    "kimi",
+    "minimax",
+    "doubao",
+    "hunyuan",
+    "stepfun",
+    "longcat",
+    "mimo",
+    "grok",
+    "bailing",
+    "qianfan",
+]
 RerankerBackend = Literal["auto", "flagembedding", "lexical", "unavailable"]
-SlotName = Literal["qwen", "deepseek", "chatgpt", "chatgpt_2", "glm"]
+SlotName = Literal[
+    "qwen",
+    "deepseek",
+    "chatgpt",
+    "chatgpt_2",
+    "claude",
+    "gemini",
+    "glm",
+    "kimi",
+    "minimax",
+    "doubao",
+    "hunyuan",
+    "stepfun",
+    "longcat",
+    "mimo",
+    "grok",
+    "bailing",
+    "qianfan",
+]
 VendorApiStyle = Literal["chat_completions", "responses"]
-VENDORS: tuple[VendorName, ...] = ("qwen", "deepseek", "chatgpt", "glm")
-SLOTS: tuple[SlotName, ...] = ("qwen", "deepseek", "chatgpt", "chatgpt_2", "glm")
+VENDORS: tuple[VendorName, ...] = (
+    "qwen",
+    "deepseek",
+    "chatgpt",
+    "claude",
+    "gemini",
+    "glm",
+    "kimi",
+    "minimax",
+    "doubao",
+    "hunyuan",
+    "stepfun",
+    "longcat",
+    "mimo",
+    "grok",
+    "bailing",
+    "qianfan",
+)
+SLOTS: tuple[SlotName, ...] = (
+    "qwen",
+    "deepseek",
+    "chatgpt",
+    "chatgpt_2",
+    "claude",
+    "gemini",
+    "glm",
+    "kimi",
+    "minimax",
+    "doubao",
+    "hunyuan",
+    "stepfun",
+    "longcat",
+    "mimo",
+    "grok",
+    "bailing",
+    "qianfan",
+)
 # high/mid/low 并行路径按此顺序取同时挂了 plan_loop 与 key_insight_check 的槽：一家提、下一家审
 PARALLEL_SLOT_ORDER: tuple[SlotName, ...] = (
     "chatgpt",
     "chatgpt_2",
+    "claude",
+    "gemini",
     "qwen",
     "glm",
     "deepseek",
+    "kimi",
+    "minimax",
+    "doubao",
+    "hunyuan",
+    "stepfun",
+    "longcat",
+    "mimo",
+    "grok",
+    "bailing",
+    "qianfan",
 )
 ALL_AGENTS: tuple[AgentName, ...] = (
     "idea_review",
@@ -63,64 +145,79 @@ ALL_AGENTS: tuple[AgentName, ...] = (
 SHARED_AGENTS: frozenset[AgentName] = frozenset({"plan_loop", "key_insight_check"})
 AgentModeList = Annotated[list[AgentName], NoDecode]
 
-# default API style, official base URL。核对时间 2026-09-07。
+# 厂商名单与默认模型对齐 cc-switch 的 Codex 预设；Claude / Gemini 不在
+# 那份名单里（cc-switch 把它们放在 Claude / Gemini 应用下），这里补官方
+# OpenAI 兼容端点。面板里模型名自填，这里只预填便宜快的默认型号。
+# 聚合中转和 OAuth 官方登录不收录。
 VENDOR_PRESETS: dict[VendorName, tuple[VendorApiStyle, str]] = {
     "chatgpt": ("responses", "https://api.openai.com/v1"),
+    "claude": ("chat_completions", "https://api.anthropic.com/v1"),
+    "gemini": (
+        "chat_completions",
+        "https://generativelanguage.googleapis.com/v1beta/openai",
+    ),
     "deepseek": ("chat_completions", "https://api.deepseek.com"),
     "glm": ("chat_completions", "https://open.bigmodel.cn/api/paas/v4"),
     "qwen": (
         "chat_completions",
         "https://dashscope.aliyuncs.com/compatible-mode/v1",
     ),
+    "kimi": ("chat_completions", "https://api.moonshot.cn/v1"),
+    "minimax": ("chat_completions", "https://api.minimaxi.com/v1"),
+    "doubao": ("chat_completions", "https://ark.cn-beijing.volces.com/api/v3"),
+    "hunyuan": ("chat_completions", "https://tokenhub.tencentmaas.com/v1"),
+    "stepfun": ("chat_completions", "https://api.stepfun.com/step_plan/v1"),
+    "longcat": ("chat_completions", "https://api.longcat.chat/openai/v1"),
+    "mimo": ("chat_completions", "https://api.xiaomimimo.com/v1"),
+    "grok": ("chat_completions", "https://api.x.ai/v1"),
+    "bailing": ("chat_completions", "https://api.tbox.cn/api/llm/v1"),
+    "qianfan": (
+        "chat_completions",
+        "https://qianfan.baidubce.com/v2/tokenplan/personal",
+    ),
 }
 
 VENDOR_DEFAULT_MODELS: dict[VendorName, str] = {
-    "chatgpt": "gpt-5.6-terra",
+    "chatgpt": "gpt-5.6-luna",
+    "claude": "claude-haiku-4.5",
+    "gemini": "gemini-3.8-flash",
     "deepseek": "deepseek-v4-flash",
-    "glm": "glm-5.3-flash",
-    "qwen": "qwen3.7-plus",
+    "glm": "glm-5.3",
+    "qwen": "qwen3-coder-plus",
+    "kimi": "kimi-k2.7-code",
+    "minimax": "MiniMax-M3",
+    "doubao": "doubao-seed-2-1-pro-260628",
+    "hunyuan": "hy3",
+    "stepfun": "step-3.7-flash",
+    "longcat": "LongCat-2.0",
+    "mimo": "mimo-v2.5-pro",
+    "grok": "grok-4.5",
+    "bailing": "Ling-2.6-1T",
+    "qianfan": "deepseek-v4-flash",
 }
 
 VENDOR_LABELS: dict[VendorName, str] = {
     "chatgpt": "ChatGPT",
-    "deepseek": "Deepseek",
+    "claude": "Claude",
+    "gemini": "Gemini",
+    "deepseek": "DeepSeek",
     "glm": "GLM",
     "qwen": "千问 Qwen",
+    "kimi": "Kimi",
+    "minimax": "MiniMax",
+    "doubao": "豆包 Doubao",
+    "hunyuan": "混元 Hunyuan",
+    "stepfun": "阶跃星辰",
+    "longcat": "LongCat",
+    "mimo": "小米 MiMo",
+    "grok": "xAI Grok",
+    "bailing": "百灵 BaiLing",
+    "qianfan": "千帆 Qianfan",
 }
 
-# 面板与 .env.example 共用同一份候选列表，避免注释与代码漂移。
-# 核对时间 2026-09-07，来源为各厂商官方 API 文档。已退役的型号不再列出：
-# OpenAI 的 gpt-4o / gpt-4.1 / o4-mini 已退役，o3 于 2026-08 下线；
-# DeepSeek 的 deepseek-chat / deepseek-reasoner 自 2026-07-24 起停用，旧名直接报错。
+# 预填 cc-switch 该预设的默认型号；面板里可改成任意可用名称。
 VENDOR_MODEL_OPTIONS: dict[VendorName, tuple[str, ...]] = {
-    "chatgpt": (
-        "gpt-6-astra",
-        "gpt-5.6-sol",
-        "gpt-5.6-terra",
-        "gpt-5.6-luna",
-        "gpt-5.6",
-    ),
-    "deepseek": (
-        "deepseek-v4-pro",
-        "deepseek-v4-flash",
-        "deepseek-v4-flash-vision-exp",
-    ),
-    "glm": (
-        "glm-5.3",
-        "glm-5.3-flash",
-        "glm-5.2",
-        "glm-5.1",
-        "glm-5-turbo",
-    ),
-    "qwen": (
-        "qwen3.8-max",
-        "qwen3.8-flash",
-        "qwen3.7-max",
-        "qwen3.7-plus",
-        "qwen3.7-flash",
-        "qwen3-max",
-        "qwen-long",
-    ),
+    vendor: (model,) for vendor, model in VENDOR_DEFAULT_MODELS.items()
 }
 
 # chatgpt_2 是「同一把 ChatGPT key 的第二个模型」，凭据默认继承主槽。
@@ -129,23 +226,57 @@ SLOT_VENDOR: dict[SlotName, VendorName] = {
     "deepseek": "deepseek",
     "chatgpt": "chatgpt",
     "chatgpt_2": "chatgpt",
+    "claude": "claude",
+    "gemini": "gemini",
     "glm": "glm",
+    "kimi": "kimi",
+    "minimax": "minimax",
+    "doubao": "doubao",
+    "hunyuan": "hunyuan",
+    "stepfun": "stepfun",
+    "longcat": "longcat",
+    "mimo": "mimo",
+    "grok": "grok",
+    "bailing": "bailing",
+    "qianfan": "qianfan",
 }
 
-# 引导面板只暴露一家一个槽：一把 key 填一次，需要跑多条路径就在配对里复用它。
-# chatgpt_2 仍然可用，但只保留给手工编辑 .env 的高级用法。
-PANEL_SLOTS: tuple[SlotName, ...] = ("qwen", "deepseek", "chatgpt", "glm")
+# 引导面板一家一个槽。chatgpt_2 只留给手工编辑 .env。
+PANEL_SLOTS: tuple[SlotName, ...] = VENDORS  # VendorName 是 SlotName 的子集
 
-# 国内网关走系统 HTTP 代理时经常读超时；这些 host 直连。
+# 国内网关走系统 HTTP 代理时经常读超时或触发 Windows 10013；这些 host 直连。
 DIRECT_CONNECT_MARKERS: tuple[str, ...] = (
     "wanjiedata.com",
     "dashscope.aliyuncs.com",
     "bigmodel.cn",
+    "api.deepseek.com",
+    "api.openai.com",
+    "api.anthropic.com",
+    "generativelanguage.googleapis.com",
+    "api.moonshot.cn",
+    "api.minimaxi.com",
+    "volces.com",
+    "tencentmaas.com",
+    "api.stepfun.com",
+    "api.longcat.chat",
+    "xiaomimimo.com",
+    "api.x.ai",
+    "api.tbox.cn",
+    "qianfan.baidubce.com",
 )
 
 
 def direct_connect(base_url: str) -> bool:
     return any(marker in base_url for marker in DIRECT_CONNECT_MARKERS)
+
+
+def vendor_http_headers(base_url: str, api_key: str) -> dict[str, str]:
+    """Auth headers for a vendor slot. Anthropic 官方同时认 Bearer 和 x-api-key。"""
+    headers = {"Authorization": f"Bearer {api_key}"}
+    if "anthropic.com" in base_url:
+        headers["x-api-key"] = api_key
+        headers["anthropic-version"] = "2023-06-01"
+    return headers
 
 
 PLAN_CHECK_PAIR_MAX = PLAN_CANDIDATE_MAX
@@ -209,11 +340,71 @@ class Settings(BaseSettings):
     chatgpt_2_model: str | None = None
     chatgpt_2_api_style: VendorApiStyle | None = None
     chatgpt_2_agents: AgentModeList = Field(default_factory=list)
+    claude_api_key: SecretStr | None = None
+    claude_base_url: HttpUrl | None = None
+    claude_model: str | None = None
+    claude_api_style: VendorApiStyle | None = None
+    claude_agents: AgentModeList = Field(default_factory=list)
+    gemini_api_key: SecretStr | None = None
+    gemini_base_url: HttpUrl | None = None
+    gemini_model: str | None = None
+    gemini_api_style: VendorApiStyle | None = None
+    gemini_agents: AgentModeList = Field(default_factory=list)
     glm_api_key: SecretStr | None = None
     glm_base_url: HttpUrl | None = None
     glm_model: str | None = None
     glm_api_style: VendorApiStyle | None = None
     glm_agents: AgentModeList = Field(default_factory=list)
+    kimi_api_key: SecretStr | None = None
+    kimi_base_url: HttpUrl | None = None
+    kimi_model: str | None = None
+    kimi_api_style: VendorApiStyle | None = None
+    kimi_agents: AgentModeList = Field(default_factory=list)
+    minimax_api_key: SecretStr | None = None
+    minimax_base_url: HttpUrl | None = None
+    minimax_model: str | None = None
+    minimax_api_style: VendorApiStyle | None = None
+    minimax_agents: AgentModeList = Field(default_factory=list)
+    doubao_api_key: SecretStr | None = None
+    doubao_base_url: HttpUrl | None = None
+    doubao_model: str | None = None
+    doubao_api_style: VendorApiStyle | None = None
+    doubao_agents: AgentModeList = Field(default_factory=list)
+    hunyuan_api_key: SecretStr | None = None
+    hunyuan_base_url: HttpUrl | None = None
+    hunyuan_model: str | None = None
+    hunyuan_api_style: VendorApiStyle | None = None
+    hunyuan_agents: AgentModeList = Field(default_factory=list)
+    stepfun_api_key: SecretStr | None = None
+    stepfun_base_url: HttpUrl | None = None
+    stepfun_model: str | None = None
+    stepfun_api_style: VendorApiStyle | None = None
+    stepfun_agents: AgentModeList = Field(default_factory=list)
+    longcat_api_key: SecretStr | None = None
+    longcat_base_url: HttpUrl | None = None
+    longcat_model: str | None = None
+    longcat_api_style: VendorApiStyle | None = None
+    longcat_agents: AgentModeList = Field(default_factory=list)
+    mimo_api_key: SecretStr | None = None
+    mimo_base_url: HttpUrl | None = None
+    mimo_model: str | None = None
+    mimo_api_style: VendorApiStyle | None = None
+    mimo_agents: AgentModeList = Field(default_factory=list)
+    grok_api_key: SecretStr | None = None
+    grok_base_url: HttpUrl | None = None
+    grok_model: str | None = None
+    grok_api_style: VendorApiStyle | None = None
+    grok_agents: AgentModeList = Field(default_factory=list)
+    bailing_api_key: SecretStr | None = None
+    bailing_base_url: HttpUrl | None = None
+    bailing_model: str | None = None
+    bailing_api_style: VendorApiStyle | None = None
+    bailing_agents: AgentModeList = Field(default_factory=list)
+    qianfan_api_key: SecretStr | None = None
+    qianfan_base_url: HttpUrl | None = None
+    qianfan_model: str | None = None
+    qianfan_api_style: VendorApiStyle | None = None
+    qianfan_agents: AgentModeList = Field(default_factory=list)
     # 有序的「提案槽>评审槽」列表，最多 3 对，例如 qwen>glm,chatgpt>deepseek。
     # 留空则退回按 PARALLEL_SLOT_ORDER 轮转的旧行为。
     # 字段名带 _spec 是因为 plan_check_pairs 已经是方法名，所以显式给出环境变量名。
@@ -222,7 +413,7 @@ class Settings(BaseSettings):
     )
     # 恰好 2 对时，high 模式的第三条路取哪个交错组合：
     # ad = 第一家提·第二家审，bc = 第二家提·第一家审。
-    plan_check_high_cross: Literal["ad", "bc"] = "ad"
+    plan_check_high_cross: Literal["off", "ad", "bc"] = "off"
     # unset: 没有旧式单模型配置。此时必须由 vendor slot 提供全部 Agent，
     # 否则 bootstrap 直接报错，不静默退化成 demo fixture。
     model_provider: Literal["unset", "demo", "openai", "openai_compatible"] = "unset"
@@ -264,7 +455,19 @@ class Settings(BaseSettings):
         "deepseek_agents",
         "chatgpt_agents",
         "chatgpt_2_agents",
+        "claude_agents",
+        "gemini_agents",
         "glm_agents",
+        "kimi_agents",
+        "minimax_agents",
+        "doubao_agents",
+        "hunyuan_agents",
+        "stepfun_agents",
+        "longcat_agents",
+        "mimo_agents",
+        "grok_agents",
+        "bailing_agents",
+        "qianfan_agents",
         mode="before",
     )
     @classmethod
@@ -307,7 +510,19 @@ class Settings(BaseSettings):
             "deepseek_api_key",
             "chatgpt_api_key",
             "chatgpt_2_api_key",
+            "claude_api_key",
+            "gemini_api_key",
             "glm_api_key",
+            "kimi_api_key",
+            "minimax_api_key",
+            "doubao_api_key",
+            "hunyuan_api_key",
+            "stepfun_api_key",
+            "longcat_api_key",
+            "mimo_api_key",
+            "grok_api_key",
+            "bailing_api_key",
+            "qianfan_api_key",
             "openalex_api_key",
             "hf_token",
         ):
@@ -412,10 +627,10 @@ class Settings(BaseSettings):
     def plan_check_pairs(self) -> tuple[tuple[str, str], ...]:
         """Ordered (plan model, check model) pairs, one per parallel candidate path.
 
-        With an explicit spec the pairs are taken in order. Exactly two pairs get a
-        third crossed pair appended so `high` still has three distinct paths; one
-        pair stays length one, which makes `mid` and `high` unavailable rather than
-        silently self-reviewing.
+        With an explicit spec the pairs are taken in order. Exactly two pairs stay
+        length two unless `plan_check_high_cross` is `ad` or `bc`, which appends a
+        crossed third path for `high`. One pair stays length one, which makes `mid`
+        and `high` unavailable rather than silently self-reviewing.
         """
         explicit = self.plan_check_slot_pairs()
         if explicit:
@@ -423,7 +638,7 @@ class Settings(BaseSettings):
                 (self.slot_model(plan), self.slot_model(check))
                 for plan, check in explicit
             ]
-            if len(explicit) == 2:
+            if len(explicit) == 2 and self.plan_check_high_cross in {"ad", "bc"}:
                 (plan_a, check_a), (plan_b, check_b) = explicit
                 crossed = (
                     (plan_a, check_b)

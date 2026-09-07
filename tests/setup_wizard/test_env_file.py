@@ -115,11 +115,11 @@ def test_write_env_is_atomic_owner_only_and_readable_back(tmp_path):
     target = tmp_path / ".env"
     target.write_text("RESEARCH_MENTOR_RERANKER_BACKEND=lexical\n", encoding="utf-8")
 
-    write_env({"RERANKER_BACKEND": "auto", "QWEN_MODEL": "qwen3.8-max"}, path=target)
+    write_env({"RERANKER_BACKEND": "auto", "QWEN_MODEL": "qwen3-coder-plus"}, path=target)
 
     assert read_env(target) == {
         "RERANKER_BACKEND": "auto",
-        "QWEN_MODEL": "qwen3.8-max",
+        "QWEN_MODEL": "qwen3-coder-plus",
     }
     mode = stat.S_IMODE(target.stat().st_mode)
     assert mode == 0o600

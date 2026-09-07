@@ -78,6 +78,19 @@ def test_updates_survive_a_settings_round_trip_with_full_coverage():
     assert settings.plan_check_pairs() == (("qwen-model", "qwen-model"),)
 
 
+def test_two_pairs_default_to_dual_mode_without_a_crossed_third():
+    request = _request(
+        "qwen",
+        "glm",
+        "deepseek",
+        "chatgpt",
+        pairs=[_pair("qwen", "glm"), _pair("deepseek", "chatgpt")],
+    )
+
+    assert request.parallel_path_count() == 2
+    assert request.available_modes() == ["low", "mid"]
+
+
 def test_two_pairs_round_trip_into_three_runtime_paths():
     request = _request(
         "qwen",
@@ -85,6 +98,7 @@ def test_two_pairs_round_trip_into_three_runtime_paths():
         "deepseek",
         "chatgpt",
         pairs=[_pair("qwen", "glm"), _pair("deepseek", "chatgpt")],
+        high_cross="ad",
     )
     updates = build_updates(request, {})
 

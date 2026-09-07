@@ -5,7 +5,7 @@ import urllib.request
 
 import pytest
 
-from research_mentor.config import ALL_AGENTS
+from research_mentor.config import ALL_AGENTS, PANEL_SLOTS
 from research_mentor.setup_wizard.models import EXCLUSIVE_AGENTS
 from research_mentor.setup_wizard.server import (
     app_styles,
@@ -65,7 +65,7 @@ def _payload(slot="qwen"):
                 "slot": slot,
                 "api_key": "sk-panel-test",
                 "base_url": "https://api.example/v1",
-                "model": "qwen3.7-plus",
+                "model": "qwen3-coder-plus",
                 "api_style": "chat_completions",
             }
         ],
@@ -127,13 +127,7 @@ def test_catalog_exposes_agents_vendors_and_optional_dependencies(panel):
     assert status == 200
     assert [item["name"] for item in body["agents"]] == list(ALL_AGENTS)
     assert body["agent_order"] == list(ALL_AGENTS)
-    # 一家一个槽：chatgpt_2 不再出现在面板上。
-    assert {item["slot"] for item in body["vendors"]} == {
-        "qwen",
-        "deepseek",
-        "chatgpt",
-        "glm",
-    }
+    assert {item["slot"] for item in body["vendors"]} == set(PANEL_SLOTS)
     assert {item["key"] for item in body["optional"]} == {
         "openalex",
         "reranker",
@@ -143,9 +137,11 @@ def test_catalog_exposes_agents_vendors_and_optional_dependencies(panel):
     assert [mode["paths"] for mode in body["plan_modes"]] == [1, 2, 3]
     assert body["max_pairs"] == 3
     for vendor in body["vendors"]:
-        assert vendor["model_options"]
-        assert vendor["default_model"] in vendor["model_options"]
+        assert vendor["default_model"]
         assert vendor["default_base_url"].startswith("http")
+    for agent in body["agents"]:
+        assert "qwen3.8-max" not in agent["recommended"]
+        assert "gpt-5.6-sol" not in agent["recommended"]
 
 
 def test_current_never_returns_stored_secrets_in_clear_text(panel):

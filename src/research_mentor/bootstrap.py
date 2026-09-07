@@ -37,6 +37,7 @@ from research_mentor.config import (
     Settings,
     SlotName,
     direct_connect,
+    vendor_http_headers,
 )
 from research_mentor.errors import ConfigurationIncomplete
 from research_mentor.ports.model import StructuredModelPort
@@ -96,7 +97,7 @@ def _build_vendor_adapter(
         return OpenAIResponsesModelAdapter(client), client.close
     if not base_url:
         raise ValueError(f"{slot} chat_completions requires base_url")
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+    headers = vendor_http_headers(base_url, api_key) if api_key else None
     direct = direct_connect(base_url)
     if direct:
         logger.info("model http client direct-connect host=%s", base_url)

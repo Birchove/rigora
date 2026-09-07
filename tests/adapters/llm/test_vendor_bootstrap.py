@@ -60,6 +60,7 @@ async def test_build_vendor_adapter_uses_json_object_for_deepseek() -> None:
 
     assert isinstance(adapter, OpenAICompatibleModelAdapter)
     assert adapter._response_format_mode == "json_object"
+    assert adapter._client.trust_env is False
     assert closer is not None
     await closer()
 
@@ -110,3 +111,39 @@ def test_use_openalex_when_vendor_agents_are_configured() -> None:
     )
     assert _use_openalex(demo_only) is False
     assert _use_openalex(with_vendor) is True
+
+
+@pytest.mark.asyncio
+async def test_build_claude_adapter_uses_anthropic_openai_compat() -> None:
+    settings = Settings(
+        claude_api_key=SecretStr("sk-ant-test"),
+        claude_agents=["idea_review"],
+    )
+
+    adapter, closer = _build_vendor_adapter(settings, "claude")
+
+    assert isinstance(adapter, OpenAICompatibleModelAdapter)
+    assert adapter._endpoint == "https://api.anthropic.com/v1/chat/completions"
+    assert adapter._client.headers["x-api-key"] == "sk-ant-test"
+    assert adapter._client.headers["anthropic-version"] == "2023-06-01"
+    assert adapter._client.trust_env is False
+    assert closer is not None
+    await closer()
+
+
+@pytest.mark.asyncio
+async def test_build_gemini_adapter_uses_openai_compat_endpoint() -> None:
+    settings = Settings(
+        gemini_api_key=SecretStr("gemini-test"),
+        gemini_agents=["working_qa"],
+    )
+
+    adapter, closer = _build_vendor_adapter(settings, "gemini")
+
+    assert isinstance(adapter, OpenAICompatibleModelAdapter)
+    assert adapter._endpoint == (
+        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+    )
+    assert adapter._client.trust_env is False
+    assert closer is not None
+    await closer()

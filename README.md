@@ -168,15 +168,15 @@ npm run dev
 
 这一节是手工编辑 `.env` 的参考；用 `rigora-setup` 的话这些都会被填好。
 
-模板已写好千问 / Deepseek / ChatGPT / GLM 的官方 `BASE_URL`。**只改你要用的那一家**；`AGENTS` 留空的槽不会被调用，但五个 Agent 必须都被某个槽认领，否则启动报错。
+模板已写好各家官方 `BASE_URL` 与默认模型（对齐 [cc-switch](https://github.com/farion1231/cc-switch) 的 `codexProviderPresets.ts`，每家一个型号）。**只改你要用的那一家**；`AGENTS` 留空的槽不会被调用，但五个 Agent 必须都被某个槽认领，否则启动报错。
 
-每家五个字段（以千问为例，其它家把 `QWEN` 换成 `DEEPSEEK` / `CHATGPT` / `GLM`）：
+每家五个字段（以千问为例，其它家把 `QWEN` 换成对应槽名，如 `DEEPSEEK` / `CHATGPT` / `CLAUDE` / `GEMINI` / `GLM` / `KIMI` / `MINIMAX` / `DOUBAO` / `HUNYUAN` / `STEPFUN` / `LONGCAT` / `MIMO` / `GROK` / `BAILING` / `QIANFAN`）：
 
 | 变量 | 含义 |
 | --- | --- |
 | `RESEARCH_MENTOR_QWEN_API_KEY` | 商家密钥。占位 `xxxx` = 未填 |
 | `RESEARCH_MENTOR_QWEN_BASE_URL` | 填到 `/v1`（或商家兼容前缀），**不要**带 `/chat/completions`。官方已在模板里；中转只改这一项 |
-| `RESEARCH_MENTOR_QWEN_MODEL` | 模型名，如 `qwen3.7-plus`、`deepseek-v4-flash`、`gpt-5.6-terra`、`glm-5.3-flash` |
+| `RESEARCH_MENTOR_QWEN_MODEL` | 模型名，面板里自己填。预填的是 cc-switch 该厂商的默认型号，可改成控制台里任意可用名称 |
 | `RESEARCH_MENTOR_QWEN_API_STYLE` | `chat_completions`：走 `openai_compatible` 的 `{BASE_URL}/chat/completions`；`responses`：走 OpenAI Responses API（ChatGPT 官方默认） |
 | `RESEARCH_MENTOR_QWEN_AGENTS` | 这把 key 负责哪些 Agent，逗号分隔 |
 
@@ -190,11 +190,11 @@ npm run dev
 
 | Agent | 吃什么能力 | 参考模型 |
 | --- | --- | --- |
-| `idea_review` | 读多篇文献摘要，吃长上下文，必须稳定输出 JSON | `deepseek-v4-flash` / `qwen3.7-plus` / `gpt-5.6-terra` |
-| `plan_loop` | 一次生成较长的结构化方案 | `gpt-5.6-sol` / `deepseek-v4-pro` / `glm-5.3` |
-| `key_insight_check` | 严格推理与稳定打分；建议换一家，避免自己写自己审 | `deepseek-v4-pro` / `gpt-5.6-sol` / `glm-5.3` |
-| `working_qa` | 交互最频繁，优先便宜且快 | `gpt-5.6-luna` / `qwen3.8-flash` / `glm-5.3-flash` |
-| `complete` | 综合多份实验结果做归纳 | `gpt-5.6-sol` / `deepseek-v4-pro` / `qwen3.8-max` |
+| `idea_review` | 读多篇文献摘要，吃长上下文，必须稳定输出 JSON | `deepseek-v4-flash` / `qwen3-coder-plus` / `gpt-5.6-luna` |
+| `plan_loop` | 一次生成较长的结构化方案 | `MiniMax-M3` / `kimi-k2.7-code` / `step-3.7-flash` |
+| `key_insight_check` | 严格推理与稳定打分；建议换一家，避免自己写自己审 | `deepseek-v4-flash` / `kimi-k2.7-code` / `step-3.7-flash` |
+| `working_qa` | 交互最频繁，优先便宜且快 | `gpt-5.6-luna` / `qwen3-coder-plus` / `step-3.7-flash` |
+| `complete` | 综合多份实验结果做归纳 | `MiniMax-M3` / `deepseek-v4-flash` / `kimi-k2.7-code` |
 
 两处已下线的旧模型名要避开：`deepseek-chat` / `deepseek-reasoner` 自 2026-07-24 起停用，旧请求直接报错；`gpt-4o` / `gpt-4.1` / `o4-mini` 已退役，`o3` 于 2026-08 下线。
 
@@ -205,10 +205,10 @@ npm run dev
 | 配几对 | 可用模式 | 路径怎么来 |
 | --- | --- | --- |
 | 1 对 | 仅 `low` | 就这一条。请求 `mid` / `high` 会返回 `plan_mode_unavailable`，而不是退化成同模型自审 |
-| 2 对 | `low` / `mid` / `high` | 前两条按顺序配对，`high` 的第三条用 `RESEARCH_MENTOR_PLAN_CHECK_HIGH_CROSS` 指定的交错组合补齐（`ad` = 第一家提·第二家审，`bc` = 第二家提·第一家审） |
+| 2 对 | `low` / `mid` | 两条按顺序配对。默认不补第三条；把 `RESEARCH_MENTOR_PLAN_CHECK_HIGH_CROSS` 设成 `ad` 或 `bc` 才会打开 `high` |
 | 3 对 | `low` / `mid` / `high` | 每条路就是你写的一对 |
 
-例如 `qwen>glm,deepseek>chatgpt` 配 `ad`，`high` 会跑「千问提·GLM审」「Deepseek提·ChatGPT审」「千问提·ChatGPT审」三条。同一对里尽量选不同厂商、能力相近的两个模型：不同厂商避免自己写自己审，能力相近才不会出现强模型压着弱模型改。
+例如 `qwen>glm,deepseek>chatgpt` 配 2 对时默认跑两条路。若再把 `PLAN_CHECK_HIGH_CROSS` 设为 `ad`，`high` 才会补上「千问提·ChatGPT审」第三条。同一对里尽量选不同厂商、能力相近的两个模型：不同厂商避免自己写自己审，能力相近才不会出现强模型压着弱模型改。
 
 留空这一项则退回旧行为：按 ChatGPT → ChatGPT 第二槽 → 千问 → GLM → Deepseek 的顺序，取同时挂了两个 Agent 的槽轮转配对。
 

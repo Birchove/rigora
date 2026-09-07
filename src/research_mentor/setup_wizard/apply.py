@@ -117,7 +117,7 @@ def current_config(existing: dict[str, str], path: Path) -> CurrentConfig:
         env_path=str(path),
         slots=slots,
         pairs=_stored_pairs(existing),
-        high_cross=(existing.get("PLAN_CHECK_HIGH_CROSS") or "ad").strip().lower(),
+        high_cross=(existing.get("PLAN_CHECK_HIGH_CROSS") or "off").strip().lower(),
         optional=OptionalState(
             openalex_has_key=openalex.has_value,
             openalex_masked=openalex.masked,

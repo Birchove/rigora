@@ -64,7 +64,7 @@ AGENT_GUIDE: tuple[dict[str, Any], ...] = (
             "会区分「搜到了什么」和「实际用了什么来支撑判断」",
         ],
         "needs": "要读多篇文献摘要，吃长上下文，且必须稳定输出 JSON。",
-        "recommended": ("deepseek-v4-flash", "qwen3.7-plus", "gpt-5.6-terra"),
+        "recommended": ("deepseek-v4-flash", "qwen3-coder-plus", "gpt-5.6-luna"),
     },
     {
         "name": "plan_loop",
@@ -81,7 +81,7 @@ AGENT_GUIDE: tuple[dict[str, Any], ...] = (
             "它不能宣布方案已通过，确认权在你手上",
         ],
         "needs": "要一次生成较长的结构化方案，选生成能力强的模型。",
-        "recommended": ("gpt-5.6-sol", "deepseek-v4-pro", "glm-5.3"),
+        "recommended": ("MiniMax-M3", "kimi-k2.7-code", "step-3.7-flash"),
     },
     {
         "name": "key_insight_check",
@@ -102,7 +102,7 @@ AGENT_GUIDE: tuple[dict[str, Any], ...] = (
             "建议和方案生成换一家模型，避免自己写自己审",
         ],
         "needs": "要严格推理和稳定打分，选推理型模型。",
-        "recommended": ("deepseek-v4-pro", "gpt-5.6-sol", "glm-5.3"),
+        "recommended": ("deepseek-v4-flash", "kimi-k2.7-code", "step-3.7-flash"),
     },
     {
         "name": "working_qa",
@@ -119,7 +119,7 @@ AGENT_GUIDE: tuple[dict[str, Any], ...] = (
             "结果不符合预期不等于执行失败，它会如实保留",
         ],
         "needs": "交互最频繁的一环，优先选便宜且快的模型。",
-        "recommended": ("gpt-5.6-luna", "qwen3.8-flash", "glm-5.3-flash"),
+        "recommended": ("gpt-5.6-luna", "qwen3-coder-plus", "step-3.7-flash"),
     },
     {
         "name": "complete",
@@ -136,7 +136,7 @@ AGENT_GUIDE: tuple[dict[str, Any], ...] = (
             "不会把没跑的实验当成已完成",
         ],
         "needs": "要综合多份实验结果，选推理和归纳强的模型。",
-        "recommended": ("gpt-5.6-sol", "deepseek-v4-pro", "qwen3.8-max"),
+        "recommended": ("MiniMax-M3", "deepseek-v4-flash", "kimi-k2.7-code"),
     },
 )
 
@@ -173,9 +173,9 @@ PAIRING_RULES: dict[str, Any] = {
         },
         {
             "pairs": 2,
-            "modes": ["low", "mid", "high"],
-            "text": "配 2 对时，前两条路按你填的顺序配对；三方案模式的第三条路"
-            "用一个交错组合补齐，下面可以选是哪一个。",
+            "modes": ["low", "mid"],
+            "text": "配 2 对时默认是双方案：两条路按你填的顺序配对。"
+            "想用三方案，再加第三对，或手动打开下面的交错补路。",
         },
         {
             "pairs": 3,

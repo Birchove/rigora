@@ -15,7 +15,7 @@ const state = {
   // 只放独占 Agent；方案生成与点睛之笔评分由 pairs 决定。
   assignments: {},
   pairs: [],
-  highCross: "ad",
+  highCross: "off",
   optional: {
     openalex_api_key: "",
     hf_token: "",
@@ -112,7 +112,10 @@ function seedFromCurrent() {
   }
 
   state.pairs = (state.current.pairs ?? []).map((pair) => ({ ...pair }));
-  state.highCross = state.current.high_cross === "bc" ? "bc" : "ad";
+  state.highCross =
+    state.current.high_cross === "ad" || state.current.high_cross === "bc"
+      ? state.current.high_cross
+      : "off";
 
   const option = state.current.optional;
   state.optional.hf_endpoint = option.hf_endpoint ?? "";
@@ -142,13 +145,16 @@ function ensurePairs() {
 
 /** Paths available at runtime; mirrors Settings.plan_check_pairs(). */
 function pathCount() {
-  return state.pairs.length === 2 ? 3 : state.pairs.length;
+  if (state.pairs.length === 2 && (state.highCross === "ad" || state.highCross === "bc")) {
+    return 3;
+  }
+  return state.pairs.length;
 }
 
 /** The concrete (plan, check) slot pairs the runtime will use. */
 function expandedPairs() {
   const pairs = state.pairs.map((pair) => [pair.plan, pair.check]);
-  if (state.pairs.length === 2) {
+  if (state.pairs.length === 2 && (state.highCross === "ad" || state.highCross === "bc")) {
     const [first, second] = state.pairs;
     pairs.push(
       state.highCross === "ad"
@@ -326,7 +332,6 @@ function renderCredentials() {
   const cards = [...state.selected].map((slot) => {
     const vendor = vendorFor(slot);
     const config = state.slots[slot];
-    const listId = `models-${slot}`;
 
     const probeLine = el("span", {
       class: "probe-msg",
@@ -366,8 +371,8 @@ function renderCredentials() {
           el("span", { text: "模型名" }),
           el("input", {
             type: "text",
-            list: listId,
             spellcheck: "false",
+            placeholder: vendor.default_model,
             value: config.model,
             oninput: (event) => {
               config.model = event.target.value;
@@ -375,11 +380,6 @@ function renderCredentials() {
               refreshFoot();
             },
           }),
-          el(
-            "datalist",
-            { id: listId },
-            vendor.model_options.map((option) => el("option", { value: option })),
-          ),
         ),
         el(
           "label",
@@ -572,22 +572,25 @@ function renderModes() {
 function renderCrossChoice() {
   const [first, second] = state.pairs;
   const choices = [
-    ["ad", first.plan, second.check],
-    ["bc", second.plan, first.check],
+    ["off", null, null, "保持双方案，不补第三条路"],
+    ["ad", first.plan, second.check, null],
+    ["bc", second.plan, first.check, null],
   ];
   return el(
     "section",
     { class: "card" },
-    el("h2", { text: "三方案模式的第三条路" }),
+    el("h2", { text: "要不要打开三方案" }),
     el("p", {
       class: "pick-note",
-      text: "你配了 2 对，前两条路就是它们。三方案模式还差一条，用下面这个交错组合补齐。",
+      text: "配了 2 对时默认是双方案。只有你主动选一个交错组合，才会补第三条路。",
     }),
     el(
       "div",
       { class: "picker" },
-      choices.map(([value, plan, check]) => {
+      choices.map(([value, plan, check, label]) => {
         const on = state.highCross === value;
+        const title =
+          label ?? `${slotLabel(plan)} 提 · ${slotLabel(check)} 审`;
         return el(
           "button",
           {
@@ -604,11 +607,8 @@ function renderCrossChoice() {
           el(
             "span",
             {},
-            el("span", {
-              class: "pick-title",
-              text: `${slotLabel(plan)} 提 · ${slotLabel(check)} 审`,
-            }),
-            plan === check
+            el("span", { class: "pick-title", text: title }),
+            plan && plan === check
               ? el(
                   "span",
                   { class: "pick-note" },
@@ -633,6 +633,7 @@ function renderCrossChoice() {
 /** True when the chosen crossed pair has the same model on both sides. */
 function selfReviewCross() {
   if (state.pairs.length !== 2) return false;
+  if (state.highCross !== "ad" && state.highCross !== "bc") return false;
   const [first, second] = state.pairs;
   return state.highCross === "ad"
     ? first.plan === second.check
@@ -678,6 +679,7 @@ function renderPairs() {
               text: "移除",
               onclick: () => {
                 state.pairs.splice(index, 1);
+                if (state.pairs.length !== 2) state.highCross = "off";
                 render();
               },
             })
@@ -735,6 +737,8 @@ function renderPairs() {
             plan: slots[used % slots.length],
             check: slots[(used + 1) % slots.length],
           });
+          // 加到 2 对时不要沿用旧 .env 里的 ad/bc，否则会直接跳进三方案。
+          state.highCross = "off";
           render();
         },
       }),
