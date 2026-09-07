@@ -52,5 +52,4 @@ Thumbs.db
 # Local secrets
 .env
 .env.*
-!.env.example
 

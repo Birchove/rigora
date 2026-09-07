@@ -1,8 +1,6 @@
-"""Operator docs, env template, and check scripts must stay executable."""
+"""Operator docs and check scripts must stay executable."""
 
 from pathlib import Path
-
-from research_mentor.config import Settings
 
 
 def test_readme_documents_required_start_commands():
@@ -12,73 +10,32 @@ def test_readme_documents_required_start_commands():
         "alembic upgrade head",
         "uvicorn research_mentor.api.app:create_app",
         "npm run dev",
+        "uv run rigora-setup",
     ):
         assert command in readme
 
 
-def test_env_example_has_no_secret_values():
-    text = Path(".env.example").read_text(encoding="utf-8")
-    for name in (
-        "RESEARCH_MENTOR_QWEN_API_KEY=",
-        "RESEARCH_MENTOR_QWEN_BASE_URL=",
-        "RESEARCH_MENTOR_DEEPSEEK_API_KEY=",
-        "RESEARCH_MENTOR_CHATGPT_API_KEY=",
-        "RESEARCH_MENTOR_GLM_API_KEY=",
-        "RESEARCH_MENTOR_OPENALEX_API_KEY=",
-        "RESEARCH_MENTOR_HF_ENDPOINT=",
-        "RESEARCH_MENTOR_HF_TOKEN=",
-    ):
-        assert name in text
-    assert "sk-" not in text
-
-
-def test_readme_covers_v1_operator_topics():
+def test_readme_covers_user_setup_topics():
     readme = Path("README.md").read_text(encoding="utf-8")
     for needle in (
-        "frontend/tests/e2e/visual.spec.ts-snapshots",
-        "idea_review",
-        "plan_loop",
-        "key_insight_check",
-        "working_qa",
-        "complete",
-        "low/mid/high",
-        "默认 low",
-        "OpenAI",
-        "openai_compatible",
+        "https://birchove.github.io/rigora/",
+        "审查想法",
+        "点睛之笔",
+        "Claude",
+        "Gemini",
+        "自己填写模型名",
+        "双方案",
+        "三方案",
         "OpenAlex",
-        "mailto",
-        "Anydoc",
-        "FlagEmbedding",
         "download_reranker",
         "--mirror",
         "hf-mirror.com",
-        "modelscope.cn",
         "SQLite",
         "PostgreSQL",
-        "/api/v1",
-        "Last-Event-ID",
-        "不替写代码/论文正文、不解决无关细碎问题",
-        "https://birchove.github.io/rigora/",
+        "不代写论文正文",
+        "不替写代码或论文正文，不解决无关细碎问题",
     ):
         assert needle in readme
-
-
-def test_env_example_keys_are_known_settings():
-    names = []
-    for line in Path(".env.example").read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#") or "=" not in stripped:
-            continue
-        names.append(stripped.split("=", 1)[0])
-    # 有 validation_alias 的字段以别名为准，因为那才是 .env 里真正的键名。
-    known = set()
-    for field_name, field in Settings.model_fields.items():
-        alias = field.validation_alias
-        known.add(
-            str(alias) if isinstance(alias, str) else f"RESEARCH_MENTOR_{field_name.upper()}"
-        )
-    assert names
-    assert [name for name in names if name not in known] == []
 
 
 def test_dev_and_check_scripts_cover_runtime_gates():
