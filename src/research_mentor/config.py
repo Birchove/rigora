@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Annotated, Literal, Self
@@ -62,10 +63,10 @@ ALL_AGENTS: tuple[AgentName, ...] = (
 SHARED_AGENTS: frozenset[AgentName] = frozenset({"plan_loop", "key_insight_check"})
 AgentModeList = Annotated[list[AgentName], NoDecode]
 
-# default API style, official base URL
+# default API style, official base URL。核对时间 2026-09-07。
 VENDOR_PRESETS: dict[VendorName, tuple[VendorApiStyle, str]] = {
     "chatgpt": ("responses", "https://api.openai.com/v1"),
-    "deepseek": ("chat_completions", "https://api.deepseek.com/v1"),
+    "deepseek": ("chat_completions", "https://api.deepseek.com"),
     "glm": ("chat_completions", "https://open.bigmodel.cn/api/paas/v4"),
     "qwen": (
         "chat_completions",
@@ -74,11 +75,101 @@ VENDOR_PRESETS: dict[VendorName, tuple[VendorApiStyle, str]] = {
 }
 
 VENDOR_DEFAULT_MODELS: dict[VendorName, str] = {
-    "chatgpt": "gpt-4o-mini",
-    "deepseek": "deepseek-chat",
-    "glm": "glm-4-flash",
-    "qwen": "qwen-plus",
+    "chatgpt": "gpt-5.6-terra",
+    "deepseek": "deepseek-v4-flash",
+    "glm": "glm-5.3-flash",
+    "qwen": "qwen3.7-plus",
 }
+
+VENDOR_LABELS: dict[VendorName, str] = {
+    "chatgpt": "ChatGPT",
+    "deepseek": "Deepseek",
+    "glm": "GLM",
+    "qwen": "千问 Qwen",
+}
+
+# 面板与 .env.example 共用同一份候选列表，避免注释与代码漂移。
+# 核对时间 2026-09-07，来源为各厂商官方 API 文档。已退役的型号不再列出：
+# OpenAI 的 gpt-4o / gpt-4.1 / o4-mini 已退役，o3 于 2026-08 下线；
+# DeepSeek 的 deepseek-chat / deepseek-reasoner 自 2026-07-24 起停用，旧名直接报错。
+VENDOR_MODEL_OPTIONS: dict[VendorName, tuple[str, ...]] = {
+    "chatgpt": (
+        "gpt-6-astra",
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "gpt-5.6-luna",
+        "gpt-5.6",
+    ),
+    "deepseek": (
+        "deepseek-v4-pro",
+        "deepseek-v4-flash",
+        "deepseek-v4-flash-vision-exp",
+    ),
+    "glm": (
+        "glm-5.3",
+        "glm-5.3-flash",
+        "glm-5.2",
+        "glm-5.1",
+        "glm-5-turbo",
+    ),
+    "qwen": (
+        "qwen3.8-max",
+        "qwen3.8-flash",
+        "qwen3.7-max",
+        "qwen3.7-plus",
+        "qwen3.7-flash",
+        "qwen3-max",
+        "qwen-long",
+    ),
+}
+
+# chatgpt_2 是「同一把 ChatGPT key 的第二个模型」，凭据默认继承主槽。
+SLOT_VENDOR: dict[SlotName, VendorName] = {
+    "qwen": "qwen",
+    "deepseek": "deepseek",
+    "chatgpt": "chatgpt",
+    "chatgpt_2": "chatgpt",
+    "glm": "glm",
+}
+
+# 引导面板只暴露一家一个槽：一把 key 填一次，需要跑多条路径就在配对里复用它。
+# chatgpt_2 仍然可用，但只保留给手工编辑 .env 的高级用法。
+PANEL_SLOTS: tuple[SlotName, ...] = ("qwen", "deepseek", "chatgpt", "glm")
+
+# 国内网关走系统 HTTP 代理时经常读超时；这些 host 直连。
+DIRECT_CONNECT_MARKERS: tuple[str, ...] = (
+    "wanjiedata.com",
+    "dashscope.aliyuncs.com",
+    "bigmodel.cn",
+)
+
+
+def direct_connect(base_url: str) -> bool:
+    return any(marker in base_url for marker in DIRECT_CONNECT_MARKERS)
+
+
+PLAN_CHECK_PAIR_MAX = PLAN_CANDIDATE_MAX
+
+
+def parse_plan_check_spec(raw: str) -> tuple[tuple[str, str], ...]:
+    """Parse `plan>check,plan>check` into ordered slot pairs."""
+    entries = [
+        part.strip() for part in raw.replace(";", ",").split(",") if part.strip()
+    ]
+    pairs: list[tuple[str, str]] = []
+    for entry in entries:
+        plan, separator, check = entry.partition(">")
+        if not separator or not plan.strip() or not check.strip():
+            raise ValueError(
+                f"配对 {entry!r} 格式不对，应为 提案槽>评审槽，例如 qwen>glm"
+            )
+        pairs.append((plan.strip(), check.strip()))
+    return tuple(pairs)
+
+
+def format_plan_check_spec(pairs: Sequence[tuple[str, str]]) -> str:
+    return ",".join(f"{plan}>{check}" for plan, check in pairs)
+
 
 _PLACEHOLDER_KEYS = frozenset({"xxxx", "XXXX"})
 _ENV_FILE = None if os.environ.get("PYTEST_VERSION") else ".env"
@@ -94,6 +185,8 @@ class Settings(BaseSettings):
         env_file=_ENV_FILE,
         env_file_encoding="utf-8",
         env_ignore_empty=True,
+        # plan_check_pairs_spec 用了显式 validation_alias，构造时仍要能按字段名传。
+        populate_by_name=True,
     )
 
     qwen_api_key: SecretStr | None = None
@@ -121,7 +214,18 @@ class Settings(BaseSettings):
     glm_model: str | None = None
     glm_api_style: VendorApiStyle | None = None
     glm_agents: AgentModeList = Field(default_factory=list)
-    model_provider: Literal["demo", "openai", "openai_compatible"] = "demo"
+    # 有序的「提案槽>评审槽」列表，最多 3 对，例如 qwen>glm,chatgpt>deepseek。
+    # 留空则退回按 PARALLEL_SLOT_ORDER 轮转的旧行为。
+    # 字段名带 _spec 是因为 plan_check_pairs 已经是方法名，所以显式给出环境变量名。
+    plan_check_pairs_spec: str = Field(
+        default="", validation_alias="RESEARCH_MENTOR_PLAN_CHECK_PAIRS"
+    )
+    # 恰好 2 对时，high 模式的第三条路取哪个交错组合：
+    # ad = 第一家提·第二家审，bc = 第二家提·第一家审。
+    plan_check_high_cross: Literal["ad", "bc"] = "ad"
+    # unset: 没有旧式单模型配置。此时必须由 vendor slot 提供全部 Agent，
+    # 否则 bootstrap 直接报错，不静默退化成 demo fixture。
+    model_provider: Literal["unset", "demo", "openai", "openai_compatible"] = "unset"
     model_name: str = "gpt-5-mini"
     model_base_url: HttpUrl | None = None
     model_api_key: SecretStr | None = None
@@ -136,7 +240,7 @@ class Settings(BaseSettings):
     document_chunk_max_chars: int = Field(default=DOCUMENT_CHUNK_MAX_CHARS, ge=100)
     document_chunk_overlap_chars: int = Field(default=DOCUMENT_CHUNK_OVERLAP_CHARS, ge=0)
     public_base_url: HttpUrl = HttpUrl("http://localhost:8000")
-    demo_mode: bool = True
+    demo_mode: bool = False
     max_check_rounds: int = Field(default=MAX_CHECK_ROUNDS, ge=1)
     check_pass_score: float = Field(default=CHECK_PASS_SCORE, ge=0.0, le=10.0)
     rag_relevance_threshold: float = Field(default=RAG_RELEVANCE_THRESHOLD, ge=0.0, le=1.0)
@@ -233,7 +337,29 @@ class Settings(BaseSettings):
                         f"agent {agent} is assigned to both {previous} and {slot}"
                     )
                 claimed[agent] = slot
+        self._validate_plan_check_spec()
         return self
+
+    def _validate_plan_check_spec(self) -> None:
+        raw = self.plan_check_pairs_spec.strip()
+        if not raw:
+            return
+        pairs = parse_plan_check_spec(raw)
+        if len(pairs) > PLAN_CHECK_PAIR_MAX:
+            raise ValueError(
+                f"plan_check_pairs 最多 {PLAN_CHECK_PAIR_MAX} 对，当前 {len(pairs)} 对"
+            )
+        for plan_slot, check_slot in pairs:
+            for slot, required in ((plan_slot, "plan_loop"), (check_slot, "key_insight_check")):
+                if slot not in SLOTS:
+                    raise ValueError(f"plan_check_pairs 引用了未知供应商槽 {slot}")
+                if self.slot_api_key(slot) is None:
+                    raise ValueError(f"plan_check_pairs 引用的 {slot} 没有 API key")
+                if required not in getattr(self, f"{slot}_agents"):
+                    raise ValueError(
+                        f"plan_check_pairs 把 {required} 交给了 {slot}，"
+                        f"但 {slot}_agents 里没有 {required}"
+                    )
 
     def huggingface_hub_token(self) -> str | None:
         if self.hf_token is not None:
@@ -277,7 +403,38 @@ class Settings(BaseSettings):
             if SHARED_AGENTS.issubset(set(getattr(self, f"{slot}_agents")))
         )
 
+    def plan_check_slot_pairs(self) -> tuple[tuple[SlotName, SlotName], ...]:
+        raw = self.plan_check_pairs_spec.strip()
+        if not raw:
+            return ()
+        return parse_plan_check_spec(raw)  # type: ignore[return-value]
+
     def plan_check_pairs(self) -> tuple[tuple[str, str], ...]:
+        """Ordered (plan model, check model) pairs, one per parallel candidate path.
+
+        With an explicit spec the pairs are taken in order. Exactly two pairs get a
+        third crossed pair appended so `high` still has three distinct paths; one
+        pair stays length one, which makes `mid` and `high` unavailable rather than
+        silently self-reviewing.
+        """
+        explicit = self.plan_check_slot_pairs()
+        if explicit:
+            pairs = [
+                (self.slot_model(plan), self.slot_model(check))
+                for plan, check in explicit
+            ]
+            if len(explicit) == 2:
+                (plan_a, check_a), (plan_b, check_b) = explicit
+                crossed = (
+                    (plan_a, check_b)
+                    if self.plan_check_high_cross == "ad"
+                    else (plan_b, check_a)
+                )
+                pairs.append(
+                    (self.slot_model(crossed[0]), self.slot_model(crossed[1]))
+                )
+            return tuple(pairs)
+
         groups = self.parallel_slots()
         if not groups:
             return ()
@@ -287,7 +444,7 @@ class Settings(BaseSettings):
                 "plan/check 可用 slot 不足 2 个（当前 %s），high 模式会退化为同模型自审",
                 n,
             )
-        pairs: list[tuple[str, str]] = []
+        pairs = []
         for index in range(PLAN_CANDIDATE_MAX):
             plan_slot = groups[index % n]
             check_slot = groups[(index + 1) % n] if n > 1 else groups[0]
@@ -307,6 +464,17 @@ class Settings(BaseSettings):
     def vendor_api_style(self, vendor: VendorName) -> VendorApiStyle:
         explicit = getattr(self, f"{vendor}_api_style")
         return explicit or VENDOR_PRESETS[vendor][0]
+
+    def configured_slots(self) -> tuple[SlotName, ...]:
+        return tuple(slot for slot in SLOTS if getattr(self, f"{slot}_agents"))
+
+    def unrouted_agents(self) -> tuple[AgentName, ...]:
+        routed = {
+            agent
+            for slot in SLOTS
+            for agent in getattr(self, f"{slot}_agents")
+        }
+        return tuple(agent for agent in ALL_AGENTS if agent not in routed)
 
     def agent_vendor_map(self) -> dict[AgentName, SlotName]:
         mapping: dict[AgentName, SlotName] = {}
@@ -349,6 +517,10 @@ class HarnessConfig:
             or self.agent_models.get("default")
             or "default"
         )
+
+    def max_plan_candidates(self) -> int:
+        """How many parallel candidate paths the current configuration supports."""
+        return len(self.plan_check_pairs) or PLAN_CANDIDATE_MAX
 
     def plan_model_for_path(self, index: int) -> str:
         if self.plan_check_pairs:

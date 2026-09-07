@@ -13,6 +13,7 @@ from research_mentor.errors import (
     ConcurrencyConflict,
     IllegalTransitionError,
     LiteratureSearchUnavailable,
+    PlanModeUnavailable,
     PortExecutionError,
     SessionNotFoundError,
 )
@@ -91,6 +92,12 @@ def install_error_handlers(app: FastAPI) -> None:
             "stale_project_version",
             "项目已在其他操作中更新，请刷新后重试。",
         )
+
+    @app.exception_handler(PlanModeUnavailable)
+    async def plan_mode_unavailable(
+        request: Request, exc: PlanModeUnavailable
+    ) -> JSONResponse:
+        return _response(422, "plan_mode_unavailable", str(exc))
 
     @app.exception_handler(IllegalTransitionError)
     async def illegal_transition(

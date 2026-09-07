@@ -3,6 +3,9 @@ export const THEME_STORAGE_KEY = "rigora-theme";
 export type Theme = "light" | "dark";
 export type ThemePreference = Theme | "system";
 
+export const DEFAULT_PREFERENCE: ThemePreference = "light";
+
+/** Light by default. "system" stays selectable, it is just not the default. */
 export function readPreference(): ThemePreference {
   try {
     const value = localStorage.getItem(THEME_STORAGE_KEY);
@@ -12,7 +15,7 @@ export function readPreference(): ThemePreference {
   } catch {
     // private mode / tests
   }
-  return "system";
+  return DEFAULT_PREFERENCE;
 }
 
 export function writePreference(preference: ThemePreference): void {

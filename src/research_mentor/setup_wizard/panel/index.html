@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Rigora 配置引导</title>
+    <link rel="stylesheet" href="/assets/app.css?t=__SETUP_TOKEN__" />
+    <link rel="stylesheet" href="/assets/panel.css?t=__SETUP_TOKEN__" />
+  </head>
+  <body>
+    <div class="wizard">
+      <header class="wizard-head">
+        <span class="brand">Rigora</span>
+        <span class="brand-sub">配置引导</span>
+        <nav class="rail" id="rail" aria-label="步骤进度"></nav>
+        <button
+          type="button"
+          id="themeToggle"
+          class="quiet theme-toggle"
+          aria-label="切换深浅主题"
+        ></button>
+      </header>
+
+      <main class="stage" id="stage" tabindex="-1">
+        <p class="loading" role="status">正在载入…</p>
+      </main>
+
+      <footer class="wizard-foot">
+        <p class="foot-note" id="footNote"></p>
+        <div class="foot-actions">
+          <button type="button" id="backButton" class="ghost">上一步</button>
+          <button type="button" id="nextButton" class="primary">下一步</button>
+        </div>
+      </footer>
+    </div>
+
+    <script>
+      window.RIGORA_SETUP_TOKEN = "__SETUP_TOKEN__";
+    </script>
+    <script src="/assets/panel.js?t=__SETUP_TOKEN__"></script>
+  </body>
+</html>

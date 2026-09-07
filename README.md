@@ -93,16 +93,29 @@ Demo 项目：`demo-project-planning`、`demo-project-working`、`demo-project-v
 
 在线 Pages 是只读界面。要自己点命令、跑模型或上传文件，按下面做。密钥只写在仓库根目录 `.env`，不要提交 git，也不要写进数据库 / event / SSE / 前端 bundle。`xxxx` 视为未填写。
 
-### 先选一种跑法
+### 最快路径：引导式配置
 
-| 目标 | `.env` 要改什么 | 要不要额外下载 |
+```bash
+uv sync --all-groups
+uv run rigora-setup
+```
+
+它在本机起一个一次性面板：先用五屏介绍五个 Agent 各自的职责和选模型的取舍，再让你多选供应商、填 key 与模型（官方 `BASE_URL` 已预填，可当场测试连通性），然后用卡片给 `idea_review` / `working_qa` / `complete` 各指一个模型，再把「方案生成」和「点睛之笔评分」按对配好（面板会同步说明 `low` / `mid` / `high` 三种模式各需几条路径），最后给出文献检索等可选项。确认后写入 `.env`（权限 `600`，只更新它管理的键，保留你已有的注释和其它配置），进程随即退出。
+
+面板一家供应商只展示一个槽——key 填一次，需要多条并行路径时在配对里复用它。面板只监听 `127.0.0.1` 的随机端口，地址带一次性 token；已保存的密钥只以掩码回显，不会明文出现在页面、日志或响应里。想改配置就重跑 `rigora-setup`，上一次填的内容会读回来。面板默认浅色主题，右上角可切深色。
+
+### 本地不再有 demo 兜底
+
+五个 Agent 必须全部分配到某个已配置的槽，否则 `build_container` 直接抛 `ConfigurationIncomplete` 并提示去跑 `rigora-setup`。只有显式写 `RESEARCH_MENTOR_MODEL_PROVIDER=demo` 才会使用固定 fixture 模型——那种情况下模型和文献都是 demo 数据，**不能当模型质量或检索质量的证据**。在线 Pages 的演示是纯前端的（`VITE_STATIC_DEMO`），与此无关。
+
+### 各档目标要准备什么
+
+| 目标 | 要什么 | 要不要额外下载 |
 | --- | --- | --- |
-| 只看界面和三个 Demo 项目 | 复制模板即可，各家 `AGENTS` 留空 | 不需要 |
-| 用真实模型走完流程 | 至少一家填 `API_KEY` + `AGENTS` | 不需要 |
+| 用真实模型走完流程 | 至少一家 `API_KEY`，且五个 Agent 分配齐 | 不需要 |
+| 方案生成与评分交叉互审 | 两家或以上，且**同一家**同时承担 `plan_loop` 和 `key_insight_check` | 不需要 |
 | 想法审查用真文献 | 上一项，再填 OpenAlex key | 不需要下模型，但要申请 OpenAlex |
 | 上传 PDF/Markdown 并按语义排序 | 上一项，再装 FlagEmbedding 并下载 reranker | **需要**，约 1–2GB |
-
-未挂任何 `AGENTS` 且 `model_provider=demo` 时：模型是固定 fixture，文献检索也是 demo 数据，**不能当模型质量或检索质量的证据**。
 
 ### 环境
 
@@ -138,13 +151,13 @@ npm run dev
 
 也可一次拉起 API 与 Vite：`pwsh -File scripts/dev.ps1`。
 
-`RESEARCH_MENTOR_DEMO_MODE=true`（模板默认）且数据库为空时，会 seed 三个 Demo 项目：`demo-project-planning`、`demo-project-working`、`demo-project-validation`。
+`RESEARCH_MENTOR_DEMO_MODE=true` 且数据库为空时，会 seed 三个 Demo 项目：`demo-project-planning`、`demo-project-working`、`demo-project-validation`。默认为 `false`，正式使用时不会往你的工作区灌示例数据。
 
 ### 3. 公共项
 
 | 变量 | 含义 | 本地怎么填 |
 | --- | --- | --- |
-| `RESEARCH_MENTOR_DEMO_MODE` | `true`：空库 seed 三个 Demo；`false`：不自动灌 Demo | 本地看界面保持 `true` 即可；真实模型仍按各家 `AGENTS` 调用 |
+| `RESEARCH_MENTOR_DEMO_MODE` | `true`：空库 seed 三个 Demo；`false`：不自动灌 Demo | 默认 `false`。只想先看懂界面时可手工开，示例项目会标记 DEMO DATA。`rigora-setup` 不再展示这一项，也不会改写它 |
 | `RESEARCH_MENTOR_DATABASE_URL` | 异步数据库 URL | 开发默认 SQLite：`sqlite+aiosqlite:///./research_mentor.db` |
 | `RESEARCH_MENTOR_UPLOAD_ROOT` | 上传文件根目录 | 默认 `./data/uploads`（已 gitignore） |
 | `RESEARCH_MENTOR_PUBLIC_BASE_URL` | 对外基址（导出链接等） | 本地 `http://localhost:8000` |
@@ -153,7 +166,9 @@ npm run dev
 
 ### 4. 真实模型（可选）
 
-模板已写好千问 / Deepseek / ChatGPT / GLM 的官方 `BASE_URL`。**只改你要用的那一家**；`AGENTS` 留空的槽不会被调用，对应 Agent 走 demo fixture。
+这一节是手工编辑 `.env` 的参考；用 `rigora-setup` 的话这些都会被填好。
+
+模板已写好千问 / Deepseek / ChatGPT / GLM 的官方 `BASE_URL`。**只改你要用的那一家**；`AGENTS` 留空的槽不会被调用，但五个 Agent 必须都被某个槽认领，否则启动报错。
 
 每家五个字段（以千问为例，其它家把 `QWEN` 换成 `DEEPSEEK` / `CHATGPT` / `GLM`）：
 
@@ -161,25 +176,43 @@ npm run dev
 | --- | --- |
 | `RESEARCH_MENTOR_QWEN_API_KEY` | 商家密钥。占位 `xxxx` = 未填 |
 | `RESEARCH_MENTOR_QWEN_BASE_URL` | 填到 `/v1`（或商家兼容前缀），**不要**带 `/chat/completions`。官方已在模板里；中转只改这一项 |
-| `RESEARCH_MENTOR_QWEN_MODEL` | 模型名，如 `qwen-plus`、`deepseek-chat`、`gpt-4o-mini`、`glm-4-flash` |
+| `RESEARCH_MENTOR_QWEN_MODEL` | 模型名，如 `qwen3.7-plus`、`deepseek-v4-flash`、`gpt-5.6-terra`、`glm-5.3-flash` |
 | `RESEARCH_MENTOR_QWEN_API_STYLE` | `chat_completions`：走 `openai_compatible` 的 `{BASE_URL}/chat/completions`；`responses`：走 OpenAI Responses API（ChatGPT 官方默认） |
 | `RESEARCH_MENTOR_QWEN_AGENTS` | 这把 key 负责哪些 Agent，逗号分隔 |
 
 `AGENTS` 可写：`idea_review`、`plan_loop`、`key_insight_check`、`working_qa`、`complete`，或 `all`。
 
 - `idea_review` / `working_qa` / `complete` **只能出现在一个槽**。
-- `plan_loop` 与 `key_insight_check` 可以同时写在多家下面。`high/mid/low` 按 ChatGPT → ChatGPT 第二槽 → 千问 → GLM（缺的跳过）取 3/2/1 路，每路「一家提、下一家审」。
-- 同一把 ChatGPT key 的第二个模型用 `CHATGPT_2_*`；其 key / `BASE_URL` / `API_STYLE` 留空则继承主槽。
+- `plan_loop` 与 `key_insight_check` 的并行路径由 `RESEARCH_MENTOR_PLAN_CHECK_PAIRS` 显式给出，见下一节。
+- 同一把 ChatGPT key 的第二个模型用 `CHATGPT_2_*`；其 key / `BASE_URL` / `API_STYLE` 留空则继承主槽。面板一家只展示一个槽，这个槽只留给手工编辑。
 
-选择建议如下, 可据此对比同能力模型进行替换
+按 Agent 的任务特性选模型，同能力的可以替换。这份建议与 `rigora-setup` 面板里显示的是同一份数据（`setup_wizard/catalog.py`），模型名核对时间 2026-09-07：
 
-agent模型选择
-1. Agent1 -> ds-多模态
-2. Agent2 -> key_insight gpt-sol; check使用Qwen3.8或GLM-5.3
-3. Agent3 -> gpt-luna
-4. Agent4 -> ds-多模态
+| Agent | 吃什么能力 | 参考模型 |
+| --- | --- | --- |
+| `idea_review` | 读多篇文献摘要，吃长上下文，必须稳定输出 JSON | `deepseek-v4-flash` / `qwen3.7-plus` / `gpt-5.6-terra` |
+| `plan_loop` | 一次生成较长的结构化方案 | `gpt-5.6-sol` / `deepseek-v4-pro` / `glm-5.3` |
+| `key_insight_check` | 严格推理与稳定打分；建议换一家，避免自己写自己审 | `deepseek-v4-pro` / `gpt-5.6-sol` / `glm-5.3` |
+| `working_qa` | 交互最频繁，优先便宜且快 | `gpt-5.6-luna` / `qwen3.8-flash` / `glm-5.3-flash` |
+| `complete` | 综合多份实验结果做归纳 | `gpt-5.6-sol` / `deepseek-v4-pro` / `qwen3.8-max` |
 
-`DEMO_MODE` 可以继续为 `true`（保留三个 Demo 项目）。改完 `.env` 后重启 uvicorn。有凭据的真实 provider smoke 只在发布环境执行并记录 request id，结果不得提交进仓库。
+两处已下线的旧模型名要避开：`deepseek-chat` / `deepseek-reasoner` 自 2026-07-24 起停用，旧请求直接报错；`gpt-4o` / `gpt-4.1` / `o4-mini` 已退役，`o3` 于 2026-08 下线。
+
+#### 方案生成 × 点睛之笔评分的并行配对
+
+`RESEARCH_MENTOR_PLAN_CHECK_PAIRS` 写成有序的 `提案槽>评审槽`，逗号分隔，最多 3 对。左边的槽必须挂 `plan_loop`，右边的槽必须挂 `key_insight_check`，不一致会在启动时报错而不是静默降级。
+
+| 配几对 | 可用模式 | 路径怎么来 |
+| --- | --- | --- |
+| 1 对 | 仅 `low` | 就这一条。请求 `mid` / `high` 会返回 `plan_mode_unavailable`，而不是退化成同模型自审 |
+| 2 对 | `low` / `mid` / `high` | 前两条按顺序配对，`high` 的第三条用 `RESEARCH_MENTOR_PLAN_CHECK_HIGH_CROSS` 指定的交错组合补齐（`ad` = 第一家提·第二家审，`bc` = 第二家提·第一家审） |
+| 3 对 | `low` / `mid` / `high` | 每条路就是你写的一对 |
+
+例如 `qwen>glm,deepseek>chatgpt` 配 `ad`，`high` 会跑「千问提·GLM审」「Deepseek提·ChatGPT审」「千问提·ChatGPT审」三条。同一对里尽量选不同厂商、能力相近的两个模型：不同厂商避免自己写自己审，能力相近才不会出现强模型压着弱模型改。
+
+留空这一项则退回旧行为：按 ChatGPT → ChatGPT 第二槽 → 千问 → GLM → Deepseek 的顺序，取同时挂了两个 Agent 的槽轮转配对。
+
+改完 `.env` 后重启 uvicorn。有凭据的真实 provider smoke 只在发布环境执行并记录 request id，结果不得提交进仓库。
 
 ### 5. OpenAlex 文献检索（可选，但真模型建议填）
 

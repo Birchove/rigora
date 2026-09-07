@@ -13,13 +13,13 @@
     <script>
       (function () {
         var key = "rigora-theme";
-        var pref = "system";
+        var pref = "light";
         try {
-          pref = localStorage.getItem(key) || "system";
+          pref = localStorage.getItem(key) || "light";
         } catch (e) {}
         var dark =
           pref === "dark" ||
-          (pref !== "light" &&
+          (pref === "system" &&
             window.matchMedia("(prefers-color-scheme: dark)").matches);
         document.documentElement.dataset.theme = dark ? "dark" : "light";
         document.documentElement.style.colorScheme = dark ? "dark" : "light";

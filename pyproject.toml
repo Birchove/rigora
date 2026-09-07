@@ -34,6 +34,7 @@ dev = [
 ]
 
 [project.scripts]
+rigora-setup = "research_mentor.setup_wizard.cli:main"
 rigora-download-reranker = "research_mentor.cli.download_reranker:main"
 
 [build-system]

@@ -91,10 +91,11 @@ def test_settings_rejects_unknown_provider(monkeypatch):
         Settings()
 
 
-def test_settings_defaults_to_demo_and_sqlite():
+def test_settings_defaults_to_unconfigured_and_sqlite():
     settings = Settings()
 
-    assert settings.model_provider == "demo"
+    # 正式发布默认不落到 demo：没有 slot 配置时 bootstrap 必须报错而不是发 fixture。
+    assert settings.model_provider == "unset"
     assert settings.model_name == "gpt-5-mini"
     assert settings.model_base_url is None
     assert settings.model_api_key is None
@@ -109,7 +110,7 @@ def test_settings_defaults_to_demo_and_sqlite():
     assert settings.database_url.startswith("sqlite+aiosqlite:///")
     assert settings.upload_root == Path("./data/uploads")
     assert str(settings.public_base_url) == "http://localhost:8000/"
-    assert settings.demo_mode is True
+    assert settings.demo_mode is False
     assert settings.max_check_rounds == 5
     assert settings.check_pass_score == 6.0
     assert settings.reranker_backend == "auto"
@@ -119,7 +120,9 @@ def test_settings_defaults_to_demo_and_sqlite():
     assert settings.hf_token is None
 
 
-@pytest.mark.parametrize("provider", ("demo", "openai", "openai_compatible"))
+@pytest.mark.parametrize(
+    "provider", ("unset", "demo", "openai", "openai_compatible")
+)
 def test_settings_accepts_supported_providers(monkeypatch, provider):
     monkeypatch.setenv("RESEARCH_MENTOR_MODEL_PROVIDER", provider)
 
@@ -168,8 +171,8 @@ def test_settings_vendor_agents_are_multi_select(monkeypatch):
     assert models["idea_review"] == "qwen-max"
     assert models["plan_loop"] == "qwen-max"
     assert models["working_qa"] == "qwen-max"
-    assert models["key_insight_check"] == "deepseek-chat"
-    assert models["complete"] == "deepseek-chat"
+    assert models["key_insight_check"] == "deepseek-v4-flash"
+    assert models["complete"] == "deepseek-v4-flash"
 
 
 def test_settings_all_alias_assigns_every_agent(monkeypatch):
@@ -185,7 +188,7 @@ def test_settings_all_alias_assigns_every_agent(monkeypatch):
         "working_qa",
         "complete",
     }
-    assert settings.agent_models()["complete"] == "glm-4-flash"
+    assert settings.agent_models()["complete"] == "glm-5.3-flash"
 
 
 def test_settings_rejects_unknown_agent_mode(monkeypatch):
@@ -252,6 +255,84 @@ def test_plan_check_pairs_warns_when_only_one_slot_would_self_review(monkeypatch
     )
     warning.assert_called_once()
     assert "同模型自审" in warning.call_args.args[0]
+
+
+def _pairing_env(monkeypatch, spec: str, cross: str = "ad") -> None:
+    monkeypatch.setenv("RESEARCH_MENTOR_QWEN_API_KEY", "qwen-test-key")
+    monkeypatch.setenv("RESEARCH_MENTOR_QWEN_MODEL", "qwen-plan")
+    monkeypatch.setenv("RESEARCH_MENTOR_QWEN_AGENTS", "[plan_loop, idea_review]")
+    monkeypatch.setenv("RESEARCH_MENTOR_GLM_API_KEY", "glm-test-key")
+    monkeypatch.setenv("RESEARCH_MENTOR_GLM_MODEL", "glm-check")
+    monkeypatch.setenv("RESEARCH_MENTOR_GLM_AGENTS", "[key_insight_check, working_qa]")
+    monkeypatch.setenv("RESEARCH_MENTOR_DEEPSEEK_API_KEY", "ds-test-key")
+    monkeypatch.setenv("RESEARCH_MENTOR_DEEPSEEK_MODEL", "ds-plan")
+    monkeypatch.setenv("RESEARCH_MENTOR_DEEPSEEK_AGENTS", "[plan_loop, complete]")
+    monkeypatch.setenv("RESEARCH_MENTOR_CHATGPT_API_KEY", "openai-test-key")
+    monkeypatch.setenv("RESEARCH_MENTOR_CHATGPT_MODEL", "gpt-check")
+    monkeypatch.setenv("RESEARCH_MENTOR_CHATGPT_AGENTS", "key_insight_check")
+    monkeypatch.setenv("RESEARCH_MENTOR_PLAN_CHECK_PAIRS", spec)
+    monkeypatch.setenv("RESEARCH_MENTOR_PLAN_CHECK_HIGH_CROSS", cross)
+
+
+def test_one_explicit_pair_leaves_only_the_single_path_mode(monkeypatch):
+    _pairing_env(monkeypatch, "qwen>glm")
+
+    settings = Settings()
+
+    assert settings.plan_check_pairs() == (("qwen-plan", "glm-check"),)
+    assert HarnessConfig(plan_check_pairs=settings.plan_check_pairs()).max_plan_candidates() == 1
+
+
+@pytest.mark.parametrize(
+    ("cross", "third"),
+    [("ad", ("qwen-plan", "gpt-check")), ("bc", ("ds-plan", "glm-check"))],
+)
+def test_two_explicit_pairs_append_a_crossed_third_path(monkeypatch, cross, third):
+    _pairing_env(monkeypatch, "qwen>glm,deepseek>chatgpt", cross=cross)
+
+    settings = Settings()
+
+    assert settings.plan_check_pairs() == (
+        ("qwen-plan", "glm-check"),
+        ("ds-plan", "gpt-check"),
+        third,
+    )
+
+
+def test_three_explicit_pairs_are_used_verbatim(monkeypatch):
+    _pairing_env(monkeypatch, "qwen>glm,deepseek>chatgpt,qwen>chatgpt")
+
+    settings = Settings()
+
+    assert settings.plan_check_pairs() == (
+        ("qwen-plan", "glm-check"),
+        ("ds-plan", "gpt-check"),
+        ("qwen-plan", "gpt-check"),
+    )
+
+
+def test_explicit_pairs_reject_more_than_three_entries(monkeypatch):
+    _pairing_env(
+        monkeypatch, "qwen>glm,deepseek>chatgpt,qwen>chatgpt,deepseek>glm"
+    )
+
+    with pytest.raises(ValidationError, match="最多 3 对"):
+        Settings()
+
+
+def test_explicit_pair_rejects_a_slot_that_does_not_serve_that_agent(monkeypatch):
+    # glm 只挂了 key_insight_check，不能出现在提案位上。
+    _pairing_env(monkeypatch, "glm>qwen")
+
+    with pytest.raises(ValidationError, match="plan_loop"):
+        Settings()
+
+
+def test_explicit_pair_rejects_malformed_entries(monkeypatch):
+    _pairing_env(monkeypatch, "qwen-glm")
+
+    with pytest.raises(ValidationError, match="提案槽>评审槽"):
+        Settings()
 
 
 def test_settings_chatgpt_2_inherits_key_for_second_model(monkeypatch):

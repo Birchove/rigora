@@ -106,6 +106,21 @@ def _boundary_violations(module: str, imports: list[str]) -> list[str]:
             if _matches(target, "research_mentor.harness.orchestrator")
             or _matches(target, "research_mentor.harness.orchestration")
         )
+    if _matches(module, "research_mentor.setup_wizard"):
+        # 引导面板只读写 .env。它不得触达数据库、worker 或 Agent 运行时。
+        forbidden = (
+            "research_mentor.adapters",
+            "research_mentor.agents",
+            "research_mentor.application",
+            "research_mentor.bootstrap",
+            "research_mentor.domain",
+            "research_mentor.harness",
+        )
+        violations.extend(
+            f"{module} imports runtime component {target}"
+            for target in imports
+            if any(_matches(target, prefix) for prefix in forbidden)
+        )
     return violations
 
 

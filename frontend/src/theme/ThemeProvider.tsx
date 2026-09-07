@@ -10,6 +10,7 @@ import {
 
 import {
   applyTheme,
+  DEFAULT_PREFERENCE,
   readPreference,
   resolvedTheme,
   writePreference,
@@ -65,7 +66,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 export function useTheme(): ThemeContextValue {
   return useContext(ThemeContext) ?? {
     theme: "light",
-    preference: "system",
+    preference: DEFAULT_PREFERENCE,
     toggleTheme: () => undefined,
   };
 }

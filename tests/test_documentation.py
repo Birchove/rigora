@@ -70,11 +70,15 @@ def test_env_example_keys_are_known_settings():
         if not stripped or stripped.startswith("#") or "=" not in stripped:
             continue
         names.append(stripped.split("=", 1)[0])
-    known = {
-        f"RESEARCH_MENTOR_{field_name.upper()}" for field_name in Settings.model_fields
-    }
+    # 有 validation_alias 的字段以别名为准，因为那才是 .env 里真正的键名。
+    known = set()
+    for field_name, field in Settings.model_fields.items():
+        alias = field.validation_alias
+        known.add(
+            str(alias) if isinstance(alias, str) else f"RESEARCH_MENTOR_{field_name.upper()}"
+        )
     assert names
-    assert all(name in known for name in names)
+    assert [name for name in names if name not in known] == []
 
 
 def test_dev_and_check_scripts_cover_runtime_gates():

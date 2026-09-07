@@ -52,6 +52,14 @@ class LiteratureSearchUnavailable(ResearchMentorError):
     """文献 provider 当前不可用或拒绝了请求。"""
 
 
+class ConfigurationIncomplete(ResearchMentorError):
+    """缺少可用的模型配置，无法在正式模式下启动。"""
+
+
+class PlanModeUnavailable(ResearchMentorError):
+    """请求的多方案模式所需的提案/评审配对数量超出当前配置。"""
+
+
 class ModelOutputInvalid(ResearchMentorError):
     """模型返回内容不符合请求的 structured output schema。"""
 

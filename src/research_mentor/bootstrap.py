@@ -31,22 +31,18 @@ from research_mentor.application.documents import DocumentParseWorker, DocumentS
 from research_mentor.application.journal import ExportService, JournalRenderer
 from research_mentor.application.demo import DemoService
 from research_mentor.adapters.filestore.local import LocalFileStore
-from research_mentor.config import SHARED_AGENTS, SLOTS, Settings, SlotName
+from research_mentor.config import (
+    SHARED_AGENTS,
+    SLOTS,
+    Settings,
+    SlotName,
+    direct_connect,
+)
+from research_mentor.errors import ConfigurationIncomplete
 from research_mentor.ports.model import StructuredModelPort
 
 
 logger = logging.getLogger("research_mentor.runs")
-
-# 国内网关走系统 HTTP 代理时经常读超时；这些 host 直连。
-_DIRECT_CONNECT_MARKERS = (
-    "wanjiedata.com",
-    "dashscope.aliyuncs.com",
-    "bigmodel.cn",
-)
-
-
-def _direct_connect(base_url: str) -> bool:
-    return any(marker in base_url for marker in _DIRECT_CONNECT_MARKERS)
 
 
 UowFactory = Callable[[], SqlUnitOfWork]
@@ -78,7 +74,7 @@ class ApplicationContainer:
 def _use_openalex(settings: Settings) -> bool:
     if any(getattr(settings, f"{slot}_agents") for slot in SLOTS):
         return True
-    return settings.model_provider != "demo"
+    return settings.model_provider not in {"unset", "demo"}
 
 
 def _usable_secret(secret: SecretStr | None) -> str | None:
@@ -101,7 +97,7 @@ def _build_vendor_adapter(
     if not base_url:
         raise ValueError(f"{slot} chat_completions requires base_url")
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
-    direct = _direct_connect(base_url)
+    direct = direct_connect(base_url)
     if direct:
         logger.info("model http client direct-connect host=%s", base_url)
     client = httpx.AsyncClient(headers=headers, trust_env=not direct)
@@ -116,34 +112,54 @@ def _build_vendor_adapter(
     )
 
 
+SETUP_HINT = "运行 `uv run rigora-setup` 完成配置，或手工编辑仓库根目录 .env。"
+
+
 def _build_model(
     settings: Settings,
 ) -> tuple[StructuredModelPort, Callable[[], Awaitable[Any]] | None]:
+    configured = settings.configured_slots()
+    if configured:
+        # 先纯校验再建客户端，避免中途报错泄漏未关闭的 httpx client。
+        missing = settings.unrouted_agents()
+        if missing:
+            raise ConfigurationIncomplete(
+                "以下 Agent 没有分配模型: " + ", ".join(missing) + f"。{SETUP_HINT}"
+            )
+
     routes: dict[str, StructuredModelPort] = {}
     closers: list[Callable[[], Awaitable[Any]]] = []
-    for slot in SLOTS:
+    primary: StructuredModelPort | None = None
+    for slot in configured:
         agents = getattr(settings, f"{slot}_agents")
-        if not agents:
-            continue
         adapter, closer = _build_vendor_adapter(settings, slot)
         if closer is not None:
             closers.append(closer)
+        if primary is None:
+            primary = adapter
         routes[settings.slot_model(slot)] = adapter
         for agent in agents:
             if agent in SHARED_AGENTS:
                 routes.setdefault(agent, adapter)
             else:
                 routes[agent] = adapter
-    if routes:
+    if routes and primary is not None:
 
         async def close_all() -> None:
             for closer in closers:
                 await closer()
 
-        return RoutingModelAdapter(routes, fallback=DemoModelAdapter()), close_all
+        # 正式模式下不保留 demo fixture 兜底：未知 profile 落到首个已配置的槽。
+        return RoutingModelAdapter(routes, fallback=primary), close_all
 
     if settings.model_provider == "demo":
         return DemoModelAdapter(), None
+
+    if settings.model_provider == "unset":
+        raise ConfigurationIncomplete(
+            "没有可用的模型配置：至少需要一把 API key 并把五个 Agent 分配完整。"
+            f"{SETUP_HINT}"
+        )
 
     api_key = _usable_secret(settings.model_api_key)
     if settings.model_provider == "openai":

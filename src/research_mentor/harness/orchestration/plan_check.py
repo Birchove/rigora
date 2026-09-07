@@ -21,7 +21,7 @@ from research_mentor.domain.research import (
     UserPlanDecision,
     UserPlanFeedback,
 )
-from research_mentor.errors import InvariantViolationError
+from research_mentor.errors import InvariantViolationError, PlanModeUnavailable
 from research_mentor.harness.orchestration.base import OrchestratorBase
 from research_mentor.harness.routing import route_key_insight_check, route_plan_decision
 from research_mentor.harness.scoring import finalize_key_insight_check
@@ -115,6 +115,13 @@ class PlanCheckOrchestrator(OrchestratorBase):
         if session.plan_candidates:
             return self._revise_candidate_plan(session, candidate_id)
         count_by_mode = PLAN_CANDIDATE_COUNTS
+        available = self._config.max_plan_candidates()
+        if count_by_mode[mode] > available:
+            raise PlanModeUnavailable(
+                f"{mode} 模式需要 {count_by_mode[mode]} 条并行路径，"
+                f"当前配置只有 {available} 条。"
+                "在 rigora-setup 里增加提案/评审配对，或改用更低的模式。"
+            )
         focus_hints = PLAN_CANDIDATE_FOCUS_HINTS
         specs = [
             (

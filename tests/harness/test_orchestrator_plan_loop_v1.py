@@ -16,7 +16,7 @@ from research_mentor.agents.working_qa.runner import WorkingQARunner
 from research_mentor.config import HarnessConfig
 from research_mentor.domain.experiments import MainExperimentResult
 from research_mentor.domain.research import KeyInsight, UserPlanDecision
-from research_mentor.errors import InvariantViolationError
+from research_mentor.errors import InvariantViolationError, PlanModeUnavailable
 from research_mentor.harness.orchestrator import ResearchMentorOrchestrator
 from research_mentor.harness.state import SessionPhase
 
@@ -80,6 +80,31 @@ def test_plan_mode_creates_isolated_candidate_paths(
     assert all(item.check_round == 0 for item in session.plan_candidates)
     assert len({item.focus_hint for item in session.plan_candidates}) == count
     assert session.plan_generation_mode == mode
+
+
+@pytest.mark.parametrize("mode", ["mid", "high"])
+def test_modes_needing_more_paths_than_configured_are_refused(bundle, mode) -> None:
+    """One configured pair means one path, so mid and high must fail loudly."""
+    orchestrator, _, _ = bundle
+    orchestrator._config = HarnessConfig(
+        plan_check_pairs=(("gpt-plan", "qwen-check"),)
+    )
+
+    with pytest.raises(PlanModeUnavailable, match="rigora-setup"):
+        orchestrator.run_plan("s1", mode=mode)
+
+
+def test_two_configured_pairs_allow_every_mode(bundle) -> None:
+    orchestrator, _, _ = bundle
+    orchestrator._config = HarnessConfig(
+        plan_check_pairs=(
+            ("gpt-plan", "qwen-check"),
+            ("qwen-plan", "glm-check"),
+            ("gpt-plan", "glm-check"),
+        )
+    )
+
+    assert orchestrator._config.max_plan_candidates() == 3
 
 
 def test_high_mode_rotates_plan_and_check_models(

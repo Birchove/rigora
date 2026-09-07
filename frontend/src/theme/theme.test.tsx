@@ -7,7 +7,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ThemeToggle } from "../components/ThemeToggle";
 import { ThemeProvider } from "./ThemeProvider";
-import { applyTheme, resolvedTheme, THEME_STORAGE_KEY } from "./theme";
+import {
+  applyTheme,
+  readPreference,
+  resolvedTheme,
+  THEME_STORAGE_KEY,
+} from "./theme";
 
 const memory = new Map<string, string>();
 
@@ -46,6 +51,23 @@ describe("theme", () => {
   it("resolves an explicit preference without consulting the system", () => {
     expect(resolvedTheme("dark")).toBe("dark");
     expect(resolvedTheme("light")).toBe("light");
+  });
+
+  it("defaults to light even when the system prefers dark", () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: (query: string) => ({
+        matches: true,
+        media: query,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }),
+    });
+
+    expect(readPreference()).toBe("light");
+    expect(resolvedTheme(readPreference())).toBe("light");
+    // "system" 仍然可以被显式选中，只是不再是默认值。
+    expect(resolvedTheme("system")).toBe("dark");
   });
 
   it("writes color-scheme onto the document root", () => {
