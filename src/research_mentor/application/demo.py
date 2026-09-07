@@ -137,11 +137,10 @@ def _candidate() -> ValidationCandidate:
     return ValidationCandidate(
         candidate_id="demo-validation-ablation",
         task=ValidationTask(
-            paradigm="effectiveness",
-            validation_type="ablation",
             name="移除分层摘要的消融实验",
             purpose="确认性能增益来自分层状态压缩",
             method="在相同任务和随机种子上移除分层摘要后比较恢复正确率",
+            evaluation_criteria=["恢复正确率差异", "状态漂移率差异"],
             expected_result="完整方法的恢复正确率更高",
         ),
         priority="critical",

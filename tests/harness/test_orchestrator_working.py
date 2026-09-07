@@ -99,11 +99,10 @@ def main_task(*, status: str = "in_progress", current: str | None = "运行恢�
 
 def validation_task() -> ExperimentTaskContext:
     task = ValidationTask(
-        paradigm="robustness_reliability",
-        validation_type="multiple_runs",
         name="多次运行验证",
         purpose="测量波动",
         method="运行十次并比较方差",
+        evaluation_criteria=["结果方差"],
     )
     return ExperimentTaskContext(
         task_id="validation-1",

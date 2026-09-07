@@ -183,11 +183,10 @@ export interface MainExperimentResult extends ExperimentResult {
 }
 
 export interface ValidationTask {
-  paradigm: string;
-  validation_type: string;
   name: string;
   purpose: string;
   method: string;
+  evaluation_criteria: string[];
   expected_result?: string | null;
 }
 

@@ -55,6 +55,10 @@ async def test_demo_seed_creates_three_real_schema_projects(demo_context):
     validation = projects[2]
     assert CompleteAgentOutput.model_validate(validation.latest_complete_output)
     assert validation.validation_candidates
+    task = validation.validation_candidates[0].task
+    assert task.evaluation_criteria == ["恢复正确率差异", "状态漂移率差异"]
+    assert "paradigm" not in task.model_dump()
+    assert "validation_type" not in task.model_dump()
     assert (await service.export(validation.project_id, "json")).writing_guidance
 
 
@@ -76,8 +80,6 @@ async def test_project_view_exposes_persisted_demo_marker(demo_context):
     await service.ensure_seeded()
     views = ProjectViewService(
         uow_factory,
-        supported_domains=("computer_science",),
-        supported_domain_aliases=("cs",),
         new_id=iter(("real-project", "real-session", "real-event", "real-outbox")).__next__,
     )
 
@@ -107,9 +109,24 @@ async def test_demo_adapters_return_production_schemas():
             trace_id="demo-trace",
         )
     )
+    complete = await model.generate(
+        ModelRequest(
+            agent_name="complete",
+            model_profile="demo",
+            instructions="complete",
+            user_input="validation",
+            output_model=CompleteAgentOutput,
+            timeout=1,
+            trace_id="demo-complete-trace",
+        )
+    )
     records = await DemoRetrievalAdapter().search("state compression", limit=2)
 
     assert isinstance(result, IdeaReviewOutput)
+    assert complete.validation_candidates[0].task.evaluation_criteria == [
+        "恢复正确率差异",
+        "状态漂移率差异",
+    ]
     assert records and all(item.provider == "demo" for item in records)
     assert all(item.url and item.url.startswith("demo://") for item in records)
 

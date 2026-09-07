@@ -15,36 +15,6 @@ ExperimentTaskOrigin = Literal["plan", "forward", "validation_plan"]
 ExperimentTaskStatus = Literal[
     "pending", "in_progress", "completed", "blocked", "cancelled"
 ]
-ValidationParadigm = Literal[
-    "effectiveness",
-    "efficiency",
-    "robustness_reliability",
-    "theory_interpretability",
-    "engineering_human_factors",
-    "meta_statistical",
-]
-ValidationType = Literal[
-    "benchmarking",
-    "ablation",
-    "baseline_comparison",
-    "generalization",
-    "throughput_latency",
-    "resource_consumption",
-    "scalability",
-    "energy_efficiency",
-    "adversarial",
-    "ood_detection",
-    "stress_test",
-    "long_tail_few_shot",
-    "convergence",
-    "feature_visualization",
-    "case_study_error_analysis",
-    "developer_productivity",
-    "user_study_ab_test",
-    "regression_testing",
-    "multiple_runs",
-    "significance_test",
-]
 ResultImpact = Literal["supports", "neutral", "contradicts", "invalidates"]
 ExecutionStatus = Literal["completed", "failed", "cancelled"]
 
@@ -65,11 +35,10 @@ class _ExperimentResult(BaseModel):
 
 
 class ValidationTask(BaseModel):
-    paradigm: ValidationParadigm
-    validation_type: ValidationType
     name: str
     purpose: str
     method: str
+    evaluation_criteria: list[str] = Field(default_factory=list)
     expected_result: str | None = None
 
 

@@ -33,6 +33,7 @@ from research_mentor.domain.experiments import (
 )
 from research_mentor.domain.research import (
     InitialInput,
+    NonBlankText,
     ResearchContext,
     ResearchPlan,
 )
@@ -67,7 +68,7 @@ class EvalCase(BaseModel):
 class EvalSuite(BaseModel):
     version: Literal["1.0"]
     prompt_version: str
-    domain: Literal["computer_science"]
+    domain: NonBlankText
     suite: str
     ranker: str | None = None
     cases: list[EvalCase]

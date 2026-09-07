@@ -52,11 +52,7 @@ async def _drain(worker, *, limit: int = 8) -> str | None:
 async def test_project_view_exposes_active_run_and_event_cursor(tmp_path):
     container = await _container(tmp_path)
     try:
-        views = ProjectViewService(
-            container.uow_factory,
-            supported_domains=container.settings.supported_domains,
-            supported_domain_aliases=container.settings.supported_domain_aliases,
-        )
+        views = ProjectViewService(container.uow_factory)
         created = await views.create(title="缓存研究", domain="computer_science")
         assert created.active_run is None
         assert created.last_event_sequence == 1
@@ -120,11 +116,7 @@ async def test_production_handlers_cover_commands_and_agents(tmp_path):
 async def test_submit_idea_through_worker_reaches_working(tmp_path):
     container = await _container(tmp_path)
     try:
-        views = ProjectViewService(
-            container.uow_factory,
-            supported_domains=container.settings.supported_domains,
-            supported_domain_aliases=container.settings.supported_domain_aliases,
-        )
+        views = ProjectViewService(container.uow_factory)
         project = await views.create(title="演示研究", domain="computer_science")
         idea = await container.command_bus.dispatch(
             SubmitIdeaCommand(

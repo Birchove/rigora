@@ -11,13 +11,9 @@ from research_mentor.harness.phase import SessionPhase
 
 
 def validation_task_identity(task: ValidationTask) -> tuple[str, ...]:
-    return (
-        task.paradigm,
-        task.validation_type,
-        task.name,
-        task.purpose,
-        task.method,
-        task.expected_result or "",
+    return tuple(
+        "".join(value.split()).casefold()
+        for value in (task.name, task.purpose, task.method, *task.evaluation_criteria)
     )
 
 

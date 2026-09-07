@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from research_mentor.evals.runner import (
     EvalSuite,
@@ -15,7 +16,31 @@ from research_mentor.evals.runner import (
 def test_eval_dataset_is_versioned_and_has_metadata(dataset):
     suite = EvalSuite.model_validate_json(dataset.read_text(encoding="utf-8"))
     assert suite.version == "1.0"
-    assert suite.prompt_version and suite.domain == "computer_science"
+    assert suite.prompt_version and suite.domain.strip()
+
+
+def test_eval_suite_accepts_any_research_domain():
+    suite = EvalSuite.model_validate(
+        {
+            "version": "1.0",
+            "prompt_version": "idea_review/eval",
+            "domain": "教育研究",
+            "suite": "generic",
+            "cases": [],
+        }
+    )
+    assert suite.domain == "教育研究"
+
+    with pytest.raises(ValidationError):
+        EvalSuite.model_validate(
+            {
+                "version": "1.0",
+                "prompt_version": "idea_review/eval",
+                "domain": "",
+                "suite": "generic",
+                "cases": [],
+            }
+        )
 
 
 def test_idea_review_has_at_least_twenty_labeled_cases():

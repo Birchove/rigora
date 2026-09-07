@@ -1,14 +1,10 @@
 """Research completion and validation selection contracts."""
 
-from typing import Literal, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
-from research_mentor.domain.experiments import (
-    ValidationParadigm,
-    ValidationTask,
-    ValidationType,
-)
+from research_mentor.domain.experiments import ValidationTask
 from research_mentor.domain.research import ResearchPlan
 
 
@@ -26,9 +22,15 @@ class ValidationCandidate(BaseModel):
 
 
 class ExcludedValidation(BaseModel):
-    paradigm: ValidationParadigm
-    validation_type: ValidationType
+    name: str
     reason: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_name(cls, value: Any) -> Any:
+        if isinstance(value, dict) and not value.get("name"):
+            return {**value, "name": value.get("validation_type", "历史补充实验")}
+        return value
 
 
 class WritingGuidance(BaseModel):
@@ -42,7 +44,9 @@ class CompleteAgentOutput(BaseModel):
     mode: CompletionMode
     plan: ResearchPlan | None
     final_hint: str
-    validation_candidates: list[ValidationCandidate] = Field(default_factory=list)
+    validation_candidates: list[ValidationCandidate] = Field(
+        default_factory=list, max_length=3
+    )
     excluded_validations: list[ExcludedValidation] = Field(default_factory=list)
     writing_guidance: WritingGuidance | None = None
     revision_reason: str | None = None

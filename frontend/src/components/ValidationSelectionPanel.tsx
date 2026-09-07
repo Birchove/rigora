@@ -101,6 +101,16 @@ export function ValidationSelectionPanel({
                   {candidate.task.method ? (
                     <span className="validation-candidate-method">方法：{candidate.task.method}</span>
                   ) : null}
+                  {candidate.task.evaluation_criteria.length > 0 ? (
+                    <span className="validation-candidate-method">
+                      评价标准：{candidate.task.evaluation_criteria.join("、")}
+                    </span>
+                  ) : null}
+                  {candidate.task.expected_result ? (
+                    <span className="validation-candidate-method">
+                      预期结果：{candidate.task.expected_result}
+                    </span>
+                  ) : null}
                 </span>
               </label>
             </li>

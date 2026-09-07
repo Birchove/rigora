@@ -138,11 +138,10 @@ def completed_phase_main_result() -> MainExperimentResult:
 def completed_phase_validation_result() -> ValidationResult:
     return ValidationResult(
         task=ValidationTask(
-            paradigm="robustness_reliability",
-            validation_type="multiple_runs",
             name="重复运行验证",
             purpose="测量结果波动",
             method="运行十次并比较方差",
+            evaluation_criteria=["结果方差", "置信区间"],
         ),
         actual_result="方差未降低",
         conclusion="未支持稳定性改善",

@@ -27,8 +27,6 @@ from research_mentor.hyperparameters import (
     RUN_RETRY_LIMIT,
     RUN_TIMEOUT_SECONDS,
     SCORING_RULE_VERSION,
-    SUPPORTED_DOMAIN_ALIASES,
-    SUPPORTED_DOMAINS,
     UPLOAD_ALLOWED_EXTENSIONS,
     UPLOAD_ALLOWED_MEDIA_TYPES,
     UPLOAD_MAX_FILE_BYTES,
@@ -447,8 +445,6 @@ class Settings(BaseSettings):
     run_lease_renewal_seconds: float = Field(default=RUN_LEASE_RENEWAL_SECONDS, gt=0.0)
     run_timeout_seconds: float = Field(default=RUN_TIMEOUT_SECONDS, gt=0.0)
     run_retry_limit: int = Field(default=RUN_RETRY_LIMIT, ge=1)
-    supported_domains: tuple[str, ...] = SUPPORTED_DOMAINS
-    supported_domain_aliases: tuple[str, ...] = SUPPORTED_DOMAIN_ALIASES
 
     @field_validator(
         "qwen_agents",
@@ -723,8 +719,6 @@ class HarnessConfig:
     )
     agent_models: dict[str, str] = field(default_factory=dict)
     plan_check_pairs: tuple[tuple[str, str], ...] = ()
-    supported_domains: tuple[str, ...] = ("computer science",)
-    supported_domain_aliases: tuple[str, ...] = ("cs", "计算机科学", "计算机")
 
     def model_for_agent(self, agent_name: str) -> str:
         return (
