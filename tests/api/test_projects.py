@@ -129,20 +129,23 @@ async def test_create_project_and_fetch_view(monkeypatch, tmp_path):
 
 
 @pytest.mark.anyio
-async def test_project_list_is_stable_and_domain_alias_is_normalized(
+async def test_project_list_is_stable_and_free_form_domain_is_preserved(
     monkeypatch, tmp_path
 ):
     async with _client(monkeypatch, tmp_path) as client:
         first = await client.post(
-            "/api/v1/projects", json={"title": "一", "domain": "CS"}
+            "/api/v1/projects",
+            json={"title": "一", "domain": "  Mechanical   Engineering  "},
         )
         second = await client.post(
-            "/api/v1/projects", json={"title": "二", "domain": "计算机科学"}
+            "/api/v1/projects", json={"title": "二", "domain": "教育研究"}
         )
         response = await client.get("/api/v1/projects")
 
-        assert first.json()["domain"] == "computer_science"
-        assert second.json()["domain"] == "computer_science"
+        assert first.status_code == 201
+        assert first.json()["domain"] == "Mechanical Engineering"
+        assert second.status_code == 201
+        assert second.json()["domain"] == "教育研究"
         assert response.status_code == 200
         assert [item["project_id"] for item in response.json()] == [
             second.json()["project_id"],
@@ -153,16 +156,11 @@ async def test_project_list_is_stable_and_domain_alias_is_normalized(
 @pytest.mark.anyio
 async def test_project_errors_use_stable_envelope(monkeypatch, tmp_path):
     async with _client(monkeypatch, tmp_path) as client:
-        unsupported = await client.post(
-            "/api/v1/projects", json={"title": "研究", "domain": "biology"}
-        )
         missing = await client.get("/api/v1/projects/missing")
         malformed = await client.post(
             "/api/v1/projects", json={"title": "", "domain": "computer_science"}
         )
 
-        assert unsupported.status_code == 422
-        assert unsupported.json()["error"]["code"] == "unsupported_domain"
         assert missing.status_code == 404
         assert missing.json()["error"] == {
             "code": "project_not_found",

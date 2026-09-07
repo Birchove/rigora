@@ -117,33 +117,20 @@ class ProjectNotFoundError(Exception):
     pass
 
 
-class UnsupportedDomainError(Exception):
-    pass
-
-
 class ProjectViewService:
     def __init__(
         self,
         uow_factory,
         *,
-        supported_domains: tuple[str, ...],
-        supported_domain_aliases: tuple[str, ...],
         new_id: Callable[[], str] | None = None,
         now: Callable[[], datetime] | None = None,
     ) -> None:
         self._uow_factory = uow_factory
         self._new_id = new_id or (lambda: str(uuid4()))
         self._now = now or (lambda: datetime.now(timezone.utc))
-        canonical = supported_domains[0]
-        self._domains = {
-            value.strip().casefold(): canonical
-            for value in (*supported_domains, *supported_domain_aliases)
-        }
 
     async def create(self, *, title: str, domain: str) -> ProjectView:
-        normalized_domain = self._domains.get(domain.strip().casefold())
-        if normalized_domain is None:
-            raise UnsupportedDomainError(domain)
+        normalized_domain = " ".join(domain.split())
         project_id = self._new_id()
         session_id = self._new_id()
         event_id = self._new_id()

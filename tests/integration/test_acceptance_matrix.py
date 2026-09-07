@@ -16,7 +16,7 @@ JUNIT_PATH = ROOT / "test-results" / "acceptance-pytest.xml"
 SCENARIOS: dict[int, tuple[str, ...]] = {
     1: ("tests/application/test_production_journey.py::test_submit_idea_through_worker_reaches_working",),
     2: ("tests/harness/test_orchestrator_idea_review_v1.py::test_range_clarification_can_be_resubmitted",),
-    3: ("tests/harness/test_orchestrator_idea_review_v1.py::test_non_cs_domain_returns_refinement_without_model",),
+    3: ("tests/harness/test_orchestrator_idea_review_v1.py::test_review_action_has_single_route",),
     4: ("tests/integration/test_forward_stages.py::test_each_forward_stage_skips_plan_loop_and_enters_working",),
     5: ("tests/harness/test_orchestrator_completion_v1.py::test_record_main_result_confirms_task_and_forward_runs_complete",),
     6: ("tests/harness/test_scoring.py::test_scoring_fails_when_dimension_is_below_floor",),
@@ -42,7 +42,8 @@ SCENARIOS: dict[int, tuple[str, ...]] = {
     26: ("tests/application/test_run_worker.py::test_running_agent_uses_frozen_input_snapshot",),
     27: ("tests/application/test_allowed_commands.py::test_illegal_phase_is_rejected_by_server_authority",),
     28: ("tests/application/test_command_bus.py::test_restart_archives_cycle_by_switching_active_session_and_queues_review",),
-    29: ("tests/harness/test_orchestrator_idea_review_v1.py::test_non_cs_domain_returns_refinement_without_model",),
+    # 场景 29 原"非 CS 明确 unsupported"已被跨领域改造取代：任意领域均进入 pipeline。
+    29: ("tests/harness/test_orchestrator_idea_review_v1.py::test_any_domain_reaches_idea_review_model",),
     30: ("tests/test_architecture_boundaries.py::test_architecture_import_boundaries",),
     31: ("tests/harness/test_orchestrator_plan_loop_v1.py::test_plan_mode_creates_isolated_candidate_paths",),
     32: ("tests/harness/test_orchestrator_plan_loop_v1.py::test_exhausted_candidate_requires_explicit_override",),

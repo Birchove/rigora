@@ -43,11 +43,10 @@ def _main_result() -> MainExperimentResult:
 def _validation_result() -> ValidationResult:
     return ValidationResult(
         task=ValidationTask(
-            paradigm="robustness_reliability",
-            validation_type="multiple_runs",
             name="重复运行",
             purpose="检查波动",
             method="重复十次",
+            evaluation_criteria=["结果方差"],
         ),
         actual_result="波动仍然存在",
         conclusion="结果稳定",

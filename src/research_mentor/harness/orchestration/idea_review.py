@@ -21,23 +21,7 @@ class IdeaReviewOrchestrator(OrchestratorBase):
             {SessionPhase.AWAITING_IDEA, SessionPhase.AWAITING_IDEA_REFINEMENT},
         )
         phase_before = session.phase
-        supported_domains = {
-            item.casefold()
-            for item in (
-                *self._config.supported_domains,
-                *self._config.supported_domain_aliases,
-            )
-        }
-        if idea.domain.strip().casefold() not in supported_domains:
-            output = IdeaReviewOutput(
-                idea_type="range",
-                action="request_refinement",
-                normalized_idea=idea.original_idea,
-                reason="当前版本仅支持 computer science 领域。",
-                next_action="请将问题限定为 computer science 研究，或使用通用 Agent。",
-            )
-            refinement_code = "unsupported_domain"
-        elif prepared is not None:
+        if prepared is not None:
             output = prepared.model_copy(deep=True)
             refinement_code = (
                 "idea_refinement" if output.action == "request_refinement" else None

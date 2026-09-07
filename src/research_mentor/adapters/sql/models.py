@@ -226,16 +226,6 @@ class ProjectLiteratureRow(Base):
     selected: Mapped[bool] = mapped_column(Boolean, nullable=False)
 
 
-class ValidationTypeRow(Base):
-    __tablename__ = "validation_types"
-
-    validation_type: Mapped[str] = mapped_column(String(100), primary_key=True)
-    paradigm: Mapped[str] = mapped_column(String(100), nullable=False)
-    display_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=False)
-    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
-
-
 class AgentOutputRow(Base):
     __tablename__ = "agent_outputs"
 

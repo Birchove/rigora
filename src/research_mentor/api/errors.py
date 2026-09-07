@@ -4,10 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from research_mentor.application.views import (
-    ProjectNotFoundError,
-    UnsupportedDomainError,
-)
+from research_mentor.application.views import ProjectNotFoundError
 from research_mentor.application.documents import DocumentError
 from research_mentor.errors import (
     ConcurrencyConflict,
@@ -64,12 +61,6 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(DocumentError)
     async def document_error(request: Request, exc: DocumentError) -> JSONResponse:
         return _response(exc.status_code, exc.code, str(exc))
-
-    @app.exception_handler(UnsupportedDomainError)
-    async def unsupported_domain(
-        request: Request, exc: UnsupportedDomainError
-    ) -> JSONResponse:
-        return _response(422, "unsupported_domain", "v1 仅支持计算机科学领域。")
 
     @app.exception_handler(ProjectNotFoundError)
     async def project_not_found(

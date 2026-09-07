@@ -31,6 +31,70 @@ function BootNotice({
   );
 }
 
+function NewProjectForm({
+  onCreate,
+  onCancel,
+}: {
+  onCreate: (input: { title: string; domain: string }) => Promise<void>;
+  onCancel?: () => void;
+}) {
+  const [title, setTitle] = useState("新研究");
+  const [domain, setDomain] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <section className="connection-notice">
+      <h2>新建研究</h2>
+      <p>填写项目名称和实际研究领域，后续 Agent 将据此设计方案与实验。</p>
+      <form
+        className="structured-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setBusy(true);
+          setError(null);
+          void onCreate({ title: title.trim(), domain: domain.trim() })
+            .catch((reason: unknown) => {
+              setError(errorMessage(reason, "无法创建项目。"));
+            })
+            .finally(() => setBusy(false));
+        }}
+      >
+        <label className="structured-field">
+          项目名称
+          <input
+            value={title}
+            required
+            maxLength={500}
+            disabled={busy}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </label>
+        <label className="structured-field">
+          研究领域
+          <input
+            value={domain}
+            required
+            maxLength={200}
+            disabled={busy}
+            placeholder="例如：教育研究、临床医学、机械工程"
+            onChange={(event) => setDomain(event.target.value)}
+          />
+        </label>
+        {error ? <p className="command-error" role="alert">{error}</p> : null}
+        <div className="structured-actions">
+          <button type="submit" disabled={busy}>创建项目</button>
+          {onCancel ? (
+            <button type="button" className="secondary-action" disabled={busy} onClick={onCancel}>
+              取消
+            </button>
+          ) : null}
+        </div>
+      </form>
+    </section>
+  );
+}
+
 function LiveWorkspace({
   projectId,
   projects,
@@ -193,6 +257,7 @@ export default function App() {
   const [projects, setProjects] = useState<ProjectView[]>([]);
   const [bootError, setBootError] = useState<string | null>(null);
   const [bootNonce, setBootNonce] = useState(0);
+  const [creating, setCreating] = useState(false);
 
   const refreshProjects = useCallback(() => {
     void client.listProjects().then(setProjects).catch(() => undefined);
@@ -203,38 +268,33 @@ export default function App() {
     url.searchParams.set("project", projectId);
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
     setBootError(null);
+    setCreating(false);
     setLiveId(projectId);
     refreshProjects();
   };
 
-  const createProject = () => {
-    void client
-      .createProject({
-        title: "新研究",
-        domain: "computer_science",
-      })
-      .then((created) => selectProject(created.project_id))
-      .catch((error: unknown) => {
-        setBootError(errorMessage(error, "无法创建项目。"));
-      });
+  const createProject = async (input: { title: string; domain: string }) => {
+    const created = await client.createProject(input);
+    selectProject(created.project_id);
   };
 
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("project");
-    const boot = requested
+    const boot: Promise<string | null> = requested
       ? client.getProject(requested).then((item) => item.project_id)
-      : client.listProjects().then(async (listed) => {
+      : client.listProjects().then((listed) => {
+          setProjects(listed);
           if (listed[0] !== undefined) {
-            setProjects(listed);
             return listed[0].project_id;
           }
-          const created = await client.createProject({
-            title: "新研究",
-            domain: "computer_science",
-          });
-          return created.project_id;
+          setCreating(true);
+          return null;
         });
-    void boot.then(selectProject).catch((error: unknown) => {
+    void boot.then((projectId) => {
+      if (projectId !== null) {
+        selectProject(projectId);
+      }
+    }).catch((error: unknown) => {
       setLiveId(null);
       setBootError(errorMessage(error, "无法连接研究服务。请确认后端已启动后重试。"));
     });
@@ -243,7 +303,12 @@ export default function App() {
   return (
     <ThemeProvider>
       <h1 className="visually-hidden">Rigora</h1>
-      {bootError && liveId === null ? (
+      {creating ? (
+        <NewProjectForm
+          onCreate={createProject}
+          onCancel={liveId === null ? undefined : () => setCreating(false)}
+        />
+      ) : bootError && liveId === null ? (
         <BootNotice
           title="无法连接研究服务"
           message={bootError}
@@ -256,7 +321,7 @@ export default function App() {
         <LiveWorkspace
           projectId={liveId}
           projects={projects}
-          onCreateProject={createProject}
+          onCreateProject={() => setCreating(true)}
           onSelectProject={selectProject}
           onProjectsChanged={refreshProjects}
         />

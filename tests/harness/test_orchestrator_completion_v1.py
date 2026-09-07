@@ -110,11 +110,11 @@ def candidate(candidate_id: str, rank: int) -> ValidationCandidate:
     return ValidationCandidate(
         candidate_id=candidate_id,
         task=ValidationTask(
-            paradigm="robustness_reliability",
-            validation_type="multiple_runs",
             name=f"重复运行 {candidate_id}",
             purpose="检查稳定性",
             method="重复十次",
+            evaluation_criteria=["结果方差", "置信区间"],
+            expected_result="确定结果是否稳定复现",
         ),
         priority="critical" if rank == 1 else "high",
         rank=rank,

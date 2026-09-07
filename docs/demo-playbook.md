@@ -101,9 +101,10 @@ cd frontend && npm run dev
 ### A0. 新建项目
 
 1. 左栏点 **＋**（`aria-label`：新建项目）。
-2. 出现标题「新研究」、`domain = computer_science`、`phase = awaiting_idea`。
-3. 中栏标题：**研究起点**。
-4. 底栏主按钮：**提交研究想法**。composer 可输入。
+2. 出现「新建研究」表单：填项目名称和自由文本研究领域（任意领域，如「教育研究」「机械工程」）。
+3. 点 **创建项目**；新项目 `phase = awaiting_idea`。
+4. 中栏标题：**研究起点**。
+5. 底栏主按钮：**提交研究想法**。composer 可输入。
 
 若列表里已有 `demo-project-*`：先点其中一个，指出 **DEMO DATA**，再说「现场走真实项目」再点 ＋。
 
@@ -572,7 +573,7 @@ Idea/Plan/Check/Complete 任一 **等待** 中点 **取消运行**。期望 run 
 | 右栏全是「采用」 | 看 `selected`；未引用文献应为未采用 |
 | 上传失败 | 扩展名、10MB、项目合计 100MB、MIME |
 | 注入成功改了职责 | **缺陷**；记下 command_id、run_id、user_input 片段（不要把 key 贴进 issue） |
-| 非 CS | 创建 API 默认就是 `computer_science`；领域拒绝走 unsupported_domain 澄清，一般现场不演示 |
+| 非 CS | 跨领域已支持：研究领域为自由文本，任意非空领域均进入正常 Agent pipeline |
 | DEMO DATA | seed 项目；现场主线请 ＋ 新项目 |
 
 常用日志：`research_mentor.runs`、`research_mentor.events`。密钥应被打成 `sk-***` / `Bearer ***`。

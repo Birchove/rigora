@@ -57,8 +57,6 @@ def harness_config(settings: Settings) -> HarnessConfig:
         max_check_rounds=settings.max_check_rounds,
         pass_score=settings.check_pass_score,
         rag_relevance_threshold=settings.rag_relevance_threshold,
-        supported_domains=settings.supported_domains,
-        supported_domain_aliases=settings.supported_domain_aliases,
         agent_models=settings.agent_models(),
         plan_check_pairs=settings.plan_check_pairs(),
     )

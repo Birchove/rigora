@@ -3,6 +3,7 @@ from pydantic import ValidationError
 
 from research_mentor.domain.completion import (
     CompleteAgentOutput,
+    ExcludedValidation,
     ValidationCandidate,
     ValidationSelection,
     WritingGuidance,
@@ -18,11 +19,10 @@ PLAN = ResearchPlan(
     key_insight=KeyInsight(title="分层缓存", content="比较尾延迟", rationale="可验证"),
 )
 TASK = ValidationTask(
-    paradigm="robustness_reliability",
-    validation_type="multiple_runs",
     name="重复运行",
     purpose="验证方差",
     method="固定种子重复十次",
+    evaluation_criteria=["结果方差", "置信区间"],
 )
 
 
@@ -53,6 +53,18 @@ def test_validation_mode_requires_ranked_unique_candidates() -> None:
             plan=PLAN,
             final_hint="选择验证",
             validation_candidates=[candidate("v1", 1), candidate("v1", 2)],
+        )
+
+
+def test_validation_mode_accepts_at_most_three_candidates() -> None:
+    with pytest.raises(ValidationError):
+        CompleteAgentOutput(
+            mode="validation",
+            plan=PLAN,
+            final_hint="选择验证",
+            validation_candidates=[
+                candidate(f"v{rank}", rank) for rank in range(1, 5)
+            ],
         )
 
 
@@ -92,3 +104,24 @@ def test_validation_selection_rejects_selected_skipped_overlap() -> None:
         ValidationSelection(
             selected_candidate_ids=["v1"], skipped_candidate_ids=["v1"]
         )
+
+
+def test_excluded_validation_uses_experiment_name_instead_of_taxonomy() -> None:
+    excluded = ExcludedValidation(name="扩大样本实验", reason="超出当前资源预算")
+
+    assert excluded.model_dump() == {
+        "name": "扩大样本实验",
+        "reason": "超出当前资源预算",
+    }
+
+
+def test_legacy_excluded_validation_uses_old_type_as_name() -> None:
+    excluded = ExcludedValidation(
+        paradigm="effectiveness",
+        validation_type="ablation",
+        reason="已经完成等价实验",
+    )
+
+    assert excluded.name == "ablation"
+    assert "paradigm" not in excluded.model_dump()
+    assert "validation_type" not in excluded.model_dump()

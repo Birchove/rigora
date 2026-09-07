@@ -4,15 +4,14 @@ from research_mentor.domain.completion import ValidationCandidate, ValidationSel
 from research_mentor.domain.experiments import ValidationTask
 from research_mentor.errors import ValidationSelectionError
 from research_mentor.harness.state import SessionPhase
-from research_mentor.harness.validation import ValidationQueue
+from research_mentor.harness.validation import ValidationQueue, validation_task_identity
 
 
 TASK = ValidationTask(
-    paradigm="effectiveness",
-    validation_type="ablation",
     name="消融",
     purpose="验证贡献",
     method="逐一移除模块",
+    evaluation_criteria=["性能变化"],
 )
 
 
@@ -28,6 +27,25 @@ def candidate(candidate_id: str, rank: int, priority: str = "high") -> Validatio
 
 
 CANDIDATES = [candidate("v1", 1), candidate("v2", 2), candidate("v3", 3)]
+
+
+def test_validation_identity_includes_domain_neutral_evaluation_criteria() -> None:
+    changed = TASK.model_copy(update={"evaluation_criteria": ["成本变化"]})
+
+    assert validation_task_identity(TASK) != validation_task_identity(changed)
+
+
+def test_validation_identity_normalizes_whitespace_and_case() -> None:
+    changed = TASK.model_copy(
+        update={
+            "name": "  消融  ",
+            "purpose": "验证  贡献",
+            "method": "逐一移除模块",
+            "evaluation_criteria": ["  性能变化  "],
+        }
+    )
+
+    assert validation_task_identity(TASK) == validation_task_identity(changed)
 
 
 def test_selected_candidates_are_queued_by_rank_not_request_order() -> None:
