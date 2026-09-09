@@ -69,11 +69,10 @@ def main_result() -> MainExperimentResult:
 def validation_result() -> ValidationResult:
     return ValidationResult(
         task=ValidationTask(
-            paradigm="robustness_reliability",
-            validation_type="multiple_runs",
             name="重复运行",
             purpose="检查波动",
             method="重复十次",
+            evaluation_criteria=["结果方差"],
         ),
         actual_result="波动仍然存在",
         conclusion="结果稳定",
@@ -176,16 +175,16 @@ def test_forward_initializes_research_context_and_stage_task(bundle, stage: str)
         )
 
 
-def test_non_cs_domain_returns_refinement_without_model(bundle) -> None:
+def test_any_domain_reaches_idea_review_model(bundle) -> None:
     orchestrator, model, repository = bundle
+    model.enqueue("idea_review", review_output("proceed_to_plan"))
 
     output = orchestrator.review_idea("s1", idea(domain="biomedicine"))
 
     session = repository.get("s1")
-    assert output.action == "request_refinement"
-    assert session.phase is SessionPhase.AWAITING_IDEA_REFINEMENT
-    assert session.refinement_code == "unsupported_domain"
-    assert model.calls == []
+    assert output.action == "proceed_to_plan"
+    assert session.phase is SessionPhase.PLANNING
+    assert len(model.calls) == 1
 
 
 def test_range_clarification_can_be_resubmitted(bundle) -> None:

@@ -13,6 +13,10 @@ describe("static demo client", () => {
       "demo-project-validation",
     ]);
     expect(staticDemoProjects()).toHaveLength(3);
+    expect(projects[2]?.validation_candidates?.[0]?.task.evaluation_criteria).toEqual([
+      "恢复正确率差异",
+      "状态漂移率差异",
+    ]);
   });
 
   it("rejects writes with a readonly error", async () => {

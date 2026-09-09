@@ -15,11 +15,10 @@ def session_with_current_task(task_kind: str) -> ResearchSession:
     validation_task = None
     if task_kind == "validation":
         validation_task = ValidationTask(
-            paradigm="effectiveness",
-            validation_type="ablation",
             name="消融",
             purpose="验证组件贡献",
             method="移除组件后对比",
+            evaluation_criteria=["组件贡献差异"],
         )
     return ResearchSession(
         session_id="s1",

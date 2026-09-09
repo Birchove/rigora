@@ -8,7 +8,11 @@ from research_mentor.domain.experiments import MainExperimentResult, ValidationR
 from research_mentor.domain.research import InitialInput, ResearchContext, ResearchPlan
 
 DEFAULT_VALIDATION_GUIDELINES = [
-    "根据 ResearchPlan、KeyInsight、主实验结果和 completed_validations 判断当前证据链仍缺少哪些验证。",
+    "逐项审阅 MainExperimentResult 与每个 completed ValidationResult，先识别具体 evidence gap，再决定是否需要新实验。",
+    "只输出优先级最高且互不重复的 1–3 个候选；不要求为每项旧结果各生成一个实验。",
+    "实验应适配 idea.domain 指示的研究领域，不套用固定分类或计算机科学术语模板。",
+    "每个 ValidationTask 必须填写 name、purpose、method、evaluation_criteria 和 expected_result；评价标准应可观察或可测量。",
+    "每个候选的 rationale 必须关联至少一项已有实验结果，并说明它留下的具体 evidence gap。",
     "只建议能够检验关键主张、排除主要替代解释或补足可靠性风险的实验，不得为了显得完整而堆叠实验。",
     "建议必须符合用户时间、数据、算力、设备和知识条件；不可执行的实验应明确排除或降级。",
     "不得重复已经完成且结论充分的 ValidationTask；应利用所有 completed_validations，包括未支持预期的结果。",

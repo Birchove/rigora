@@ -60,11 +60,10 @@ def test_task_factory_owns_ids_status_and_defaults() -> None:
 def test_task_factory_creates_valid_validation_relationship() -> None:
     parent = TaskFactory.create_main(origin="plan")
     task = ValidationTask(
-        paradigm="effectiveness",
-        validation_type="ablation",
         name="消融实验",
         purpose="验证模块贡献",
         method="逐一移除模块",
+        evaluation_criteria=["性能变化"],
     )
 
     validation = TaskFactory.create_validation(parent_task_id=parent.task_id, task=task)

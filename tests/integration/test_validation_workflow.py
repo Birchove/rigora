@@ -10,11 +10,10 @@ from research_mentor.harness.validation import ValidationQueue
 
 
 TASK = ValidationTask(
-    paradigm="effectiveness",
-    validation_type="ablation",
     name="消融",
     purpose="验证贡献",
     method="逐一移除模块",
+    evaluation_criteria=["性能变化"],
 )
 
 

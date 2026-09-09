@@ -15,11 +15,10 @@ from research_mentor.domain.experiments import (
 
 def validation_task() -> ValidationTask:
     return ValidationTask(
-        paradigm="effectiveness",
-        validation_type="benchmarking",
         name="benchmark",
         purpose="compare performance",
         method="run benchmark",
+        evaluation_criteria=["记录准确率与耗时"],
     )
 
 
@@ -126,24 +125,36 @@ def test_default_factory_values_are_not_shared():
     assert second.observations == []
 
 
-@pytest.mark.parametrize(
-    ("field", "value"),
-    [
-        ("paradigm", "invalid"),
-        ("validation_type", "invalid"),
-    ],
-)
-def test_validation_task_enum_values_are_rejected(field, value):
-    payload = {
-        "paradigm": "effectiveness",
-        "validation_type": "benchmarking",
-        "name": "x",
-        "purpose": "y",
-        "method": "z",
+def test_validation_task_uses_domain_neutral_structure() -> None:
+    task = ValidationTask(
+        name="高峰订单下的路径拥堵实验",
+        purpose="验证效率提升是否只在低负载下成立",
+        method="逐级提高订单到达率并记录完成时间",
+        evaluation_criteria=["平均完成时间", "最长等待时间"],
+        expected_result="高负载下仍优于现有方案",
+    )
+
+    assert task.model_dump() == {
+        "name": "高峰订单下的路径拥堵实验",
+        "purpose": "验证效率提升是否只在低负载下成立",
+        "method": "逐级提高订单到达率并记录完成时间",
+        "evaluation_criteria": ["平均完成时间", "最长等待时间"],
+        "expected_result": "高负载下仍优于现有方案",
     }
-    payload[field] = value
-    with pytest.raises(ValidationError):
-        ValidationTask(**payload)
+
+
+def test_legacy_validation_task_ignores_old_classification_fields() -> None:
+    task = ValidationTask(
+        paradigm="effectiveness",
+        validation_type="benchmarking",
+        name="旧实验",
+        purpose="读取历史项目",
+        method="沿用历史方法",
+    )
+
+    assert task.evaluation_criteria == []
+    assert "paradigm" not in task.model_dump()
+    assert "validation_type" not in task.model_dump()
 
 
 @pytest.mark.parametrize(

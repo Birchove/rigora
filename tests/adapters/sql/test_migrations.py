@@ -19,7 +19,6 @@ EXPECTED_TABLES = {
     "document_chunks",
     "literature_records",
     "project_literature",
-    "validation_types",
     "agent_outputs",
     "research_exports",
 }

@@ -263,11 +263,10 @@ def test_validation_result_and_writing_completion_event_table_branches(
 ) -> None:
     orchestrator, _, repository = _bundle()
     validation_task = ValidationTask(
-        paradigm="effectiveness",
-        validation_type="multiple_runs",
         name="重复运行",
         purpose="检查结果稳定性",
         method="固定切分重复五次",
+        evaluation_criteria=["结果方差"],
     )
     validation_context = ExperimentTaskContext(
         task_id="validation-1",

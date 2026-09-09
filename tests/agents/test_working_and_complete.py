@@ -98,11 +98,11 @@ def complete_output(research_plan: ResearchPlan) -> CompleteAgentOutput:
             ValidationCandidate(
                 candidate_id="v1",
                 task=ValidationTask(
-                    paradigm="robustness_reliability",
-                    validation_type="multiple_runs",
                     name="重复运行",
                     purpose="验证结果稳定性",
                     method="固定切分重复运行",
+                    evaluation_criteria=["结果方差", "置信区间"],
+                    expected_result="明确结果是否稳定复现",
                 ),
                 priority="critical",
                 rank=1,
@@ -158,6 +158,19 @@ def test_working_plan_issue_is_main_only_in_runtime_guidelines() -> None:
     assert "main" in joined
     assert "validation" in joined
     assert "record_validation_result" in joined
+
+
+def test_complete_guidelines_require_specific_domain_neutral_experiments() -> None:
+    joined = "\n".join(
+        CompleteAgentSysInput(
+            current_date=date(2026, 9, 1), completion_status=False
+        ).validation_guidelines
+    )
+
+    assert "逐项审阅" in joined
+    assert "1–3" in joined
+    assert "不套用固定分类" in joined
+    assert "evaluation_criteria" in joined
 
 
 @pytest.mark.parametrize("status", ["pending", "completed", "blocked", "cancelled"])
@@ -222,7 +235,7 @@ def test_complete_prompt_matches_fixed_sha256_oracle() -> None:
     )
 
     assert hashlib.sha256(prompt.read_bytes()).hexdigest() == (
-        "7324359059df3029ce81984042f31fb86e823552de95c0f34ff32035c10f1ba1"
+        "0f81f5d1a079c84915f91277dd3e9371a6216d628cd9f1aff53cd0264d4c2f6a"
     )
 
 
@@ -322,6 +335,10 @@ def test_complete_builder_has_complete_expected_instructions_and_isolates_data(
     assert invocation.output_model is CompleteAgentOutput
     assert "Retrieval guidelines" not in invocation.instructions
     assert "QA guidelines" not in invocation.instructions
+    assert "适用于任何研究领域" in invocation.instructions
+    assert "结果 → 证据缺口 → 候选实验" in invocation.instructions
+    assert "1–3" in invocation.instructions
+    assert "evaluation_criteria" in invocation.instructions
 
 
 class RecordingModel:

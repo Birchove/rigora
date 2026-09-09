@@ -1,6 +1,6 @@
 # Agent Eval Suites
 
-每个 `*_cases.json` 都是 versioned `EvalSuite`：`version=1.0`、`prompt_version`、`domain=computer_science`。runner 只评 schema、routing、rubric 和稳定性，不用另一个 LLM 当发布 gate。没有真实 model provider 时，`provider_mode` 固定为 `demo`，不伪造真实模型质量。
+每个 `*_cases.json` 都是 versioned `EvalSuite`：`version=1.0`、`prompt_version`、`domain` 为自由文本研究领域。现有样例仍多用 `computer_science`，只表示这批标注的题材，不是产品限制。runner 只评 schema、routing、rubric 和稳定性，不用另一个 LLM 当发布 gate。没有真实 model provider 时，`provider_mode` 固定为 `demo`，不伪造真实模型质量。
 
 | Suite | 覆盖 |
 | --- | --- |

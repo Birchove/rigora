@@ -43,12 +43,11 @@ const CANDIDATES_REORDERED_FOR_DISPLAY = [
     rationale: "检验分布外稳定性",
     addresses_claims: ["robustness"],
     task: {
-      paradigm: "robustness_reliability",
-      validation_type: "ood_detection",
       name: "鲁棒性验证",
       purpose: "检验分布外稳定性",
       method: "替换测试分布",
-      expected_result: null,
+      evaluation_criteria: ["分布外性能变化", "置信区间"],
+      expected_result: "确定模型是否跨分布稳定",
     },
   },
   {
@@ -58,12 +57,11 @@ const CANDIDATES_REORDERED_FOR_DISPLAY = [
     rationale: "排除模块贡献混淆",
     addresses_claims: ["ablation"],
     task: {
-      paradigm: "effectiveness",
-      validation_type: "ablation",
       name: "消融实验",
       purpose: "排除模块贡献混淆",
       method: "去掉关键模块后重测",
-      expected_result: null,
+      evaluation_criteria: ["性能变化"],
+      expected_result: "确定关键模块的独立贡献",
     },
   },
 ];
@@ -160,6 +158,8 @@ describe("ProjectActions", () => {
     );
     fireEvent.click(screen.getByLabelText("鲁棒性验证"));
     fireEvent.click(screen.getByRole("button", { name: "确认选择" }));
+    expect(screen.getByText("评价标准：分布外性能变化、置信区间")).toBeInTheDocument();
+    expect(screen.getByText("预期结果：确定模型是否跨分布稳定")).toBeInTheDocument();
     expect(submit).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "select_validations",

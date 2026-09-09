@@ -26,11 +26,11 @@ PLAN = ResearchPlan(
                     {
                         "candidate_id": "v1",
                         "task": {
-                            "paradigm": "effectiveness",
-                            "validation_type": "ablation",
                             "name": "消融",
                             "purpose": "验证贡献",
                             "method": "移除模块",
+                            "evaluation_criteria": ["性能变化"],
+                            "expected_result": "确定该模块是否产生独立贡献",
                         },
                         "priority": "high",
                         "rank": 1,

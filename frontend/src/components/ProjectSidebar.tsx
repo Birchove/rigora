@@ -105,7 +105,7 @@ export function ProjectSidebar({
       })}
       <div className="product-boundary">
         <strong>使用边界</strong>
-        <p>管理科研判断、实验推进与证据记录；不替你执行实验，也不代写论文正文。</p>
+        <p>管理各学科的科研判断、实验推进与证据记录；不替你执行实验，也不代写论文正文。</p>
       </div>
     </nav>
   );

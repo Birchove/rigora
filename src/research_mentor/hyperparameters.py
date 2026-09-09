@@ -101,15 +101,6 @@ CLAIM_NEXT_CANDIDATE_LIMIT: Final = 8
 EVENT_SEQUENCE_RETRY_LIMIT: Final = 8
 DOCUMENT_PARSE_STALE_SECONDS: Final = 600.0
 
-SUPPORTED_DOMAINS: Final[tuple[str, ...]] = ("computer_science",)
-SUPPORTED_DOMAIN_ALIASES: Final[tuple[str, ...]] = (
-    "computer science",
-    "cs",
-    "计算机科学",
-    "计算机",
-)
-
-
 def run_config_snapshot() -> dict[str, object]:
     """Frozen copy attached to each AgentRun for audit and replay."""
     return {
