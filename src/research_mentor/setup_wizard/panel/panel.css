@@ -262,6 +262,10 @@ body::after {
   animation-delay: 0.2s;
 }
 
+.stage > .flow-card {
+  animation-name: fade-in;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -270,6 +274,15 @@ body::after {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
@@ -307,7 +320,13 @@ body::after {
 /* --- flow graph --- */
 
 .flow-card {
+  position: relative;
+  z-index: 4;
   overflow: visible;
+}
+
+.flow-card:hover {
+  transform: none;
 }
 
 .flow {
@@ -319,12 +338,13 @@ body::after {
   align-items: center;
   gap: 0;
   min-height: 8.2rem;
-  padding: 3.4rem 0.35rem 0.55rem;
+  padding: 2.6rem 0.35rem 0.55rem;
   overflow-x: auto;
 }
 
 .flow-node {
   position: relative;
+  z-index: 0;
   display: flex;
   flex: none;
   flex-direction: column;
@@ -376,6 +396,11 @@ body::after {
   box-shadow: none;
 }
 
+.flow-node:hover,
+.flow-node:focus-visible {
+  z-index: 20;
+}
+
 .flow-node:hover .flow-dot,
 .flow-node:focus-visible .flow-dot {
   transform: scale(1.28);
@@ -389,11 +414,12 @@ body::after {
 }
 
 .flow-tip {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 0.55rem);
+  position: fixed;
+  z-index: 80;
+  left: var(--tip-x, 50%);
+  top: var(--tip-y, 0);
   width: max-content;
-  max-width: 16rem;
+  max-width: min(16rem, calc(100vw - 1.5rem));
   padding: 0.55rem 0.7rem;
   border-radius: 1rem;
   background: var(--surface);
@@ -402,7 +428,7 @@ body::after {
   font-size: 0.8rem;
   font-weight: 500;
   line-height: 1.45;
-  transform: translateX(-50%) translateY(4px);
+  transform: translate(-50%, calc(-100% - 0.65rem)) translateY(4px);
   opacity: 0;
   pointer-events: none;
   transition:
@@ -414,7 +440,7 @@ body::after {
 .flow-node:focus-visible .flow-tip,
 .flow[data-mode="focus"] .flow-node[data-on="true"] .flow-tip {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translate(-50%, calc(-100% - 0.65rem));
 }
 
 .flow[data-mode="focus"] .flow-node {
@@ -424,7 +450,7 @@ body::after {
 .flow[data-mode="focus"] .flow-node[data-on="true"] {
   opacity: 1;
   transform: scale(1.18);
-  z-index: 1;
+  z-index: 20;
 }
 
 .flow[data-mode="focus"] .flow-node[data-on="true"] .flow-dot {

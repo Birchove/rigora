@@ -247,8 +247,17 @@ function flowEdge(edge, fromLevel, toLevel) {
   );
 }
 
+function placeFlowTip(node) {
+  const tip = node.querySelector(".flow-tip");
+  const dot = node.querySelector(".flow-dot");
+  if (!tip || !dot) return;
+  const box = dot.getBoundingClientRect();
+  tip.style.setProperty("--tip-x", `${box.left + box.width / 2}px`);
+  tip.style.setProperty("--tip-y", `${box.top}px`);
+}
+
 function flowNode(node, { focused } = {}) {
-  return el(
+  const button = el(
     "button",
     {
       type: "button",
@@ -257,11 +266,14 @@ function flowNode(node, { focused } = {}) {
       "data-level": node.level,
       "data-on": String(Boolean(focused)),
       "aria-label": `${node.title}，思考${node.level}。${node.hover}`,
+      onpointerenter: (event) => placeFlowTip(event.currentTarget),
+      onfocus: (event) => placeFlowTip(event.currentTarget),
     },
     el("span", { class: "flow-dot", "aria-hidden": "true" }),
     el("span", { class: "flow-title", text: node.title }),
     el("span", { class: "flow-tip", text: node.hover }),
   );
+  return button;
 }
 
 function renderFlow(focus) {
@@ -297,6 +309,12 @@ function renderFlow(focus) {
   );
 }
 
+function placeVisibleFlowTips() {
+  document
+    .querySelectorAll(".flow-node:hover, .flow-node:focus-visible, .flow-node[data-on='true']")
+    .forEach(placeFlowTip);
+}
+
 function renderWelcome() {
   const product = state.catalog.product;
   return [
@@ -311,7 +329,7 @@ function renderWelcome() {
     ),
     el(
       "section",
-      { class: "card" },
+      { class: "card flow-card" },
       el("h2", { text: "核心流程" }),
       el(
         "p",
@@ -1116,6 +1134,7 @@ function render() {
   });
 
   refreshFoot();
+  requestAnimationFrame(placeVisibleFlowTips);
 }
 
 async function save() {
@@ -1206,6 +1225,8 @@ async function boot() {
   document.getElementById("themeToggle").addEventListener("click", toggleTheme);
   document.getElementById("nextButton").addEventListener("click", goNext);
   document.getElementById("backButton").addEventListener("click", goBack);
+  window.addEventListener("scroll", placeVisibleFlowTips, true);
+  window.addEventListener("resize", placeVisibleFlowTips);
 
   try {
     const [catalogPayload, currentPayload] = await Promise.all([
