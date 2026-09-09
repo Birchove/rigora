@@ -44,35 +44,34 @@ _ALLOWED_HOSTS = frozenset({"127.0.0.1", "localhost"})
 _FRONTEND_STYLES = ("tokens.css", "global.css")
 _STYLE_FALLBACK = """:root {
   color-scheme: light;
-  --bg: #f5f5f7; --surface: #ffffff; --surface-2: #f5f5f7;
-  --fill-quiet: rgb(120 120 128 / 12%); --fill-hover: rgb(120 120 128 / 20%);
-  --text-1: #1d1d1f; --text-2: #6e6e73; --text-3: #aeaeb2;
-  --separator: rgb(0 0 0 / 8%); --separator-strong: rgb(0 0 0 / 16%);
-  --accent: #c65a2e; --accent-strong: #a84a24;
-  --accent-tint: rgb(198 90 46 / 10%); --on-accent: #ffffff;
-  --adopted: #34c759; --danger: #ff3b30;
-  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
-    "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  --bg: #f8efe6; --surface: #fffaf4; --surface-2: #f3e6d8;
+  --fill-quiet: rgb(226 90 50 / 10%); --fill-hover: rgb(226 90 50 / 16%);
+  --text-1: #2a1d18; --text-2: #6f564c; --text-3: #b39486;
+  --separator: rgb(198 90 46 / 10%); --separator-strong: rgb(198 90 46 / 18%);
+  --accent: #e25a32; --accent-strong: #c94a28;
+  --accent-tint: rgb(226 90 50 / 12%); --on-accent: #fffaf4;
+  --adopted: #2bbbad; --danger: #f25070;
+  --font-ui: "Figtree", "Avenir Next", "PingFang SC", "Microsoft YaHei UI", sans-serif;
   --font-data: ui-monospace, "SF Mono", Consolas, monospace;
-  --radius-card: 16px; --radius-input: 12px; --radius-small: 9px;
+  --radius-card: 1.25rem; --radius-input: 0.9rem; --radius-small: 0.7rem;
   --radius-pill: 999px;
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 4%), 0 4px 16px rgb(0 0 0 / 4%);
-  --shadow-2: 0 2px 8px rgb(0 0 0 / 6%), 0 16px 40px rgb(0 0 0 / 10%);
+  --shadow-1: 0 10px 24px rgb(198 90 46 / 7%);
+  --shadow-2: 0 16px 36px rgb(122 99 232 / 12%);
   --ease-mac: cubic-bezier(0.32, 0.72, 0, 1);
-  --focus-ring: 0 0 0 4px rgb(198 90 46 / 30%);
+  --focus-ring: 0 0 0 4px rgb(226 90 50 / 28%);
 }
 html[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #10211a; --surface: #173328; --surface-2: #1b4332;
-  --fill-quiet: rgb(212 165 116 / 10%); --fill-hover: rgb(212 165 116 / 16%);
-  --text-1: #f4efe6; --text-2: #c9bfb0; --text-3: #8f877c;
-  --separator: rgb(244 239 230 / 10%); --separator-strong: rgb(244 239 230 / 18%);
-  --accent: #d4a574; --accent-strong: #e0b98a;
-  --accent-tint: rgb(212 165 116 / 14%); --on-accent: #1b4332;
-  --adopted: #6ee7a8; --danger: #ff7b73;
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 28%), 0 8px 24px rgb(0 0 0 / 22%);
-  --shadow-2: 0 4px 14px rgb(0 0 0 / 32%), 0 18px 40px rgb(0 0 0 / 28%);
-  --focus-ring: 0 0 0 4px rgb(212 165 116 / 32%);
+  --bg: #14111c; --surface: #211b2c; --surface-2: #2c243a;
+  --fill-quiet: rgb(255 147 108 / 10%); --fill-hover: rgb(255 147 108 / 16%);
+  --text-1: #f6efe7; --text-2: #cbb8ab; --text-3: #8e7b72;
+  --separator: rgb(246 239 231 / 10%); --separator-strong: rgb(246 239 231 / 16%);
+  --accent: #ff936c; --accent-strong: #ffb08a;
+  --accent-tint: rgb(255 147 108 / 16%); --on-accent: #2a1d18;
+  --adopted: #5ee0c5; --danger: #ff7b93;
+  --shadow-1: 0 12px 28px rgb(0 0 0 / 28%);
+  --shadow-2: 0 18px 40px rgb(122 99 232 / 22%);
+  --focus-ring: 0 0 0 4px rgb(255 147 108 / 30%);
 }
 * { box-sizing: border-box; }
 button, input, textarea, select { font: inherit; }

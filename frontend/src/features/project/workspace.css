@@ -1,10 +1,51 @@
 .workspace-shell {
   --header-h: 5rem;
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
   background: var(--bg);
+}
+
+.workspace-shell::before,
+.workspace-shell::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(36px);
+  opacity: 0.7;
+}
+
+.workspace-shell::before {
+  width: 22rem;
+  height: 22rem;
+  top: -7rem;
+  right: -5rem;
+  border-radius: 46% 54% 42% 58%;
+  background: var(--blob-c);
+  animation: workspace-blob 22s ease-in-out infinite;
+}
+
+.workspace-shell::after {
+  width: 16rem;
+  height: 16rem;
+  bottom: 5rem;
+  left: 1.5rem;
+  border-radius: 58% 42% 52% 48%;
+  background: var(--blob-b);
+  animation: workspace-blob 26s ease-in-out infinite reverse;
+}
+
+@keyframes workspace-blob {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(1.2rem, 0.8rem);
+  }
 }
 
 .static-demo-banner {
@@ -27,7 +68,7 @@
   align-items: center;
   min-height: var(--header-h);
   padding: 0 1.25rem;
-  border-bottom: 1px solid var(--separator);
+  border-bottom: 1px dashed var(--separator-strong);
   background: var(--header-bg);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
@@ -87,21 +128,38 @@
 }
 
 .phase-timeline li.is-reached::before {
-  background: var(--accent);
-  opacity: 0.35;
+  background: linear-gradient(90deg, var(--tone-teal), var(--tone-amber), var(--tone-violet));
+  opacity: 0.55;
 }
 
 .phase-timeline li.is-reached::after {
-  border-color: var(--accent);
+  border-color: transparent;
   background: var(--accent);
 }
 
+.phase-timeline li:nth-child(1).is-reached::after {
+  background: var(--tone-amber);
+}
+
+.phase-timeline li:nth-child(2).is-reached::after,
+.phase-timeline li:nth-child(3).is-reached::after {
+  background: var(--tone-violet);
+}
+
+.phase-timeline li:nth-child(4).is-reached::after {
+  background: var(--tone-teal);
+}
+
+.phase-timeline li:nth-child(5).is-reached::after {
+  background: var(--tone-amber);
+}
+
 .phase-timeline li[aria-current="step"] {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .phase-timeline li[aria-current="step"]::after {
-  box-shadow: 0 0 0 4px var(--accent-tint);
+  box-shadow: 0 0 0 4px var(--accent-tint), 0 0 16px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .phase-timeline span,
@@ -118,6 +176,7 @@
 }
 
 .phase-timeline strong {
+  font-family: var(--font-display);
   font-size: 0.8125rem;
   font-weight: 500;
 }
@@ -185,11 +244,12 @@
   border-radius: 50%;
   background: var(--fill-quiet);
   color: var(--text-1);
-  transition: background 160ms var(--ease-mac), color 160ms var(--ease-mac);
+  transition: background 160ms var(--ease-mac), transform 160ms var(--ease-mac);
 }
 
 .theme-toggle:hover {
   background: var(--fill-hover);
+  transform: rotate(-12deg);
 }
 
 .evidence-toggle:hover {
@@ -204,6 +264,8 @@
 /* ── 主体：左缘贴合侧栏 + 中栏 ──────────────────────────── */
 
 .workspace-grid {
+  position: relative;
+  z-index: 1;
   display: grid;
   flex: 1;
   grid-template-columns: 16.5rem minmax(0, 1fr);
@@ -226,7 +288,7 @@
   min-height: 0;
   padding: 1.5rem 0.9rem 1.25rem;
   overflow-y: auto;
-  border-right: 1px solid var(--separator);
+  border-right: 1px dashed var(--separator-strong);
 }
 
 .sidebar-heading,
@@ -254,9 +316,9 @@
   gap: 0.6rem;
   margin-top: 0.4rem;
   padding: 0.65rem 0.5rem 0.65rem 0.75rem;
-  border-radius: var(--radius-small);
+  border-radius: 1rem;
   text-decoration: none;
-  transition: background 160ms var(--ease-mac);
+  transition: background 160ms var(--ease-mac), transform 160ms var(--ease-mac);
 }
 
 .project-menu {
@@ -295,6 +357,7 @@
 
 .project-link:hover {
   background: var(--fill-quiet);
+  transform: translateX(2px);
 }
 
 .project-link.is-active {
@@ -386,18 +449,23 @@
 .phase-card {
   margin-top: 1.25rem;
   padding: 1.75rem;
-  border: 1px solid var(--separator);
-  border-radius: var(--radius-card);
+  border: 1px solid transparent;
+  border-radius: 1.35rem 1.55rem 1.3rem 1.45rem;
   background: var(--surface);
   box-shadow: var(--shadow-1);
   animation: card-in 280ms var(--ease-mac);
 }
 
+.phase-card:nth-of-type(even) {
+  border-radius: 1.5rem 1.25rem 1.55rem 1.35rem;
+}
+
 .phase-card h1 {
   margin: 0.5rem 0 0.6rem;
+  font-family: var(--font-display);
   font-size: 1.75rem;
-  font-weight: 600;
-  letter-spacing: -0.015em;
+  font-weight: 650;
+  letter-spacing: -0.02em;
   line-height: 1.25;
 }
 
@@ -427,7 +495,7 @@
   gap: 0.6rem;
   overflow: hidden;
   padding: 1.05rem 1.2rem 0.85rem;
-  border: 1px solid var(--separator);
+  border: 1px solid transparent;
   border-radius: var(--radius-card);
   background: var(--surface);
   box-shadow: var(--shadow-1);
@@ -436,8 +504,13 @@
 .agent-live-bar {
   position: absolute;
   inset: 0 0 auto 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--tone-teal),
+    var(--tone-amber),
+    var(--tone-violet)
+  );
   background-size: 45% 100%;
   background-repeat: no-repeat;
   animation: agent-live-shimmer 1.6s linear infinite;
@@ -553,6 +626,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .workspace-shell::before,
+  .workspace-shell::after,
   .agent-live-bar,
   .agent-live-dot,
   .agent-live-ellipsis::after,
@@ -948,7 +1023,7 @@
   background: var(--accent);
   color: var(--on-accent);
   font-size: 0.8125rem;
-  font-weight: 500;
+  font-weight: 700;
   transition: background 160ms var(--ease-mac), transform 160ms var(--ease-mac);
 }
 
@@ -957,6 +1032,7 @@
 .structured-form button:hover:not(:disabled),
 .structured-panel button:hover:not(:disabled) {
   background: var(--accent-strong);
+  transform: translateY(-1px);
 }
 
 .phase-card > button:active:not(:disabled),
@@ -1074,13 +1150,14 @@
   background: var(--surface);
   color: var(--text-1);
   font-size: 0.8125rem;
-  font-weight: 500;
+  font-weight: 600;
   box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
   transition: background 160ms var(--ease-mac), transform 160ms var(--ease-mac);
 }
 
 .action-pill:hover:not(:disabled) {
   background: var(--fill-quiet);
+  transform: translateY(-1px) rotate(-0.4deg);
 }
 
 .action-pill:active:not(:disabled) {
@@ -1100,9 +1177,9 @@
   right: 0;
   bottom: 0;
   width: min(23rem, 92vw);
-  border-left: 1px solid var(--separator);
+  border-left: 1px dashed var(--separator-strong);
   background: var(--surface);
-  box-shadow: -16px 0 40px rgb(0 0 0 / 8%);
+  box-shadow: -16px 0 40px rgb(122 99 232 / 10%);
   transform: translateX(103%);
   transition: transform 280ms var(--ease-mac);
 }
@@ -1378,7 +1455,7 @@
   width: min(44rem, 100%);
   padding: 0.5rem;
   border: 1px solid var(--separator);
-  border-radius: 1.5rem;
+  border-radius: 1.6rem;
   background: var(--composer-bg);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
@@ -1475,6 +1552,7 @@
 
 .composer-send:hover:not(:disabled) {
   background: var(--accent-strong);
+  transform: translateY(-1px);
 }
 
 .composer-send:active:not(:disabled) {

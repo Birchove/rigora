@@ -1,29 +1,35 @@
 :root {
   color-scheme: light;
 
-  /* 表面与文字：macOS 浅色桌面 + 白卡片 + 两级灰阶 */
-  --bg: #f5f5f7;
-  --surface: #ffffff;
-  --surface-2: #f5f5f7;
-  --fill-quiet: rgb(120 120 128 / 12%);
-  --fill-hover: rgb(120 120 128 / 20%);
-  --text-1: #1d1d1f;
-  --text-2: #6e6e73;
-  --text-3: #aeaeb2;
-  --separator: rgb(0 0 0 / 8%);
-  --separator-strong: rgb(0 0 0 / 16%);
+  /* 暖纸色工作台：比引导页更收一点，少一层糖果感 */
+  --bg: #f8efe6;
+  --surface: #fffaf4;
+  --surface-2: #f3e6d8;
+  --fill-quiet: rgb(226 90 50 / 10%);
+  --fill-hover: rgb(226 90 50 / 16%);
+  --text-1: #2a1d18;
+  --text-2: #6f564c;
+  --text-3: #b39486;
+  --separator: rgb(198 90 46 / 10%);
+  --separator-strong: rgb(198 90 46 / 18%);
 
-  /* 品牌：浅色沿用产品橙；深色切到 logo 暖金 */
-  --accent: #c65a2e;
-  --accent-strong: #a84a24;
-  --accent-tint: rgb(198 90 46 / 10%);
-  --on-accent: #ffffff;
-  --adopted: #34c759;
-  --danger: #ff3b30;
-  --header-bg: rgb(255 255 255 / 72%);
-  --composer-bg: rgb(255 255 255 / 92%);
-  --banner-bg: rgb(255 244 229);
-  --scrim: rgb(0 0 0 / 35%);
+  --accent: #e25a32;
+  --accent-strong: #c94a28;
+  --accent-tint: rgb(226 90 50 / 12%);
+  --on-accent: #fffaf4;
+  --adopted: #2bbbad;
+  --danger: #f25070;
+  --header-bg: rgb(255 250 244 / 78%);
+  --composer-bg: rgb(255 250 244 / 94%);
+  --banner-bg: #ffe4cc;
+  --scrim: rgb(42 29 24 / 32%);
+
+  --tone-teal: #2bbbad;
+  --tone-amber: #f0a020;
+  --tone-violet: #7a63e8;
+  --blob-a: #ffd4c2;
+  --blob-b: #c6f0e8;
+  --blob-c: #ddd4ff;
 
   /* 语义别名：旧 token 名统一映射到新值，避免散落引用漂移 */
   --paper: var(--bg);
@@ -34,57 +40,61 @@
   --evidence-tint: var(--fill-quiet);
   --mentor-orange: var(--accent);
 
-  /* 字体：单一系统字族 + 等宽数据字体 */
-  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
-    "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei UI", "Microsoft YaHei",
-    sans-serif;
+  --font-display: "Newsreader", "Iowan Old Style", "Palatino Linotype",
+    "Songti SC", serif;
+  --font-ui: "Figtree", "Avenir Next", "PingFang SC", "HarmonyOS Sans SC",
+    "Microsoft YaHei UI", sans-serif;
   --font-data: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono",
     Consolas, monospace;
   --font-reading: var(--font-ui);
 
-  /* 圆角 */
-  --radius-card: 16px;
-  --radius-input: 12px;
-  --radius-small: 9px;
+  --radius-card: 1.25rem;
+  --radius-input: 0.9rem;
+  --radius-small: 0.7rem;
   --radius-pill: 999px;
 
-  /* 阴影：双层柔光，静止一层、悬浮/浮动一层 */
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 4%), 0 4px 16px rgb(0 0 0 / 4%);
-  --shadow-2: 0 2px 8px rgb(0 0 0 / 6%), 0 16px 40px rgb(0 0 0 / 10%);
+  --shadow-1: 0 10px 24px rgb(198 90 46 / 7%);
+  --shadow-2: 0 16px 36px rgb(122 99 232 / 12%);
 
-  /* 动效：macOS 缓动曲线 */
   --ease-mac: cubic-bezier(0.32, 0.72, 0, 1);
 
-  --focus-ring: 0 0 0 4px rgb(198 90 46 / 30%);
+  --focus-ring: 0 0 0 4px rgb(226 90 50 / 28%);
   --content-width: 92rem;
 }
 
 html[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #10211a;
-  --surface: #173328;
-  --surface-2: #1b4332;
-  --fill-quiet: rgb(212 165 116 / 10%);
-  --fill-hover: rgb(212 165 116 / 16%);
-  --text-1: #f4efe6;
-  --text-2: #c9bfb0;
-  --text-3: #8f877c;
-  --separator: rgb(244 239 230 / 10%);
-  --separator-strong: rgb(244 239 230 / 18%);
+  --bg: #14111c;
+  --surface: #211b2c;
+  --surface-2: #2c243a;
+  --fill-quiet: rgb(255 147 108 / 10%);
+  --fill-hover: rgb(255 147 108 / 16%);
+  --text-1: #f6efe7;
+  --text-2: #cbb8ab;
+  --text-3: #8e7b72;
+  --separator: rgb(246 239 231 / 10%);
+  --separator-strong: rgb(246 239 231 / 16%);
 
-  --accent: #d4a574;
-  --accent-strong: #e0b98a;
-  --accent-tint: rgb(212 165 116 / 14%);
-  --on-accent: #1b4332;
-  --adopted: #6ee7a8;
-  --danger: #ff7b73;
-  --header-bg: rgb(16 33 26 / 78%);
-  --composer-bg: rgb(23 51 40 / 92%);
-  --banner-bg: #1b4332;
+  --accent: #ff936c;
+  --accent-strong: #ffb08a;
+  --accent-tint: rgb(255 147 108 / 16%);
+  --on-accent: #2a1d18;
+  --adopted: #5ee0c5;
+  --danger: #ff7b93;
+  --header-bg: rgb(20 17 28 / 80%);
+  --composer-bg: rgb(33 27 44 / 94%);
+  --banner-bg: #2a2238;
   --scrim: rgb(0 0 0 / 55%);
 
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 28%), 0 8px 24px rgb(0 0 0 / 22%);
-  --shadow-2: 0 4px 14px rgb(0 0 0 / 32%), 0 18px 40px rgb(0 0 0 / 28%);
-  --focus-ring: 0 0 0 4px rgb(212 165 116 / 32%);
+  --tone-teal: #5ee0c5;
+  --tone-amber: #ffb14a;
+  --tone-violet: #9b87ff;
+  --blob-a: #4a2a36;
+  --blob-b: #1a3f3d;
+  --blob-c: #33285a;
+
+  --shadow-1: 0 12px 28px rgb(0 0 0 / 28%);
+  --shadow-2: 0 18px 40px rgb(122 99 232 / 22%);
+  --focus-ring: 0 0 0 4px rgb(255 147 108 / 30%);
 }
