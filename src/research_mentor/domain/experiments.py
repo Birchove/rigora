@@ -1,6 +1,6 @@
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 
 class ExperimentInfo(BaseModel):
@@ -37,9 +37,11 @@ class _ExperimentResult(BaseModel):
 class ValidationTask(BaseModel):
     name: str
     purpose: str
-    method: str
+    # ponytail: schema 只拦空白（min_length=1 保旧 JSON 兼容），method 长度与质量由 Complete Prompt 约束
+    method: Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
     evaluation_criteria: list[str] = Field(default_factory=list)
     expected_result: str | None = None
+    required_conditions: list[str] = Field(default_factory=list)
 
 
 class ValidationResult(_ExperimentResult):

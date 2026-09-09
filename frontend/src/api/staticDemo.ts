@@ -148,6 +148,7 @@ function validationProject(): ProjectView {
           method: "在相同任务和随机种子上移除分层摘要后比较恢复正确率",
           evaluation_criteria: ["恢复正确率差异", "状态漂移率差异"],
           expected_result: "完整方法的恢复正确率更高",
+          required_conditions: ["固定对话任务集", "单张消费级 GPU"],
         },
       },
     ],

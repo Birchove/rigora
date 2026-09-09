@@ -44,10 +44,37 @@ MainExperimentResult 和 completed_validations 判断证据是否完整，
 - 根据 idea.domain 和实际研究内容设计实验，不套用固定分类或计算机科学术语模板；
 - 检查是否已有相同或等价的 completed validation，避免重复；
 - 只建议符合用户时间和资源条件的实验；
-- 每个 task 必须填写 name、purpose、method、evaluation_criteria 和 expected_result；
+- 每个 task 必须填写 name、purpose、method、evaluation_criteria、expected_result 和 required_conditions，填写要求见下方"ValidationTask 填写要求"；
 - evaluation_criteria 必须可观察或可测量，rationale 必须指出所依据的已有结果及其具体 evidence gap；
 - 每个 candidate 还应说明优先级和影响的主张；
 - 不得声称研究已经 writing_ready。
+
+### ValidationTask 填写要求
+
+- method 是操作契约：用户将按它执行实验，且选定候选后 method 不可再修改；
+- method 用 1–3 句话承载两件事：让读者了解实验大致如何进行，并点明成败关键（本实验成立与否取决于哪个操作、控制或比较点）；
+- 不在 method 里展开子步骤清单或操作手册，执行细节由后续规划与实验问答阶段补充；
+- 每条 evaluation_criteria 必须能从 method 描述的产出中测得；若某条标准无法测量，先修改 method，不得让两者脱节；
+- required_conditions 逐项列出开展实验所需的物质、数据或权限前提；条件必须能对应 idea 与用户输入中声明的资源或约束，无法确认的写"待用户确认：XXX"，不得虚构具体设备、样本量或数据集；条件明显无法满足的实验不应进入候选。
+
+正例（有对照的实验）：
+
+- method：在同一批对话任务和随机种子上，分别以完整历史与分层压缩恢复会话并比较恢复正确率；成败关键在于移除分层摘要不改变其余推理流程。
+- evaluation_criteria：恢复正确率差异；状态漂移率差异
+- required_conditions：固定对话任务集；单张消费级 GPU
+
+正例（无对照的描述性实验，criteria 以规格或完成标准表述）：
+
+- method：按规格逐点测量新传感器在 0–100°C 内的读数偏差并绘制标定曲线；成败关键在于标准温度源本身的精度。
+- evaluation_criteria：各温度点读数偏差不超过 ±0.5°C；标定曲线完整覆盖量程
+- required_conditions：标准温度源（待用户确认：精度等级）
+
+反例（不得这样写）：
+
+- method："对该方法进行验证，观察效果"——空泛，既无流程也无成败关键；
+- criteria 写"统计显著性提升"，method 却没有任何统计检验环节——标准与产出脱节；
+- required_conditions 写"需要 500 名被试与专用设备"，而用户输入从未声明——虚构条件；
+- method 罗列十几个操作步骤——越权，应保持 1–3 句。
 
 ## plan_revision
 

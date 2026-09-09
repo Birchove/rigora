@@ -129,18 +129,50 @@ def test_validation_task_uses_domain_neutral_structure() -> None:
     task = ValidationTask(
         name="高峰订单下的路径拥堵实验",
         purpose="验证效率提升是否只在低负载下成立",
-        method="逐级提高订单到达率并记录完成时间",
+        method="逐级提高订单到达率并记录完成时间，成败关键在于配送需求分布是否固定",
         evaluation_criteria=["平均完成时间", "最长等待时间"],
         expected_result="高负载下仍优于现有方案",
+        required_conditions=["历史订单轨迹数据", "路网仿真环境"],
     )
 
     assert task.model_dump() == {
         "name": "高峰订单下的路径拥堵实验",
         "purpose": "验证效率提升是否只在低负载下成立",
-        "method": "逐级提高订单到达率并记录完成时间",
+        "method": "逐级提高订单到达率并记录完成时间，成败关键在于配送需求分布是否固定",
         "evaluation_criteria": ["平均完成时间", "最长等待时间"],
         "expected_result": "高负载下仍优于现有方案",
+        "required_conditions": ["历史订单轨迹数据", "路网仿真环境"],
     }
+
+
+def test_validation_task_required_conditions_default_empty() -> None:
+    task = ValidationTask(
+        name="重复运行",
+        purpose="验证方差",
+        method="固定种子重复十次并比较方差",
+    )
+
+    assert task.required_conditions == []
+
+
+@pytest.mark.parametrize("method", ["", "   "])
+def test_validation_task_rejects_blank_method(method: str) -> None:
+    with pytest.raises(ValidationError):
+        ValidationTask(
+            name="重复运行",
+            purpose="验证方差",
+            method=method,
+        )
+
+
+def test_validation_task_strips_method_whitespace() -> None:
+    task = ValidationTask(
+        name="重复运行",
+        purpose="验证方差",
+        method="  固定种子重复十次并比较方差  ",
+    )
+
+    assert task.method == "固定种子重复十次并比较方差"
 
 
 def test_legacy_validation_task_ignores_old_classification_fields() -> None:
@@ -153,6 +185,7 @@ def test_legacy_validation_task_ignores_old_classification_fields() -> None:
     )
 
     assert task.evaluation_criteria == []
+    assert task.required_conditions == []
     assert "paradigm" not in task.model_dump()
     assert "validation_type" not in task.model_dump()
 

@@ -57,6 +57,7 @@ async def test_demo_seed_creates_three_real_schema_projects(demo_context):
     assert validation.validation_candidates
     task = validation.validation_candidates[0].task
     assert task.evaluation_criteria == ["恢复正确率差异", "状态漂移率差异"]
+    assert task.required_conditions == ["固定对话任务集", "单张消费级 GPU"]
     assert "paradigm" not in task.model_dump()
     assert "validation_type" not in task.model_dump()
     assert (await service.export(validation.project_id, "json")).writing_guidance
@@ -126,6 +127,10 @@ async def test_demo_adapters_return_production_schemas():
     assert complete.validation_candidates[0].task.evaluation_criteria == [
         "恢复正确率差异",
         "状态漂移率差异",
+    ]
+    assert complete.validation_candidates[0].task.required_conditions == [
+        "固定对话任务集",
+        "单张消费级 GPU",
     ]
     assert records and all(item.provider == "demo" for item in records)
     assert all(item.url and item.url.startswith("demo://") for item in records)

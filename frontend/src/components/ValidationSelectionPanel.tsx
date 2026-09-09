@@ -101,9 +101,15 @@ export function ValidationSelectionPanel({
                   {candidate.task.method ? (
                     <span className="validation-candidate-method">方法：{candidate.task.method}</span>
                   ) : null}
-                  {candidate.task.evaluation_criteria.length > 0 ? (
+                  {/* 旧持久化 JSON 的 task 无这两个键，用 ?? [] 兼容 */}
+                  {(candidate.task.evaluation_criteria ?? []).length > 0 ? (
                     <span className="validation-candidate-method">
                       评价标准：{candidate.task.evaluation_criteria.join("、")}
+                    </span>
+                  ) : null}
+                  {(candidate.task.required_conditions ?? []).length > 0 ? (
+                    <span className="validation-candidate-method">
+                      实验所需条件：{candidate.task.required_conditions.join("、")}
                     </span>
                   ) : null}
                   {candidate.task.expected_result ? (

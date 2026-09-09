@@ -17,6 +17,10 @@ describe("static demo client", () => {
       "恢复正确率差异",
       "状态漂移率差异",
     ]);
+    expect(projects[2]?.validation_candidates?.[0]?.task.required_conditions).toEqual([
+      "固定对话任务集",
+      "单张消费级 GPU",
+    ]);
   });
 
   it("rejects writes with a readonly error", async () => {

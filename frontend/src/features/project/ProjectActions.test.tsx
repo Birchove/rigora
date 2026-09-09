@@ -45,9 +45,10 @@ const CANDIDATES_REORDERED_FOR_DISPLAY = [
     task: {
       name: "鲁棒性验证",
       purpose: "检验分布外稳定性",
-      method: "替换测试分布",
+      method: "替换测试分布并重测",
       evaluation_criteria: ["分布外性能变化", "置信区间"],
       expected_result: "确定模型是否跨分布稳定",
+      required_conditions: ["分布外测试数据集"],
     },
   },
   {
@@ -62,6 +63,7 @@ const CANDIDATES_REORDERED_FOR_DISPLAY = [
       method: "去掉关键模块后重测",
       evaluation_criteria: ["性能变化"],
       expected_result: "确定关键模块的独立贡献",
+      required_conditions: ["可移除模块的代码路径"],
     },
   },
 ];
@@ -160,6 +162,7 @@ describe("ProjectActions", () => {
     fireEvent.click(screen.getByRole("button", { name: "确认选择" }));
     expect(screen.getByText("评价标准：分布外性能变化、置信区间")).toBeInTheDocument();
     expect(screen.getByText("预期结果：确定模型是否跨分布稳定")).toBeInTheDocument();
+    expect(screen.getByText("实验所需条件：分布外测试数据集")).toBeInTheDocument();
     expect(submit).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "select_validations",
@@ -171,6 +174,28 @@ describe("ProjectActions", () => {
         },
       }),
     );
+  });
+
+  it("renders legacy candidates that lack evaluation_criteria and required_conditions", () => {
+    const submit = vi.fn().mockResolvedValue({});
+    const legacyCandidates = [
+      {
+        candidate_id: "candidate-legacy",
+        rank: 1,
+        priority: "high" as const,
+        rationale: "旧格式候选",
+        addresses_claims: ["legacy"],
+        task: {
+          name: "旧任务",
+          purpose: "旧目的",
+          method: "沿用历史方法",
+        },
+      },
+    ] as unknown as typeof CANDIDATES_REORDERED_FOR_DISPLAY;
+    render(<ValidationSelectionPanel candidates={legacyCandidates} submit={submit} />);
+    expect(screen.getByText("方法：沿用历史方法")).toBeInTheDocument();
+    expect(screen.queryByText(/评价标准：/)).toBeNull();
+    expect(screen.queryByText(/实验所需条件：/)).toBeNull();
   });
 
   it("records a main experiment result from the structured form", () => {

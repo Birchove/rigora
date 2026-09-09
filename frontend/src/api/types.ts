@@ -188,6 +188,7 @@ export interface ValidationTask {
   method: string;
   evaluation_criteria: string[];
   expected_result?: string | null;
+  required_conditions: string[];
 }
 
 export interface ValidationResult extends ExperimentResult {

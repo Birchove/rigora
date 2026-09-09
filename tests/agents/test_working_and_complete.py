@@ -235,7 +235,7 @@ def test_complete_prompt_matches_fixed_sha256_oracle() -> None:
     )
 
     assert hashlib.sha256(prompt.read_bytes()).hexdigest() == (
-        "0f81f5d1a079c84915f91277dd3e9371a6216d628cd9f1aff53cd0264d4c2f6a"
+        "c0053fb63a75f9a7d3d763e32ebb98d1d522bf768b9e219e59a8dbb09d54c50b"
     )
 
 
