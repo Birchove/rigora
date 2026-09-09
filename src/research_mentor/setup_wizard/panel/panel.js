@@ -215,6 +215,88 @@ function validate() {
 
 // --- renderers -----------------------------------------------------------
 
+function recId(item) {
+  return typeof item === "string" ? item : item.id;
+}
+
+function recChip(item) {
+  if (typeof item === "string") return item;
+  return item.score != null ? `${item.label} · ${item.id}` : item.id;
+}
+
+function flowEdge(edge, fromLevel, toLevel) {
+  const pulses = (count) =>
+    Array.from({ length: count }, () => el("span", { class: "flow-pulse" }));
+  return el(
+    "div",
+    {
+      class: "flow-edge",
+      "data-loop": edge?.loop ? "true" : "false",
+      "data-from": fromLevel ?? "",
+      "data-to": toLevel ?? "",
+    },
+    el("span", { class: "flow-edge-line", "aria-hidden": "true" }, pulses(3)),
+    edge?.loop
+      ? el(
+          "span",
+          { class: "flow-edge-line flow-edge-back", "aria-hidden": "true" },
+          pulses(2),
+        )
+      : null,
+    edge?.label ? el("span", { class: "flow-edge-label", text: edge.label }) : null,
+  );
+}
+
+function flowNode(node, { focused } = {}) {
+  return el(
+    "button",
+    {
+      type: "button",
+      class: "flow-node",
+      "data-agent": node.id,
+      "data-level": node.level,
+      "data-on": String(Boolean(focused)),
+      "aria-label": `${node.title}，思考${node.level}。${node.hover}`,
+    },
+    el("span", { class: "flow-dot", "aria-hidden": "true" }),
+    el("span", { class: "flow-title", text: node.title }),
+    el("span", { class: "flow-tip", text: node.hover }),
+  );
+}
+
+function renderFlow(focus) {
+  const flow = state.catalog.flow;
+  const items = [];
+  flow.nodes.forEach((node, index) => {
+    if (index > 0) {
+      const previous = flow.nodes[index - 1];
+      const edge =
+        (flow.edges ?? []).find(
+          (item) => item.from === previous.id && item.to === node.id,
+        ) ?? { from: previous.id, to: node.id, label: "" };
+      items.push(flowEdge(edge, previous.level, node.level));
+    }
+    items.push(flowNode(node, { focused: focus === node.id }));
+  });
+  return el(
+    "div",
+    {
+      class: "flow",
+      "data-mode": focus ? "focus" : "overview",
+      "data-focus": focus ?? "",
+    },
+    el("div", { class: "flow-track" }, items),
+    el(
+      "div",
+      { class: "flow-legend", "aria-hidden": "true" },
+      el("span", { "data-level": "低", text: "低" }),
+      el("span", { "data-level": "中", text: "中" }),
+      el("span", { "data-level": "高", text: "高" }),
+    ),
+    focus ? null : el("p", { class: "flow-caption", text: flow.caption }),
+  );
+}
+
 function renderWelcome() {
   const product = state.catalog.product;
   return [
@@ -223,13 +305,22 @@ function renderWelcome() {
     el(
       "section",
       { class: "card" },
-      el("h2", { text: "它帮你做什么" }),
-      el(
-        "ul",
-        { class: "chips" },
-        product.flow.map((item) => el("li", { class: "chip", text: item })),
-      ),
+      el("h2", { text: "它是什么" }),
+      (product.story ?? []).map((item) => el("p", { class: "story", text: item })),
       el("p", { class: "hint", text: product.scope }),
+    ),
+    el(
+      "section",
+      { class: "card" },
+      el("h2", { text: "核心流程" }),
+      el(
+        "p",
+        {
+          class: "pick-note",
+          text: "五个环节横着走。圆点颜色是思考强度，线上的光点是数据在往下流。悬停圆点看细节。",
+        },
+      ),
+      renderFlow(null),
     ),
     el(
       "section",
@@ -241,16 +332,29 @@ function renderWelcome() {
         product.boundaries.map((item) => el("li", { text: item })),
       ),
     ),
-    el("p", { class: "hint", text: "接下来用五屏介绍五个 Agent，然后填写模型配置。" }),
+    el("p", { class: "hint", text: "接下来按流程逐个介绍五个环节，然后填写模型配置。" }),
   ];
 }
 
 function renderAgent(name) {
   const agent = agentFor(name);
+  const asOf = agent.ranking_as_of ?? state.catalog.ranking_as_of;
   return [
-    el("p", { class: "eyebrow", text: `Agent ${agent.step} / 5` }),
+    el("p", { class: "eyebrow", text: `环节 ${agent.step} / 5 · 思考 ${agent.thinking_level}` }),
     el("h1", { text: agent.title }),
     el("p", { class: "lede", text: agent.role }),
+    el(
+      "section",
+      { class: "card flow-card" },
+      renderFlow(name),
+      el(
+        "p",
+        {
+          class: "flow-guide",
+          text: `当前放大的是「${agent.title}」。思考强度：${agent.thinking_level}。${agent.role}。`,
+        },
+      ),
+    ),
     el(
       "section",
       { class: "card" },
@@ -270,10 +374,15 @@ function renderAgent(name) {
         "ul",
         { class: "chips" },
         agent.recommended.map((item) =>
-          el("li", { class: "chip", "data-tone": "accent", text: item }),
+          el("li", { class: "chip", "data-tone": "accent", text: recChip(item) }),
         ),
       ),
-      el("p", { class: "hint", text: "这只是参考。同能力的模型都可以替换。" }),
+      el("p", {
+        class: "hint",
+        text: asOf
+          ? `参考型号按 ${asOf} 的智能指数名单挑选，填进下一页时用芯片里的英文 id。同能力可以替换。`
+          : "这只是参考。同能力的模型都可以替换。",
+      }),
     ),
   ];
 }
@@ -506,7 +615,7 @@ function renderAssign() {
       el("div", { class: "picker" }, options),
       el("p", {
         class: "hint",
-        text: `${agent.needs} 参考：${agent.recommended.join(" / ")}`,
+        text: `${agent.needs} 参考：${agent.recommended.map(recId).join(" / ")}`,
       }),
     );
   });

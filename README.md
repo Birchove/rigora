@@ -55,7 +55,7 @@ npm run dev
 
 ## 怎么选模型
 
-面板里的参考型号偏向便宜、快速，适合日常辅导。同一环节尽量选能力接近的模型；方案生成和评分尽量换两家，避免自己写自己审。
+面板里的参考型号来自仓库中的智能指数名单（`src/research_mentor/setup_wizard/model_ranking.json`），按环节需要的思考强度（低 / 中 / 高）挑选。方案生成和评分尽量换两家，避免自己写自己审。名单会不时更新，改这个文件即可。
 
 ChatGPT 官方走 Responses 接口；Claude、Gemini 走各自的官方 OpenAI 兼容地址。模型名以你控制台里能用的为准。旧名如 `deepseek-chat`、`gpt-4o` 已经下线，不要再填。
 

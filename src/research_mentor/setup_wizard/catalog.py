@@ -19,6 +19,7 @@ from research_mentor.config import (
     VENDOR_MODEL_OPTIONS,
     VENDOR_PRESETS,
 )
+from research_mentor.setup_wizard.ranking import load_ranking, recommended_models
 from research_mentor.hyperparameters import (
     CHECK_PASS_SCORE,
     MAX_CHECK_ROUNDS,
@@ -31,6 +32,15 @@ PRODUCT_INTRO: dict[str, Any] = {
     "name": "Rigora",
     "tagline": "耐心严谨的个性化科研探索导师",
     "idea": "用更严格、更具体的用户输入，换更优质、可核对的系统输出。",
+    "story": [
+        "科研辅导里最容易翻车的，不是模型写得不够长，而是你给的问题太宽，系统却假装已经理解了。"
+        "Rigora 反过来：先把输入逼具体，再让五个专职环节各做一次结构化判断。",
+        "你负责提出主张、动手做实验、记下真实发生了什么。它负责对照文献审查想法、起草方案、"
+        "给核心创新打分、在实验过程中答疑，并在证据够不够时给出下一步选项。",
+        "它不代写论文正文，不替你跑实验，也不编造结果。负面和不显著的结果会如实保留。"
+        "只辅导 computer science；五个环节彼此不互相调用，过不过、进不进下一阶段，"
+        "由固定规则和你的确认决定，模型说「已经完成」也不算数。",
+    ],
     "scope": "只辅导 computer science。不代写论文正文，不替你做实验，不编造结果。",
     "flow": [
         "审查想法",
@@ -41,8 +51,56 @@ PRODUCT_INTRO: dict[str, Any] = {
     ],
     "boundaries": [
         "五个 Agent 各自只做一次结构化推理，彼此不互相调用。",
-        "状态流转、评分和确认闸门由 Harness 独占，模型说的话不会被当成指令执行。",
+        "状态流转、评分和确认闸门由系统独占，模型说的话不会被当成指令执行。",
         "实验结果必须由你显式记录；负面和不显著的结果会如实保留。",
+    ],
+}
+
+# 引导页流程图。思考强度只分低 / 中 / 高，用来提示这一环该选多强的模型。
+FLOW_GRAPH: dict[str, Any] = {
+    "caption": "点的颜色是思考强度：青绿为低、琥珀为中、紫罗兰为高。线上的光点是数据往下一环流。悬停圆点可看这一环做什么。",
+    "edges": [
+        {"from": "idea_review", "to": "plan_loop", "label": "主张明确"},
+        {
+            "from": "plan_loop",
+            "to": "key_insight_check",
+            "label": "修订再评",
+            "loop": True,
+        },
+        {"from": "key_insight_check", "to": "working_qa", "label": "确认后开做"},
+        {"from": "working_qa", "to": "complete", "label": "记下结果"},
+    ],
+    "nodes": [
+        {
+            "id": "idea_review",
+            "title": "想法审查",
+            "level": "中",
+            "hover": "对照真实文献，判断你给的是可验证主张、还没收敛的方向，还是已经在做的实验。太宽泛会回来问你要补充什么，不会替你决定研究问题。",
+        },
+        {
+            "id": "plan_loop",
+            "title": "方案生成",
+            "level": "高",
+            "hover": "写出研究问题、知识缺口、里程碑，以及最关键的点睛之笔。后续每一轮只改该改的地方，并不能自己宣布方案已通过。",
+        },
+        {
+            "id": "key_insight_check",
+            "title": "点睛评分",
+            "level": "高",
+            "hover": "从五个固定维度给核心创新打原始分。总分由系统重算，通不通过不是模型说了算。建议和方案生成换一家，避免自己写自己审。",
+        },
+        {
+            "id": "working_qa",
+            "title": "实验问答",
+            "level": "低",
+            "hover": "围绕当前实验任务随时答疑，信息不够就只问最少的关键问题。不能替你宣布实验完成；结果不符合预期也会如实保留。",
+        },
+        {
+            "id": "complete",
+            "title": "补充验证",
+            "level": "中",
+            "hover": "综合已有结果，给出还要验证什么、是否该改方案、或证据够了可以开始写。选哪个由你决定，不会把没跑的实验当成已完成。",
+        },
     ],
 }
 
@@ -64,7 +122,7 @@ AGENT_GUIDE: tuple[dict[str, Any], ...] = (
             "会区分「搜到了什么」和「实际用了什么来支撑判断」",
         ],
         "needs": "要读多篇文献摘要，吃长上下文，且必须稳定输出 JSON。",
-        "recommended": ("deepseek-v4-flash", "qwen3-coder-plus", "gpt-5.6-luna"),
+        "thinking_level": "中",
     },
     {
         "name": "plan_loop",
@@ -80,8 +138,8 @@ AGENT_GUIDE: tuple[dict[str, Any], ...] = (
             "时间或资源不够时写进待定事项，不用假设填空",
             "它不能宣布方案已通过，确认权在你手上",
         ],
-        "needs": "要一次生成较长的结构化方案，选生成能力强的模型。",
-        "recommended": ("MiniMax-M3", "kimi-k2.7-code", "step-3.7-flash"),
+        "needs": "要一次生成较长的结构化方案，选思考强度高的模型。",
+        "thinking_level": "高",
     },
     {
         "name": "key_insight_check",
@@ -101,8 +159,8 @@ AGENT_GUIDE: tuple[dict[str, Any], ...] = (
             "分数由系统重算，模型改不了判定",
             "建议和方案生成换一家模型，避免自己写自己审",
         ],
-        "needs": "要严格推理和稳定打分，选推理型模型。",
-        "recommended": ("deepseek-v4-flash", "kimi-k2.7-code", "step-3.7-flash"),
+        "needs": "要严格推理和稳定打分，选思考强度高的推理型模型。",
+        "thinking_level": "高",
     },
     {
         "name": "working_qa",
@@ -118,8 +176,8 @@ AGENT_GUIDE: tuple[dict[str, Any], ...] = (
             "会检索你上传的项目文档来辅助回答",
             "结果不符合预期不等于执行失败，它会如实保留",
         ],
-        "needs": "交互最频繁的一环，优先选便宜且快的模型。",
-        "recommended": ("gpt-5.6-luna", "qwen3-coder-plus", "step-3.7-flash"),
+        "needs": "交互最频繁的一环，优先选思考强度低、便宜且快的模型。",
+        "thinking_level": "低",
     },
     {
         "name": "complete",
@@ -135,8 +193,8 @@ AGENT_GUIDE: tuple[dict[str, Any], ...] = (
             "写作方向只给结构和讨论重点，不生成论文正文",
             "不会把没跑的实验当成已完成",
         ],
-        "needs": "要综合多份实验结果，选推理和归纳强的模型。",
-        "recommended": ("MiniMax-M3", "deepseek-v4-flash", "kimi-k2.7-code"),
+        "needs": "要综合多份实验结果，选思考强度中等、归纳稳的模型。",
+        "thinking_level": "中",
     },
 )
 
@@ -257,9 +315,17 @@ def vendor_catalog() -> list[dict[str, Any]]:
 
 
 def catalog() -> dict[str, Any]:
+    ranking = load_ranking()
+    agents = []
+    for item in AGENT_GUIDE:
+        entry = dict(item)
+        entry["recommended"] = recommended_models(item["name"])
+        entry["ranking_as_of"] = ranking["as_of"]
+        agents.append(entry)
     return {
         "product": PRODUCT_INTRO,
-        "agents": list(AGENT_GUIDE),
+        "flow": FLOW_GRAPH,
+        "agents": agents,
         "agent_order": list(ALL_AGENTS),
         "shared_agents": sorted(SHARED_AGENTS),
         "vendors": vendor_catalog(),
@@ -267,4 +333,5 @@ def catalog() -> dict[str, Any]:
         "pairing": PAIRING_RULES,
         "max_pairs": PLAN_CHECK_PAIR_MAX,
         "optional": list(OPTIONAL_DEPENDENCIES),
+        "ranking_as_of": ranking["as_of"],
     }

@@ -136,12 +136,16 @@ def test_catalog_exposes_agents_vendors_and_optional_dependencies(panel):
     }
     assert [mode["paths"] for mode in body["plan_modes"]] == [1, 2, 3]
     assert body["max_pairs"] == 3
+    assert {node["id"] for node in body["flow"]["nodes"]} == set(ALL_AGENTS)
+    assert {node["level"] for node in body["flow"]["nodes"]} <= {"低", "中", "高"}
+    assert body["flow"]["edges"]
     for vendor in body["vendors"]:
         assert vendor["default_model"]
         assert vendor["default_base_url"].startswith("http")
     for agent in body["agents"]:
-        assert "qwen3.8-max" not in agent["recommended"]
-        assert "gpt-5.6-sol" not in agent["recommended"]
+        assert agent["thinking_level"] in {"低", "中", "高"}
+        assert agent["recommended"]
+        assert all("id" in item for item in agent["recommended"])
 
 
 def test_current_never_returns_stored_secrets_in_clear_text(panel):
